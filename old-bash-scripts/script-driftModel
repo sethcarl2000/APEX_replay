@@ -1,0 +1,19 @@
+#!/bin/bash
+
+#SBATCH --nodes=1
+#SBATCH --partition=production
+#SBATCH --account=halla
+#SBATCH --ntasks=1
+#SBATCH --cpus-per-task=4 
+#SBATCH --output=slurm/out/%x.%j.out
+#SBATCH --error=slurm/err/%x.%j.err
+#SBATCH --mem-per-cpu=2500
+#SBATCH --job-name=driftModel-19
+#SBATCH --time=2:30:00
+
+slopeBound_lo=$1
+slopeBound_hi=$2
+run=$3
+arm=$4
+
+analyzer -l -b -q 'driftModel/iterate_randWalk_dataFrame.C(175,'$slopeBound_lo','$slopeBound_hi',"model-19-noDV",'$run','$arm')'

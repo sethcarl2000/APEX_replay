@@ -1,0 +1,52 @@
+#!/bin/bash
+
+#SBATCH --nodes 1
+#SBATCH --partition production
+#SBATCH --account halla
+#SBATCH --ntasks 1
+#SBATCH --cpus-per-task 1
+#SBATCH --output=/volatile/halla/apex/full_replay/slurm/out/%x.%j.out
+#SBATCH --error=/volatile/halla/apex/full_replay/slurm/err/%x.%j.err
+#SBATCH --mem-per-cpu=2000
+
+#make sure you have set: 
+# setenv RAWFILE_DIR /cache/mss/halla/apex/raw 
+# setenv VOLATILE_DIR /volatile/halla/apex/full_replay
+
+echo "Checking from run $1 to run $2"
+
+run=$(($1-1))
+fileNames=$()
+
+while [ $run -lt $2 ]
+do
+    run=$(( $run + 1 ))
+    #see if we can find any rawfiles in the cache for this run
+    
+    if ! test -f $VOLATILE_DIR/production/replay.$run.subfile-0.root;
+    then 
+	echo "Run $run not found in '$VOLATILE_DIR/production/..'" 
+	continue
+    fi 
+    
+    n_parts=$(ls -l $VOLATILE_DIR/production/replay.$run.subfile-*.root | wc -l)
+    
+    echo "hadd: run $run, $n_parts sub-files to combine..." 
+    
+    hadd $VOLATILE_DIR/production/replay.$run.root $VOLATILE_DIR/production/replay.$run.subfile-*.root     
+    
+    #test to see if the 'hadd' succeeded 
+    if test -f $VOLATILE_DIR/production/replay.$run.root; 
+    then 
+	echo "hadd succeeded. removing sub-files..."
+	rm $VOLATILE_DIR/production/replay.$run.subfile-*.root
+	
+	echo "done." 
+    else 
+	echo "replay file '$VOLATILE_DIR/production/replay.$run.root' not found."
+	echo "perhaps the 'hadd' failed..."
+    fi 
+    
+done
+
+echo "done."  

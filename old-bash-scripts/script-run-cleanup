@@ -1,0 +1,36 @@
+#!/bin/bash
+
+#SBATCH --nodes 1
+#SBATCH --partition production
+#SBATCH --account halla
+#SBATCH --ntasks 1
+#SBATCH --cpus-per-task 4
+#SBATCH --output=/work/halla/apex/disk1/full_replay/slurm/out/%x.%j.out
+#SBATCH --error=/work/halla/apex/disk1/full_replay/slurm/err/%x.%j.err
+#SBATCH --mem-per-cpu 2000
+#SBATCH --time=00:25:00 
+
+run=$1
+
+rm $FULL_REPLAY/production/decode.$run.* 
+
+num_subfiles=$(ls -l $FULL_REPLAY/production/replay.$run.subfile-* | wc -l)
+
+echo "$num_subfiles sub-files found..." 
+
+if [ $num_subfiles -gt 1 ] #more than 1 partfile, we must combine them 
+then 
+    echo "combining them.." 
+    
+    hadd -j 4 $FULL_REPLAY/production/replay.$run.root $FULL_REPLAY/production/replay.$run.subfile-* 
+    
+    rm $FULL_REPLAY/production/replay.$run.subfile-*
+    
+else #only 1 partfile 
+    
+    echo "renaming file.." 
+    
+    mv $FULL_REPLAY/production/replay.$run.subfile-0.root $FULL_REPLAY/production/replay.$run.root 
+
+fi 
+    

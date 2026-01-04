@@ -1,0 +1,68 @@
+#ifndef Podd_TNPoly_h_
+#define Podd_TNPoly_h_
+
+//////////////////////////////////////////////////////////////////////////
+//
+// TOpticsModel
+//
+//////////////////////////////////////////////////////////////////////////
+
+//#include "THaPhysicsModule.h"
+#include "TROOT.h"
+#include "TObject.h"
+
+using namespace std; 
+
+using RVecD = ROOT::VecOps::RVec<double>;
+
+class TNPoly : public TObject {
+  
+ public:
+
+  TNPoly() {}; 
+  TNPoly(const int nDoF,
+	 const int order=0); 
+
+  ~TNPoly();
+  
+  vector<double> Eval_noCoeff(const vector<double> X) const;
+
+  double Eval(const vector<double> *const coeff,
+	      const vector<double> X) const; 
+  
+  vector<double> Gradient(const vector<double> *const coeff,
+			  const vector<double> X) const; 
+  
+  //handle elements + get information
+  void Add_element(const vector<int> pows, const vector<double> poly);
+  
+  int Get_nElems() const { return fElems.size(); }
+
+  vector<double> Get_elemPoly  (const int i) const;
+  vector<int>    Get_elemPowers(const int i) const;
+
+ private:
+
+  int fOrder,fnDoF;
+
+  struct TNPolyElem {
+
+    TNPolyElem() {}; 
+    TNPolyElem(const vector<int>    pow,
+               const vector<double> pol)
+      : powers(pow), poly(pol) {};
+    
+    ~TNPolyElem();
+
+    vector<int> powers;  //powers for each (x,y,th,ph) in target-coordinates
+    vector<double> poly; //polynomial (in x_fp) which gives the coeff of this elem.
+  };
+  
+  vector<TNPolyElem*> fElems;
+  
+  void autoConstructPoly(const int max_power,const int nDoF); 
+  
+  ClassDef(TNPoly,0);   
+};
+
+#endif

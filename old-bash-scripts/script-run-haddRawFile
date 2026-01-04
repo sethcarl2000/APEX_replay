@@ -1,0 +1,29 @@
+#!/bin/bash
+
+#SBATCH --nodes 1
+#SBATCH --partition production
+#SBATCH --account halla
+#SBATCH --ntasks 1
+#SBATCH --output=/work/halla/apex/disk1/full_replay/slurm/out/%x.%j.out
+#SBATCH --error=/work/halla/apex/disk1/full_replay/slurm/err/%x.%j.err
+#SBATCH --time=00:20:00 
+
+run=$1
+
+num_subfiles=$(ls -l $FULL_REPLAY/production/decode.$run.subfile-* | wc -l)
+
+echo "$num_subfiles sub-files found..." 
+
+if [ $num_subfiles -gt 1 ] 
+then
+    echo "combining them.." 
+    
+    hadd $FULL_REPLAY/production/decode.$run.root $FULL_REPLAY/production/decode.$run.subfile-* 
+
+    rm $FULL_REPLAY/production/decode.$run.subfile-*
+    
+else #only 1 decode file
+    
+    mv $FULL_REPLAY/production/decode.$run.root $FULL_REPLAY/production/decode.$run.subfile-0.root 
+    
+fi 

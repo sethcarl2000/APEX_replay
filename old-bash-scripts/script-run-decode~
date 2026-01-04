@@ -1,0 +1,39 @@
+#!/bin/bash
+
+#SBATCH --nodes 1
+#SBATCH --partition production
+#SBATCH --account halla
+#SBATCH --ntasks 1
+#SBATCH --output=/volatile/halla/apex/full_replay/slurm/out/%x.%j.out
+#SBATCH --error=/volatile/halla/apex/full_replay/slurm/err/%x.%j.err
+#SBATCH --mem-per-cpu 4500
+
+###################################################################################
+#
+# Ordered parameters:
+#
+run=$1
+stem_output=$2
+path_odef=$3
+
+n_rawfiles=$(ls -1 $RAWFILE_DIR/apex_$run.* 2>/dev/null | wc -l)
+
+echo "$n_rawfiles files to decode"
+
+part=-1 
+
+for path_input in $(ls -1 $RAWFILE_DIR/apex_$run.*)
+do 
+    part=$(($part + 1))
+    
+    path_output="$stem_output.$run.part-$part.root"
+    
+    echo "PROCESSING SUB-FILE $part ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~" 
+    echo "input:  $path_input"
+    echo "output: $path_output"
+    echo "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~"
+    
+    analyzer -l -b -q 'decode_run.C("'$path_input'", "'$path_output'","'$path_odef'")'
+    
+done
+    

@@ -1,0 +1,140 @@
+///////////////////////////////////////////////////////////////////////////////
+//                                                                           //
+// TapexShower                                                                 //
+//                                                                           //
+// I'm making this a temporary class so that I can overload the 'Decode()'
+// Method to test why it's throwing me an error. Later on, I might actually
+// implement this custom class for use in the full replay.
+//  - 13 June 25
+///////////////////////////////////////////////////////////////////////////////
+
+#include "THaShower.h"
+#include "TapexShower.h"
+#include "THaAnalysisObject.h"
+#include "THaDetMap.h"
+#include "DetectorData.h"
+#include <vector>
+#include <memory>
+
+using namespace std;
+using namespace Podd;
+
+
+//_____________________________________________________________________________
+TapexShower::TapexShower( const char* name, const char* description,
+		      THaApparatus* apparatus ) :
+  THaShower(name,description,apparatus)
+{
+  // Constructor
+}
+
+//_____________________________________________________________________________
+TapexShower::TapexShower() :
+  THaShower()
+{
+  // Default constructor (for ROOT I/O)
+}
+
+//_____________________________________________________________________________
+int TapexShower::Decode( const THaEvData& evdata )
+{
+  // Generic Decode method. It loops over all active channels (= hit) in
+  // 'evdata' that are associated with this detector's detector map.
+  // For each hit, the following callbacks are made:
+  //
+  //   LoadData(evdata,hitinfo):  Returns data for the 'hitinfo' channel
+  //
+  //   StoreData(hitinfo,data):   Save data in member variables
+  //
+  // The default LoadData and StoreData may be enough for simple detectors.
+  // The default StoreData sends the data to the StoreData function of all
+  // 'detector data' objects that his detector has placed in fDetectorData.
+  //
+  // For debugging, each detector may define a PrintDecodedData function.
+  // The default version calls Print on all objects in fDetectorData.
+  
+  // I've copied this entire block from THaDetectorBase
+  // - Seth 13 Jun 25
+  
+  const char* const here = "Decode";
+
+  Print(); 
+  Info(here, "Iterating through all hits..."); 
+  
+  // Loop over all modules defined for this detector
+  bool has_warning = false;
+  int nhits = 0;
+  
+  auto hitIter = fDetMap->MakeIterator(evdata);
+  while( hitIter ) {
+    
+    cout << TString::Format("Hit % 3i ", nhits) << flush; 
+    
+    const THaDetMap::Iterator::HitInfo_t& hitinfo_ = *hitIter;
+    
+    THaDetMap::Iterator::HitInfo_t hitinfo = hitinfo_; 
+    
+    if( hitinfo.nhit > 1 ) {
+      // Multiple hits in a channel (usually noise)
+      // For multifunction modules, assume "hit" is a data word index, so
+      // don't log anything but assume the user simply wants the first word.
+      if( hitinfo.modtype != Decoder::ChannelType::kMultiFunctionADC and
+          hitinfo.modtype != Decoder::ChannelType::kMultiFunctionTDC ) {
+	THaDetectorBase::MultipleHitWarning(hitinfo, here);
+        has_warning = true;
+      }
+    }
+    
+    // Get the data for this hit
+    auto data = THaDetectorBase::LoadData(evdata, hitinfo);
+    if( !data ) {
+      // Data could not be retrieved (probably decoder bug)
+      THaDetectorBase::DataLoadWarning(hitinfo, here);
+      has_warning = true;
+      continue;
+    }
+    
+    //print info about this hit
+    cout << TString::Format("crate/slot/chan/hit=(%2i/%2i/%2i/%2i) type=%i",
+			    hitinfo.crate, hitinfo.slot, hitinfo.chan, hitinfo.hit,
+			    (int)hitinfo.type) << flush; // << endl; 
+    
+    cout << " Raw data: " << (uint)data.value_or(0) << endl;
+    /*<< "/"
+	 << (uint)evdata.GetRawData(hitinfo.crate,
+				    hitinfo.slot,
+				    hitinfo.chan,
+				    hitinfo.hit) << endl; */ 
+    
+    
+    if (hitinfo.type!=Decoder::ChannelType::kUndefined) {
+      //hitinfo.type = Decoder::ChannelType::kMultiFunctionADC; 
+
+      // Store hit data (and derived quantities) in fDetectorData.
+      // Multi-function modules can load additional data here.
+      THaShower::StoreHit(hitinfo, data.value());
+      
+      // Clear the hit-done flag which can be used in custom StoreHit methods
+      // to reorder module processing
+      for( auto& detData : fDetectorData ) detData->ClearHitDone();
+      
+      //continue; 
+    }
+        
+    // Next active channel
+    ++hitIter;
+    ++nhits;
+  }
+  if( has_warning )
+    ++fNEventsWithWarnings;
+  
+#ifdef WITH_DEBUG
+  if ( fDebug > 3 )
+    PrintDecodedData(evdata);
+#endif
+  
+  return nhits;
+}
+
+//_____________________________________________________________________________
+ClassImp(TapexShower)

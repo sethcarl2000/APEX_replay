@@ -1,0 +1,13 @@
+#!/bin/bash
+
+#SBATCH --nodes 1
+#SBATCH --partition production
+#SBATCH --account halla
+#SBATCH --ntasks 1
+#SBATCH --mem-per-cpu 256
+#SBATCH --job-name gen_tracks
+#SBATCH --time 0:30:00
+
+
+
+analyzer -l -b -q 'vdc_logMethod_fork.C('$4', '$2', '$1', "output_trees/tracks/part/new_'$4'", "replay/out", '$3')'

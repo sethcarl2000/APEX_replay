@@ -1,0 +1,39 @@
+#!/bin/bash
+
+#SBATCH --nodes 1
+#SBATCH --partition priority
+#SBATCH --account halla
+#SBATCH --ntasks 1
+#SBATCH --cpus-per-task 2
+#SBATCH --output=/volatile/halla/apex/full_replay/slurm/out/%x.%j.out
+#SBATCH --error=/volatile/halla/apex/full_replay/slurm/err/%x.%j.err
+#SBATCH --job-name=APEX_coincSearch
+#SBATCH --time=0:35:00
+#SBATCH --mem-per-cpu=1500
+
+run=$1
+
+if ! test -f $RAWFILE_DIR/apex_$run.dat.0; 
+then 
+    echo "Run $run not found in cache." 
+    continue
+fi 
+
+path_rawFile="$RAWFILE_DIR/apex_$run.dat.0"
+path_decode="$VOLATILE_DIR/production/decode_conic.$run.root"
+
+echo "PROCESSING DECODE ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~" 
+echo "input:  $path_rawFile"
+echo "output: $path_decode"
+
+analyzer -l -b -q 'setup_fullReplay.C("'$path_rawFile'", "'$path_decode'", 1e7, "outDef_coincSearch.odef")'
+
+echo "finding coinc ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~"
+
+path_csv="/volatile/halla/apex/full_replay/csv/coinc.$run.csv"
+
+analyzer -l -b -q 'replay_findCoic.C("'$path_decode'","'$path_csv'")'
+
+rm /volatile/halla/apex/full_replay/production/decode_coinc.$run.*
+
+

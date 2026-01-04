@@ -1,0 +1,124 @@
+#ifndef Podd_ApexUtils_h_
+#define Podd_ApexUtils_h_
+
+//////////////////////////////////////////////////////////////////////////
+//
+// ApexUtils
+//
+// Some general utilities which will be used by various scripts
+//
+//////////////////////////////////////////////////////////////////////////
+
+#include "TVectorD.h"
+#include "TMatrixD.h"
+
+namespace ApexUtils {
+
+
+  TVectorD SolveLinSystem( TMatrixD A, TVectorD B ) { 
+    
+    //takes the NxN matrix A, and the N-vector B, and solves it. 
+
+    //performs numerical LU factorization 
+  
+    //ASSUMES MATRIX IS NONSINGULAR!!!!
+    TVectorD X(N); 
+    
+    //check to make sure all our inputs are of a consistent size
+    if (A.GetNcols() != B.GetNoElements() || 
+	A.GetNrows() != B.GetNoElements()) { 
+      Error("ApexUtils::solveLinSystem",
+	    "Mismatch in matrix/vector dims: A => %ix%i, B => %i", 
+	    A.GetNrows(), A.GetNcols(), B.GetNoElements()); 
+      return X; 
+    }
+
+    const double det_cutoff = 1e-200; 
+
+  
+    //the U-matrix starts as a copy of the 'A' input-matrix
+    TMatrixD U(A);  
+    //we initialize the L-matrix with all zeros
+    TMatrixD L(N,N);  for (int i=0; i<N; i++) for (int j=0; j<N; j++)   L(i,j)=0.; 
+
+    //cout << "creating U & L matrices..." << flush; 
+
+    //Create the U (upper triangular) and L (lower triangular) matrices
+    for (int ii=0; ii<N; ii++) { 
+      //loop over a (successivley smaller) sub-matrix
+      double a_00 = U(ii,ii); 
+      for (int i=ii+1; i<N; i++) { 
+	double a_i0 = U(i,ii); 
+	L(i,ii) = a_i0/a_00; 
+	for (int j=ii; j<N; j++) { 
+	  U(i,j) += ( -a_i0/a_00 ) * U(ii,j); 
+	}
+      }
+    }
+    double det = 1.; 
+    for (int ii=0; ii<N; ii++) { L(ii,ii)=1.; det *= U(ii,ii); }
+    
+    //cout << "done." << endl; 
+
+    /*cout << "U ~~~~~~~~~~~~~~~~~~~" << endl; 
+      for (int i=0; i<N; i++) { for (int j=0; j<N; j++) { cout << TString::Format("%+0.3e  ",U(i,j)); } cout << endl; }
+      cout << "L ~~~~~~~~~~~~~~~~~~~" << endl; 
+      for (int i=0; i<N; i++) { for (int j=0; j<N; j++) { cout << TString::Format("%+4.1f  ",L(i,j)); } cout << endl; }
+
+
+      cout << "reco:" << endl; 
+      for (int i=0; i<N; i++) { for (int j=0; j<N; j++) { cout << TString::Format("%0.3f  ",Atest(i,j)); } cout << endl; }
+    */ 
+
+    //check if matrix is invertable
+    //cout << "Det(A) = " << det << endl; 
+    //det is too close to zero
+    /*if (TMath::Abs(det) < det_cutoff) {  
+      Warning("fit_points::solveLinSystem()",
+      "Determinant (%+0.3e) is below set tolerance (%+0.3e).",
+      det, det_cutoff); 
+      //return X; 
+      } */ 
+
+    //det is NaN 
+    if ( det != det ) {
+      Error("fit_points::solveLinSystem()", "Determinant is NaN."); 
+      return X; 
+    }
+  
+
+    //we're going to sovlve this system in steps. our total system has gone from
+    //    Ax = b
+    // factorized to 
+    //    LUx = b
+    // 
+    // which we can solve in parts by: 
+    //    Ly = b    =>    y = (L^-1)b
+    // then: 
+    //    Ux = y    =>    x = (U^-1)y
+
+    //cout << "solving LUx = b system..." << flush; 
+
+    TVectorD y(N);
+
+    //solve the system Ly = b
+    for (int i=0; i<N; i++) { 
+      y(i) = B(i); 
+      for (int j=0; j<i; j++) y(i) += -L(i,j)*y(j);
+    }
+  
+    //now solve Ux = y
+    for (int i=N-1; i>=0; i--) { 
+      X(i) = y(i); 
+      for (int j=N-1; j>i; j--) { 
+	X(i)  +=  -U(i,j) * X(j); 
+      }
+      X(i) *= 1./U(i,i); 
+    }
+    
+    return X; 
+  }
+
+
+
+#endif

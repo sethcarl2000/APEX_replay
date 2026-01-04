@@ -1,0 +1,241 @@
+//*-- Author :    Seth Hall   8-Oct-24
+
+//////////////////////////////////////////////////////////////////////////
+//     
+// TReactVertex
+//
+// Computes the reaction-vertex 
+//     
+//////////////////////////////////////////////////////////////////////////
+
+/*#include <cmath>
+#include <vector>
+#include <array>
+#include <map>
+#include "ApexUtils.h"
+#include "TNPoly.h"
+#include "TXMap.h"
+#include "TOpticsModel.h"
+#include "RMatrixD.h"
+#include "TVector3.h"
+#include "TMath.h"
+
+#include "TString.h"
+
+#include <iostream>*/
+
+#include "ROOT/RVec.hxx"
+#include "TReactVertex.h" 
+#include <ROOT/RDataFrame.hxx>
+#include "TFile.h"
+#include "TVector2.h"
+#include "RMatrixD.h" 
+
+using namespace std;
+//using namespace APEX; 
+
+using RVecD = ROOT::RVec<double>; 
+
+//_____________________________________________________________________________
+TReactVertex::TReactVertex(bool isRHRS,
+			   TString path_decode,
+			   TString target,
+			   TString treeName)
+  : fTargetName(target), f_isWireMode(false), fRaster_amplitude(TVector2(0,0))
+{
+  //these constants are hard-coded for now... it's probably better to have them loaded in from a file...
+
+
+  //initialize the wire as null, unless its specified otherwise
+  fWire = OpticsWire_t({.name="null",.isVertical=false,.x=0,.y=0,.z=0}); 
+  
+  if (target != "") {
+    //if the creator of this object told it that this is an optic-wire run (target != ""),
+    // then we will search for whichever wire it wanted to use
+    if (auto findWire = fWireMap.find(target); findWire == fWireMap.end()) {
+      //wire-name given is invalid
+      Warning("TReactVertex",
+	      "Target-name passed: '%s', but this name does not match any wire-name. Proceeding without any optic-wire selected..",
+	      target.Data());
+    } else {
+      //assign the wire to the matching name
+      f_isWireMode=true;
+      
+      fWire = findWire->second; 
+      Info("TReactVertex",
+	   "Engaging optics-wire mode.. (Target name = %s)", fWire.name.Data() );
+    }
+  }
+
+  
+  if (isRHRS) { //RHRS 
+    fMatrix_rast = RMatrixD(2,2,{0.,         0.,
+				 -2.418e-8, -3.234e-7});
+  } else      { //LHRS
+    fMatrix_rast = RMatrixD(2,2,{0.,         0.,
+				 -3.500e-8, -4.533e-7});
+  }
+  
+  fMatrix_BPMA = RMatrixD(2,2,{-1.044e0,  1.707e-1,
+			        2.449e-2, 1.132e0});
+  fR0_BPMA     = {1.185e-3, 4.223e-4};
+
+  fMatrix_BPMB = RMatrixD(2,2,{-2.833e-1, -3.360e-2,
+			        2.781e-3,  8.627e-1});
+  fR0_BPMB     = {1.314e-3, 1.713e-3}; 
+    
+  //do some basic checks before we start
+  auto file = new TFile(path_decode.Data());
+  if (!file) {
+    Error("TReactVertex()", "pointer to file \"%s\" invalid? Check path?",
+	  path_decode.Data());
+    return;
+  }
+  
+  if (!file->IsOpen() || file->IsZombie()) {
+    Error("TReactVertex()", "File \"%s\" is zombie / is not open.", path_decode.Data());
+    return;
+  }
+
+  fR_BPMA = {0,0};
+  fR_BPMB = {0,0};
+  
+  fBeam_dXdz  = TVector2(0,0);
+  fBeamCenter = TVector2(0,0);
+  
+  fRast_avg   = TVector2(0,0);
+    
+  //now, check to make sure that the right trees are present
+  if (!file->GetListOfKeys()->Contains("E")) {
+    Error("TReactVertex",
+	  "File \"%s\" does not contain Epics tree (E). React-vertex & raster set to 0,0",
+	  path_decode.Data()); 
+    return;    
+  } 
+  
+  ROOT::RDataFrame df("E", path_decode.Data()); 
+
+  //only choose events with non-zero beam-current readings
+  auto dE = df.Filter([](double bcm){return bcm>1;}, {"hac_bcm_average"}); 
+
+  //get the average epics BPM-reading for all events
+  RVecD fR_BPMA_raw = {
+    dE.Histo1D({"","",200,-1,-1},"IPM1H04A.XPOS")->GetMean()/1e3,
+    dE.Histo1D({"","",200,-1,-1},"IPM1H04A.YPOS")->GetMean()/1e3
+  };
+  RVecD fR_BPMB_raw = {
+    dE.Histo1D({"","",200,-1,-1},"IPM1H04B.XPOS")->GetMean()/1e3,
+    dE.Histo1D({"","",200,-1,-1},"IPM1H04B.YPOS")->GetMean()/1e3
+  };
+
+  fR_BPMA = fMatrix_BPMA*fR_BPMA_raw + fR0_BPMA;
+  fR_BPMB = fMatrix_BPMB*fR_BPMB_raw + fR0_BPMB;
+
+  //compute the slope of the beam
+  fBeam_dXdz  = TVector2( (fR_BPMB[0]-fR_BPMA[0])/(fB_z-fA_z),
+			  (fR_BPMB[1]-fR_BPMA[1])/(fB_z-fA_z) ); 
+
+  //compute the beam-position at z=0 (in HCS)
+  fBeamCenter = TVector2( fR_BPMB[0] - fBeam_dXdz.X()*fB_z,
+			  fR_BPMB[1] - fBeam_dXdz.Y()*fB_z );
+
+  //now, check to make sure that the right trees are present
+  if (!file->GetListOfKeys()->Contains("T")) {
+    Error("TReactVertex",
+	  "File \"%s\" does not contain CODA tree (T). Avg. Raster set to 0,0",
+	  path_decode.Data()); 
+    return;    
+  } 
+
+
+  //now, we can compute the average raster position, which we will need later to
+  // compute the beam-position on a per-event basis. 
+  ROOT::RDataFrame dT("T", path_decode.Data()); 
+    
+  auto findAvgRast = [&dT](TString rastName)
+  {
+    double rastMin(1e30), rastMax(-1e30);
+
+    auto avg = dT
+      .Range(0,10e3)
+      .Define("rast", [&rastMin,&rastMax](double rast)
+      {
+	if (rast < rastMin) rastMin=rast;
+	if (rast > rastMax) rastMax=rast;
+	return rast;
+      }, {rastName.Data()})
+      .Histo1D({"", "", 200, -1,-1}, "rast")->GetMean(); 
+
+    std::array<double,2> rastSpan = {rastMin,rastMax}; 
+    return rastSpan; 
+  };
+  //Now, find the average-raster values
+  std::array<double,2> xRast = findAvgRast( TString(isRHRS?"R":"L")+"rb.Raster2.rawcur.x" );
+  std::array<double,2> yRast = findAvgRast( TString(isRHRS?"R":"L")+"rb.Raster2.rawcur.y" );
+  
+  fRast_avg = TVector2( 0.5*(xRast[0]+xRast[1]),
+			0.5*(yRast[0]+yRast[1]) );
+  
+  fRaster_amplitude = TVector2( xRast[1]-xRast[0],
+				yRast[1]-yRast[0] ); 
+			
+    
+  Info("TReactVertex", "Done with initial react-point calculations"); 
+  
+}
+//_____________________________________________________________________________
+TVector3 TReactVertex::Compute_reactVertex(double rastX, double rastY) const
+{
+  //NOTE: this is given in hall-coordinates (HCS), in meters, from the APEX
+  // scattering-chamber center. 
+
+  //compute the beam's offset from the run-average position
+  RVecD rast = {
+    rastX - fRast_avg.X(),
+    rastY - fRast_avg.Y()
+  };
+  
+  RVecD beam_offset = fMatrix_rast * rast; 
+
+  TVector3 react_point( fBeamCenter.X() + beam_offset[0],
+			fBeamCenter.Y() + beam_offset[1],
+			0. ); 
+
+  //check if we're running in optics (wire) mode
+  if (f_isWireMode) {
+
+    //vertical or horizontal wire? 
+    if (fWire.isVertical) {
+      //V-wire
+      react_point.SetX( fWire.x );
+      react_point.SetZ( fWire.z );
+
+    } else {
+      //H-wire
+      react_point.SetY( fWire.y );
+      react_point.SetZ( fWire.z );
+    }
+  }    
+   
+  return react_point; 
+}
+//_____________________________________________________________________________
+TVector2 TReactVertex::Get_beamCenter() const
+{
+  //NOTE: this is given in hall-coordinates (HCS), in meters, from the APEX
+  // scattering-chamber center. 
+  
+  return fBeamCenter; 
+}
+//_____________________________________________________________________________
+TReactVertex::OpticsWire_t TReactVertex::Get_wire() const {
+
+  if (!f_isWireMode) {
+    Warning("Get_wire", "Wire requested, but not in wire-mode, so wire returned is null.");
+  }
+  return fWire;
+}
+//_____________________________________________________________________________
+ClassImp(TReactVertex)
+
+

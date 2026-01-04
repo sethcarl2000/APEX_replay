@@ -1,0 +1,10 @@
+#!/bin/bash
+
+#SBATCH --nodes 1
+#SBATCH --partition production
+#SBATCH --account halla
+#SBATCH --ntasks 1
+#SBATCH --output=/volatile/halla/apex/full_replay/slurm/out/%x.%j.out
+#SBATCH --error=/volatile/halla/apex/full_replay/slurm/err/%x.%j.err
+#SBATCH --time=00:20:00 
+

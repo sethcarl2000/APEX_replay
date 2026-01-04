@@ -1,0 +1,27 @@
+#!/bin/bash
+
+#SBATCH --nodes 1
+#SBATCH --partition priority
+#SBATCH --account halla
+#SBATCH --ntasks 1
+#SBATCH --cpus-per-task 2
+#SBATCH --output=/volatile/halla/apex/full_replay/slurm/out/%x.%j.out
+#SBATCH --error=/volatile/halla/apex/full_replay/slurm/err/%x.%j.err
+#SBATCH --time=0:15:00
+#SBATCH --mem-per-cpu=1500
+
+run=$1
+
+filePath_output="$VOLATILE_DIR/csv/coincOffset.$run.csv"
+filePath_input="$VOLATILE_DIR/production/decode.$run.0.root"
+
+echo "PROCESSING SUB-FILE $part ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~" 
+echo "input:  $filePath_input"
+echo "output: $filePath_output"
+
+analyzer -l -b -q 'replay_findCoic.C("'$filePath_input'","'$filePath_output'")'
+rm $filePath_input
+
+done < "$VOLATILE_DIR/decode_files.$run.list" 
+
+rm $VOLATILE_DIR/decode_files.$run.list

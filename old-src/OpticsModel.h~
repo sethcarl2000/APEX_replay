@@ -1,0 +1,96 @@
+#ifndef Podd_OpticsModel_h_
+#define Podd_OpticsModel_h_
+
+//////////////////////////////////////////////////////////////////////////
+//
+// TOpticsModel
+//
+//////////////////////////////////////////////////////////////////////////
+
+//#include "THaPhysicsModule.h"
+#include "TObject.h"
+#include "TNPoly.h"
+
+class TOpticsModel : public TObject {
+  
+public:
+
+  enum EFPCoordinate { kY=0, kDxdz, kDydz }; 
+  
+  //the optics map is going to be used per-event to evaluate possible positions
+  // which a track may take. 
+  class TOpticsMap : public TObject { ////////////////////////////////////////////
+
+  public:
+
+    TOpticsMap() {};
+    TOpticsMap(const double x,
+	       TNPoly *const y,
+	       TNPoly *const dxdz,
+	       TNPoly *const dydz);
+
+    ~TOpticsMap();
+
+    //evaluate X_tg coordinate 
+    vector<double> Eval(const vector<double> X_tg) const;
+
+    //get X-fp that this map is defined at
+    double Get_x() const { return fX_fp; }
+
+    //get coefficients that have been built by this map
+    vector<double> Get_coeffs(const EFPCoordinate coord) const;
+    
+  private:
+
+    const int fnDoF=4; 
+
+    void Build_coeffs(const EFPCoordinate coord);
+
+    map<const EFPCoordinate,vector<double>> fCoeffs = {
+        {kY,    {}},
+        {kDxdz, {}},
+        {kDydz, {}}
+      };
+
+    map<const EFPCoordinate,TNPoly*>  fPoly;
+    
+    double fX_fp;
+
+  }; /////////////////////////////////////////////////////////////////////////////
+  
+
+  //this class will be ported to the apex_lib library, and will be responsible
+  // for handling all optics calculations.
+  TOpticsModel() {};
+  TOpticsModel(const int  nDoF,
+	       const bool isRHRS=true,
+	       const int  order=0)
+  
+  ~TOpticsModel();
+  
+  void Add_polyElement(const vector<int>    ePows,
+		       const vector<double> ePoly,
+		       const EFPCoordinate  coord);  
+  
+  TNPoly *const Get_poly(const EFPCoordinate coord) { return fPolyMap.at(coord); }
+  
+  void Parse_file(const TString inFile_path) {/*noop*/}; 
+  
+ private: 
+
+  int fNElems,fOrder,fnDoF,fPolySize;
+  bool f_isRHRS; 
+
+  map<const EFPCoordinate,TNPoly*> fPolyMap;
+
+  const TString className="TOpticsModel";
+
+  const map<const EFPCoordinate,const TString> fCoordName = {
+    {kY,    "Y_fp"},
+    {kDxdz, "dx/dz_fp"},
+    {kDydz, "dy/dz_fp"}
+  };
+  
+};
+
+#endif

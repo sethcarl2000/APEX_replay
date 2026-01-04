@@ -1,0 +1,78 @@
+#ifndef Podd_TOpticsRays_h_
+#define Podd_TOpticsRays_h_
+
+//////////////////////////////////////////////////////////////////////////
+//
+// TOpticsRays
+// an object which can be created independently for each track, and mainly acts as a vector.
+//
+//////////////////////////////////////////////////////////////////////////
+
+//#include "THaPhysicsModule.h"
+#include <vector>
+#include <array>
+#include "OpticsPolynomials.h"
+#include "OpticsVectors.h"
+#include "TObject.h"
+
+using RVecD = ROOT::VecOps::RVec<double>;
+
+//_________________________________________________________________________________
+class TOpticsRays : public TObject { 
+
+  //FIXES: REMOVE BEFORE FLIGHT
+  //
+  //  -  delete 'fRays_tg' if no longer needed. just using it to debug for now. 
+  //  -  delete 'Get_TgCoords()' method if no longer needed. same reason. 
+
+public:
+
+  //this is set up so that this obj can have access to these polynomials,
+  // but can't change them. 
+  TOpticsRays(const TRPoly *_x=0,
+	      const TRPoly *_y=0,
+	      const TRPoly *_dxdz=0,
+	      const TRPoly *_dydz=0,
+	      bool isRHRS=false)
+    : f_isRHRS{isRHRS},
+      f_Z_sieve{f_isRHRS ? 0.7946 : 0.7958},
+      fPolys_reverse{{_x,_y,_dxdz,_dydz}},
+      fRays{},
+      f_maxRays{100},
+      f_dInd{0.}
+  {}; 
+  
+  TXfp Compute_Xfp(const TXtg &Xtg) const;
+  
+  double Find_Xtg(const TXfp &Xfp,
+		  TXtg &Xtg,
+		  uint max_iterations=20,
+		  double min_error=1e-6) const;
+
+  void Make_rays(const TXfp &Xfp,
+		 const TXtg &Xtg);
+
+  TXtg Get_Xtg(double) const; 
+
+  void Cast_Xtg_onto_target(const TXtg &Xtg,
+			    double &x, double &y, double z) const; 
+
+  unsigned int Get_nRays() const { return (unsigned int)fRays.size(); }
+  
+private:
+  
+  bool f_isRHRS;
+  double f_Z_sieve; 
+  
+  std::array<const TRPoly*,4> fPolys_reverse; 
+  
+  std::vector<TXtg> fRays; 
+
+  unsigned int f_maxRays; //number of rays this will attempt to generate: 2*f_maxRays + 1
+  double f_dInd; 
+  
+  ClassDef(TOpticsRays,0); 
+};
+//_________________________________________________________________________________
+
+#endif

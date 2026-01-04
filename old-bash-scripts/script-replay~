@@ -1,0 +1,11 @@
+#!/bin/bash
+
+#SBATCH --nodes 1
+#SBATCH --partition production
+#SBATCH --account halla
+#SBATCH --ntasks 1
+#SBATCH --mem-per-cpu 15000
+#SBATCH --job-name replay_tracks
+#SBATCH --time 1:40:00
+
+../run_replay.sh 4712

@@ -1,0 +1,377 @@
+//*-- Author :    Seth Hall   09-Jul-24
+
+//////////////////////////////////////////////////////////////////////////
+//     
+// TOpticsModel
+// This is the main class which handles the reverse-optics computations.
+// it's responsible for parsing / creating the TNPoly-s, and the TOpticsMap
+// which is effectivley an event-wise optics model (it is made event-wise
+// so that the computation of the x-fp polynomials only need be made once
+// per event). 
+//     
+//////////////////////////////////////////////////////////////////////////
+
+#include <cmath>
+#include <map> 
+#include "ROOT/RVec.hxx"
+#include "ApexUtils.h"
+#include "TNPoly.h"
+#include "TXMap.h"
+#include "TOpticsModel.h"
+#include "TString.h"
+#include "TVector3.h"
+#include <fstream>
+#include <iostream>
+#include <memory>
+#include <array>
+#include "OpticsVectors.h"
+#include "OpticsPolynomials.h"
+#include "TOpticsRays.h"
+
+using namespace std;
+using namespace APEX;
+using namespace ROOT::VecOps; 
+
+//using RPolyElem_t = TOpticsModel::RPolyElem_t; 
+
+using uint = unsigned int;
+
+//_____________________________________________________________________________
+TOpticsModel::TOpticsModel(const int nDoF,
+			   const bool isRHRS,
+			   const int order)
+
+  : fnDoF(nDoF), fnDoF_fp(3), f_isRHRS(isRHRS), fOrder(order), f_init_reversePolys(false) 
+{
+  fNelems =1;
+  for (uint i=fnDoF+fOrder; i>fnDoF;   i--) fNelems *= i;
+  for (uint i=1;            i<=fOrder; i++) fNelems = fNelems/i;
+
+  //construct polynomials
+  fPolys[kY]    = TNPoly(nDoF);
+  fPolys[kDxdz] = TNPoly(nDoF);
+  fPolys[kDydz] = TNPoly(nDoF);
+  
+  f_R0 = TVector3(0.,0.,0.);
+
+  //z-coordinate of the z-plane in the target-coordinate system (TCS)
+  fZ_sv = isRHRS ? 0.7946 : 0.7958; 
+}
+//_____________________________________________________________________________
+TOpticsModel::~TOpticsModel() {/*destructor*/}; 
+//_____________________________________________________________________________
+void TOpticsModel::Add_polyElement(const RVec<int>     &ePows,
+                                   const RVec<double>  &ePoly,
+                                   EFPCoordinate       coord)
+{
+  if (ePows.size() != fnDoF) {
+    Error("Add_polyElement",
+	  "Poly \"%s\", 1st arg. 'const vector<int> pows' wrong size; expected %i, recieved %i.",
+	  fCoordName.at(coord).Data(), fnDoF, (int)ePows.size());
+    return;
+  }
+  
+  fPolys.at(coord).Add_element(ePows, ePoly);
+}
+//_____________________________________________________________________________
+/*void TOpticsModel::Add_fwdPolyElement(const RVec<int>     &ePows,
+				      //const RVec<double>  &ePoly,
+				      double              coeff, 
+				      ETargetCoord        coord)
+{ 
+  
+  //if (coord >= 2) //can only be kX_tg or kY_tg
+
+  if (ePows.size() != TOpticsModel::fDoF_fp) {
+    Error("Add_fwdPolyElement",
+	  "1st arg. wrong size; expected %i, recieved %i.",
+	  (int)TOpticsModel::fDoF_fp, (int)ePows.size() );
+    return;
+  }
+  
+  fPolys_forward.at(coord).Add_element(ePows, {1.}, coeff);
+  }*/ 
+//_____________________________________________________________________________
+unique_ptr<TXMap> TOpticsModel::Get_Xmap(const double x_fp) const
+{  
+  return unique_ptr<TXMap>(new TXMap( x_fp,
+                                      fPolys.at(kY),
+                                      fPolys.at(kDxdz),
+                                      fPolys.at(kDydz), f_isRHRS ));
+}
+//_____________________________________________________________________________
+unique_ptr<TOpticsRays> TOpticsModel::Get_opticsRays() const
+{
+  return unique_ptr<TOpticsRays>(new TOpticsRays(&fPolys_reverse[0],
+						 &fPolys_reverse[1],
+						 &fPolys_reverse[2],
+						 &fPolys_reverse[3])); 
+}
+//_____________________________________________________________________________
+TXtg TOpticsModel::Get_Xtg(const TXfp &Xfp) const
+{
+  
+  if (fPolys_forward[0].Size()<1 ||
+      fPolys_forward[1].Size()<1) {
+    Error("Get_Xtg", "Forward polys not initialized! cannot compute Xtg");
+    return TXtg();
+  }
+
+  /*/this evaluates x_sv and y_sv, then infers dxdz / dydz. 
+  double x_sv = fPolys_forward[kX_tg].Eval(X_fp);
+  double y_sv = fPolys_forward[kY_tg].Eval(X_fp);
+
+  double dxdz = ( x_sv - f_R0.X() )/( fZ_sv - f_R0.Z() );
+  double dydz = ( y_sv - f_R0.Y() )/( fZ_sv - f_R0.Z() );*/
+
+  //this evaluates dxdz and dydz, then infers x_sv / y_sv. 
+  double dxdz = fPolys_forward[0].Eval(Xfp);
+  double dydz = fPolys_forward[1].Eval(Xfp); 
+
+  double x_sv = dxdz*( fZ_sv - f_R0.Z() ) + f_R0.X();
+  double y_sv = dydz*( fZ_sv - f_R0.Z() ) + f_R0.Y();
+  
+  return TXtg( x_sv, y_sv, dxdz, dydz, Xfp.x()/15. ); 
+}
+//_____________________________________________________________________________
+/* TXMap* TOpticsModel::Get_trackMap(const double x_fp, const double y_fp, const double dxdz_fp, const double dydz_fp ) const
+{
+  auto map = Get_Xmap(x_fp); map->CreateRays(y_fp,dxdz_fp,dydz_fp); 
+  return map; 
+} */
+//_____________________________________________________________________________
+int TOpticsModel::Parse_forwardTensor(TString inFile_path)
+{
+ 
+  std::fstream file(inFile_path, ios::in);
+   
+  //check if file was opened successfully
+  if (!file.is_open()) { 
+    Error("Parse_file", "File \"%s\" could not be opened! check path",
+	  inFile_path.Data()); 
+    return 0; 
+  }
+
+  for (uint i=0; i<fPolys_forward.size(); i++)
+    fPolys_forward[i].Clear();
+  
+  const map<TString, TFPoly*> poly_names = {
+    {"fwd_dxdz", &fPolys_forward[0]},
+    {"fwd_dydz", &fPolys_forward[1]}
+  };
+
+  TString str; file >> str;
+ 
+  //check to make sure we were given a react vertex to start 
+  if (str != "react-vertex") { 
+    Error("Parse_forwardTensor",
+	  "File \"%s\" does not have a 'react-vertex' line. quitting...",
+	  inFile_path.Data() );
+    return 0;
+  } 
+  
+  int nElemsFound=0; 
+  
+  //parse react vertex
+  for (uint i=0; i<3; i++) {
+    file >> str;
+    f_R0[i] = str.Atof();
+  }
+  /*f_R0.SetX( { file >> str; str.Atof() } );
+  f_R0.SetY( { file >> str; str.Atof() } );
+  f_R0.SetZ( { file >> str; str.Atof() } );*/ 
+  // = TVector3( Get_double(), Get_double(), Get_double() ); 
+  
+  //now, parse as many lines as we can
+  while (1) {
+
+    file >> str; 
+    
+    //first, read which poly this line (element) belongs to
+    auto findPoly = poly_names.find(str); 
+    
+    //check the 'name' of this row, to see if it has a vaild name
+    if (findPoly == poly_names.end()) break; 
+    
+    TFPoly::FPolyElem_t elem = { .coeff=0, .powers={} }; 
+    
+    for (uint i=0; i<TOpticsModel::fDoF_fp; i++) {
+      file >> str;
+      elem.powers.at(i) = str.Atoi();
+    }
+    
+    file >> str;
+    elem.coeff = str.Atof(); 
+    
+    TFPoly *poly = findPoly->second; 
+    poly->Push_back( elem ); 
+
+    nElemsFound++; 
+
+  }// while(1) 
+  
+  cout << "fwd-Poly elems found:"; 
+  cout << "\n x_sv = " << fPolys_forward[0].Size(); 
+  cout << "\n y_sv = " << fPolys_forward[1].Size(); 
+  cout << endl;
+  
+  return nElemsFound;   
+}
+//__________________________________________________________________________________________
+int TOpticsModel::Parse_reverseTensor(TString inFile_path)
+{
+  
+  std::fstream file(inFile_path, ios::in);
+  
+  //check if file was opened successfully
+  if (!file.is_open()) { 
+    Error("Parse_file", "File \"%s\" could not be opened! check path",
+	  inFile_path.Data()); 
+    return 0; 
+  }
+
+  //wipe (or initialize) each polynomial model
+  for (uint i=0; i<TOpticsModel::fDoF_fp; i++) 
+    fPolys_reverse[i].Clear(); 
+  
+  const map<TString, TRPoly*> poly_names = {
+    {"x_fp",    &fPolys_reverse[0]},
+    {"y_fp",    &fPolys_reverse[1]},
+    {"dxdz_fp", &fPolys_reverse[2]},
+    {"dydz_fp", &fPolys_reverse[3]}
+  };
+  
+  uint nElemsFound=0; 
+
+  while (1) {
+    
+    TString str; file >> str; 
+    
+    auto it = poly_names.find(str);
+
+    //eof ? 
+    if (it == poly_names.end()) break; 
+    
+    //poly found
+    //TNPoly *poly = it->second; 
+    //
+    TRPoly::RPolyElem_t elem = { .coeff = 1., .powers={0} }; 
+    
+    //now, get the powers
+    vector<int> powers;
+    for (uint i=0; i<TOpticsModel::fDoF_tg; i++) {
+      file >> str; 
+      //powers.push_back( str.Atoi() );
+      elem.powers.at(i) = str.Atoi(); 
+    }
+    
+    file >> str; 
+    elem.coeff = str.Atof(); 
+    
+    TRPoly *poly = it->second;  
+    poly->Push_back( elem );
+    
+    nElemsFound++; 
+  }
+
+  if (nElemsFound < 1) {
+    Error("Parse_reverseTensor",
+	  "No elems found! path: %s", inFile_path.Data());
+    return 0;
+  }
+
+  f_init_reversePolys=true; 
+  
+  cout << "fwd-Poly elems found:"; 
+  cout << "\n x    = " << fPolys_reverse.at(0).Size();
+  cout << "\n y    = " << fPolys_reverse.at(1).Size(); 
+  cout << "\n dxdz = " << fPolys_reverse.at(2).Size(); 
+  cout << "\n dydz = " << fPolys_reverse.at(3).Size(); 
+  cout << endl;
+  
+  return nElemsFound;   
+}
+//__________________________________________________________________________________________
+int TOpticsModel::Parse_file(TString inFile_path)
+{
+  //I'm hard-coding a lot of the parameters here, but i might make them 'variable' later.
+  const map<TString,EFPCoordinate> poly_names = {
+    {"y_fp",    kY},
+    {"dxdz_fp", kDxdz},
+    {"dydz_fp", kDydz}
+  }; 
+
+  //now, parse the file
+  std::fstream file(inFile_path, ios::in); 
+
+  TString str; file >> str;  
+
+  //check if file was opened successfully
+  if (!file.is_open() || str=="") { 
+    Error("Parse_file", "File \"%s\" could not be opened! check path", inFile_path.Data()); 
+    return 0; 
+  }
+  int nElemsFound=0; 
+
+  bool is_eof=false; 
+  
+  auto Get_int    = [&file,&str,&is_eof]() {
+    file >> str; if (str=="" || str=="eof") {is_eof=true; return -1;}
+    return str.Atoi(); 
+  };
+  auto Get_double = [&file,&str,&is_eof]() {
+    file >> str; if (str=="" || str=="eof") {is_eof=true; return -1e30;}
+    return str.Atof(); 
+  };
+
+  //parse as many lines as we can
+  while (str!="eof" && str!="") {
+
+    //first, read which poly this line (element) belongs to
+    auto findPoly = poly_names.find(str); 
+
+    //check the 'name' of this row, to see if it has a vaild name
+    if (findPoly==poly_names.end()) {
+      Error("Parse_file", "expected new element at start of line, instead got \"%s\". Check source code for valid elem names.",str.Data());
+      return nElemsFound;
+    }
+    //read 4 powers
+    RVec<int>    pows; pows.reserve(fnDoF);             
+    for (uint i=0; i<fnDoF; i++) pows.push_back(Get_int());
+
+    RVec<double> pols; pols.reserve(f_elem_polyDegree);
+    for (uint i=0; i<f_elem_polyDegree; i++) pols.push_back(Get_double());
+    
+    if (is_eof) { 
+      Error("Parse_file", "eof reached sooner than expected; expected %i powers and %i poly-elems per line...",(int)fnDoF,(int)f_elem_polyDegree);
+      return nElemsFound;
+    }
+
+    Add_polyElement(pows,pols,findPoly->second); 
+    nElemsFound++; 
+
+    file >> str; 
+  }// while(str!="eof" && str!="") {
+  
+  cout << "Poly elems found:"; 
+  cout << "\n y_fp       = " << fPolys.at(kY)   .Get_nElems(); 
+  cout << "\n dxdz_fp    = " << fPolys.at(kDxdz).Get_nElems(); 
+  cout << "\n dydz_fp    = " << fPolys.at(kDydz).Get_nElems() << endl;
+
+  return nElemsFound;   
+}
+//_________________________________________________________________________________________
+/*TXfp TOpticsModel::Compute_Xfp(TXtg Xtg) const
+{
+  if (!f_init_reversePolys) {
+    Error("Compute_Xfp", "Reverse-polynomials not initialized.");
+    return TXfp(); 
+  }
+  
+  TXfp Xfp; for (uint i=0; i<4; i++) Xfp.at(i) = fPolys_reverse[i].Eval(Xtg); 
+  
+  return Xfp;    
+  }*/ 
+//_____________________________________________________________________________
+ClassImp(TOpticsModel)
+

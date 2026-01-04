@@ -1,0 +1,164 @@
+//*-- Author :    Seth Hall   15-Dec-24
+
+//////////////////////////////////////////////////////////////////////////
+//     
+// OpticsPolynomials
+// some simple, std::vector-like classes, that have some added
+// computational functionality. 
+//
+//////////////////////////////////////////////////////////////////////////
+
+
+#include "OpticsPolynomials.h"
+#include "OpticsVectors.h"
+#include <vector>
+#include <cmath> 
+#include <array>
+
+using namespace std; 
+using uint = unsigned int; 
+
+//_________________________________________________________________________________________
+double TRPoly::Eval(const TXtg &Xtg) const
+{
+  //check to see if there are any elements
+  if ( Size()<1 ) {
+    Error("Eval", "No elements in this TRPoly. Not initialized?");
+    return std::nan("1");
+  }
+  
+  double ret(0.); 
+  for (const RPolyElem_t &elem : fElems) {  
+    
+    double val = elem.coeff;
+    
+    for (uint j=0; j<5; j++) {
+      if (elem.powers[j]>0) val *= pow( Xtg.get(j), elem.powers[j] );
+    }
+    
+    ret += val; 
+  }
+  
+  return ret;    
+}
+//_________________________________________________________________________________________
+double TFPoly::Eval(const TXfp &Xfp) const
+{
+  //check to see if there are any elements
+  if ( Size()<1 ) {
+    Error("Eval", "No elements. Not initialized?");
+    return std::nan("1");
+  }
+  
+  double ret(0.); 
+  for (const FPolyElem_t &elem : fElems) {  
+    
+    double val = elem.coeff;
+    
+    for (uint j=0; j<4; j++) {
+      if (elem.powers[j]>0) val *= pow( Xfp.get(j), elem.powers[j] );
+    }
+    
+    ret += val; 
+  }
+  
+  return ret;    
+}
+//_________________________________________________________________________________________
+double TRPoly::df_dxj(const TXtg &Xtg, uint j) const
+{
+  //
+  // This is an implementation of: (d/dx_j)f
+  //  where f is this polynomial
+  
+  if ( Size()<1 ) {
+    Error("Gradient", "No elements in this TRPoly. Not initialized?");
+    return std::nan("1");
+  }
+  if ( j >= 5 ) {
+    Error("df_dxj", "derivative index 'j=%i' out of range; should be j=[0,4].", (int)j);
+    return std::nan("1");
+  }
+
+  double ret(0.); 
+  
+  for (const RPolyElem_t &elem : fElems) {
+    
+    if (elem.powers[j]<1) continue; 
+    
+    double val = elem.coeff * ((double)elem.powers[j]) * pow( Xtg.get(j), elem.powers[j]-1 );
+    
+    for (uint i=0; i<5; i++) {
+      if (i!=j && elem.powers[i]>0) val *= pow( Xtg.get(i), elem.powers[i] ); 
+    }
+    
+    ret += val;
+  }
+  
+  return ret; 
+}
+//_________________________________________________________________________________________
+double TRPoly::df_dxj_dxk(const TXtg &Xtg, uint j, uint k) const
+{
+  //
+  // This is an implementation of: (d/dx_j)f
+  //  where f is this polynomial
+  
+  if ( Size()<1 ) {
+    Error("Gradient", "No elements in this TRPoly. Not initialized?");
+    return std::nan("1");
+  }
+  if ( j >= 5 || k >= 5 ) {
+    Error("df_dxj", "derivative indices 'j=%i, k=%i' out of range; should be j,k=[0,4].",
+	  (int)j, (int)k);
+    return std::nan("1");
+  }
+  
+  double ret(0.); 
+  
+  if (j==k) { //case j==k 
+
+    for (const RPolyElem_t &elem : fElems) {
+      
+      if (elem.powers[j]<2) continue; 
+      
+      double val =
+	elem.coeff
+	* ((double)(elem.powers[j] - 1)*elem.powers[j])
+	* pow( Xtg.get(j), elem.powers[j] - 2 );
+      
+      for (uint i=0; i<5; i++) {
+	if (i!=j && elem.powers[i]>0) val *= pow( Xtg.get(i), elem.powers[i] ); 
+      }
+      
+      ret += val;
+    }
+    
+  } else { //case j!=k 
+  
+    for (const RPolyElem_t &elem : fElems) {
+    
+      if (elem.powers[j]<1 || elem.powers[k]<1) continue; 
+      
+      double val =
+	elem.coeff
+	* ((double)elem.powers[j]*elem.powers[k])
+	* pow( Xtg.get(j), elem.powers[j]-1 )
+	* pow( Xtg.get(k), elem.powers[k]-1 );
+    
+      for (uint i=0; i<5; i++) {
+	if (i!=j && i!=k && elem.powers[i]>0)
+	  val *= pow( Xtg.get(i), elem.powers[i] ); 
+      }
+    
+      ret += val;
+    }
+  }
+  
+  return ret; 
+}
+//_________________________________________________________________________________________
+ 
+ClassImp(TFPoly)
+ClassImp(TRPoly);
+

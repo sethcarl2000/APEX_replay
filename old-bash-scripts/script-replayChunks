@@ -1,0 +1,38 @@
+#!/bin/bash
+
+#SBATCH --nodes 1
+#SBATCH --partition production
+#SBATCH --account halla
+#SBATCH --ntasks 1
+#SBATCH --cpus-per-task 8
+#SBATCH --output=/volatile/halla/apex/full_replay/slurm/out/%x.%j.out
+#SBATCH --error=/volatile/halla/apex/full_replay/slurm/err/%x.%j.err
+#SBATCH --time=0:50:00
+#SBATCH --mem-per-cpu=2500
+
+run=$1
+
+setenv VOLATILE_DIR /volatile/halla/apex/full_replay
+setenv RAWFILE_DIR  /cache/mss/halla/apex/raw
+
+#find all the coda-files we're gonna 'decode' 
+ls $RAWFILE_DIR/apex_$run.* > $VOLATILE_DIR/coda_files.$run.list
+
+i_coda=-1
+
+while read -r file_coda; do
+    
+    echo "analyzing coda file $file_coda...."
+    
+    let i_coda++ #index of the current coda-file
+    
+    #let's find out how many raw events are in this coda file
+    str_eventCount=$(analyzer -l -b -q 'count_events.C('$file_coda')') 
+    
+    nEvents=$(sed -n -e -'s/.*NUM_EVENTS_READ=//p' $str_eventCount) 
+    
+    echo "number of events found: $nEvents" 
+    
+done < "$VOLATILE_DIR/coda_files.$run.list" 
+
+rm $VOLATILE_DIR/coda_files.$run.list

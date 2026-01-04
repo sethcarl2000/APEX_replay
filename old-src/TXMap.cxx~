@@ -1,0 +1,565 @@
+//*-- Author :    Seth Hall   21-Jul-24
+
+//////////////////////////////////////////////////////////////////////////
+//     
+// TXMap
+// 
+// This class, which I may later find could more efficiently be absorbed by
+// TOpticsModel, basically 'pre-computes' the optics tensors for some value of
+// x_fp, to allow further processing. 
+// 
+// The reason this is 'broken off' from TOpticsModel as its own separate track is to more easily enable
+// parallel optics processing (in principle); by having a separate object
+// which can follow each vdc-track around for its whole lifetime (after x_fp is determined for that track)
+// allows us to do some optics computations for a 
+// track, then 'set it down' to look at other tracks, then
+// come back to this track to comparativley evaluate its target-optics
+// against other tracks, without having to re-compute the entire optics-tensor
+// from scratch. 
+//     
+//////////////////////////////////////////////////////////////////////////
+
+#include <cmath>
+#include <vector>
+#include <array>
+#include <map>
+#include "ROOT/RVec.hxx"
+#include "ApexUtils.h"
+#include "TNPoly.h"
+#include "TXMap.h"
+#include "TOpticsModel.h"
+#include "RMatrixD.h"
+#include "TVector3.h"
+#include "TMath.h"
+
+#include "TString.h"
+
+#include <iostream>
+
+using namespace std;
+using namespace APEX; 
+
+using RVecD = ROOT::RVec<double>; 
+
+using uint = unsigned int; 
+
+//_____________________________________________________________________________
+TXMap::TXMap( const double x,
+              const TNPoly &y,
+	            const TNPoly &dxdz,
+	            const TNPoly &dydz,
+              bool isRHRS )
+  : fX_fp(x),               //the x-fp that this map is built on. note: later, we may have ALL X_fp coordinates fed to the map here. 
+    f_isRHRS(isRHRS),       //is this the right-hrs or left-hrs? 
+    f_pivotElem(kX_tg),     //which element (of the 4 spatial-elems of X_tg) will iterate over to find matching (other elems) of X_tg? 
+    f_Z_sieve(f_isRHRS?0.7946:0.7958), //how far, in tg-coords, is the sieve from the origin in Z? hard-coding this for now, will make it smarter later on.
+    f_nRays(300),            //how many 'rays' (possible trajectories) will we project onto the target?  
+    f_raysConstructed(false)
+{
+  fBounds.push_back({-0.027,0.035}); //x_sv 
+  fBounds.push_back({-0.027,0.010}); //y_sv 
+
+  Build_coeffs( y,    kY );
+  Build_coeffs( dxdz, kDxdz );
+  Build_coeffs( dydz, kDydz );
+}
+//_____________________________________________________________________________
+TXMap::~TXMap()
+{
+  //not sure if it's necessary to explicitly delete these vectors, but i'm going to anyway (out of an abundance of caution)
+}
+//_____________________________________________________________________________
+RVecD TXMap::Eval(const RVecD &X) const
+{
+  if (X.size() != TXMap::fnDoF) {
+    Error("Eval",
+	  "Input vector wrong size; expected %u, got %u.",
+	  TXMap::fnDoF, (unsigned int)X.size());
+    return {};
+  }
+  
+  return { 
+    EvalPoly(fCoeffs[kY],    X),
+    EvalPoly(fCoeffs[kDxdz], X),
+    EvalPoly(fCoeffs[kDydz], X)
+  };
+}
+//_____________________________________________________________________________
+double TXMap::EvalPoly(const vector<Coeff_t> &A, const RVecD &X_tg) const 
+{
+  
+  if (X_tg.size()!=TXMap::fnDoF) {
+    Error("EvalPoly", "X_tg wrong size; got %i, expected %u",(int)X_tg.size(),TXMap::fnDoF); 
+    return {}; 
+  }
+  double val=0.; 
+  for (const Coeff_t &ai : A) {
+    
+    double elem=1.;
+
+    for (uint i=0; i<TXMap::fnDoF; i++)
+      if (ai.powers[i]>0) elem *= pow(X_tg[i],ai.powers[i]);
+    
+    val += elem*ai.val; 
+  }
+  return val; 
+}
+//_____________________________________________________________________________
+RVecD TXMap::Gradient(const vector<Coeff_t> &A, const RVecD &X_tg) const 
+{
+  if (X_tg.size()!=TXMap::fnDoF) {
+    Error("Gradient",
+	  "X_tg wrong size; got %i, expected %u",
+	  (int)X_tg.size(),TXMap::fnDoF);
+    
+    return {}; 
+  }
+  RVecD grad(TXMap::fnDoF,0.);
+  for (const Coeff_t &ai : A) {
+    for (uint d=0; d<TXMap::fnDoF; d++) {
+      
+      //skip this element if the deriv vanishes
+      if (ai.powers[d] < 1) continue; 
+      //use the power rule to find the deriv in respect to this element
+      double elem = ai.val * ((double)ai.powers[d])*pow( X_tg[d], ai.powers[d]-1 );
+      //now compute the 'rest' of the element normally 
+      for (uint i=0; i<TXMap::fnDoF; i++)
+	if (ai.powers[i]>0 && i!=d)
+	  elem *= pow( X_tg[i], ai.powers[i] );
+      
+      grad[d] += elem;  
+    }
+  }
+  return grad; 
+}
+//_____________________________________________________________________________
+RMatrixD TXMap::Jacobian(const vector<Coeff_t> &A, const RVecD &X_tg) const
+{
+  RMatrixD J(TXMap::fnDoF,TXMap::fnDoF, 0.);
+  
+  if (X_tg.size()!=TXMap::fnDoF) {
+    Error("Jacobian",
+	  "X_tg wrong size; got %i, expected %u",(int)X_tg.size(),TXMap::fnDoF); 
+    return J; 
+  }
+  
+  for (const Coeff_t &ai : A) {
+
+    //compute the deriv in respect to each element
+    for (uint di=0; di<TXMap::fnDoF; di++) {   
+      for (uint dj=0; dj<TXMap::fnDoF; dj++) { 
+	
+        double elem = ai.val; 
+
+	//case ==> main diagonal (d^2 f / dx^2) 
+        if (di==dj) {
+
+	  //if this element is lower order than x^2, then (d^2 / dx^2) x = 0. 
+	  if (ai.powers[di]<2) continue;
+	  	  
+          //take deriv in respect to on-diagonal element (power rule)
+          elem *= ((double)(ai.powers[di]-1)*ai.powers[di]) * pow(X_tg[di],ai.powers[di]-2);
+    
+          //add contribs from other elements
+          for (uint k=0; k<TXMap::fnDoF; k++)
+	    if (ai.powers[k]>0 && k!=di) 
+	      elem *= pow(X_tg[k],ai.powers[k]); 
+	  
+        } else      { //off-diagonal (d^2 f / dx dy) 
+
+	  //cases in which this term vanishes
+	  if (ai.powers[di]<1 || ai.powers[dj]<1) continue; 
+	  
+          elem *= ((double)ai.powers[di]) * pow(X_tg[di],ai.powers[di]-1);
+          elem *= ((double)ai.powers[dj]) * pow(X_tg[dj],ai.powers[dj]-1);
+
+          for (UInt_t k=0; k<TXMap::fnDoF; k++)
+	    if (ai.powers[k]>0 && k!=di && k!=dj) 
+	      elem *= pow(X_tg[k],ai.powers[k]); 
+        }
+        J.at(di,dj) += elem;
+      }  
+    }
+
+  }// for (const Coeff_t &ai : A)   [loop over all coeffs.]
+  return J; 
+}
+//_____________________________________________________________________________
+double TXMap::Find_Xtg(const RVecD &X_fp,
+		       RVecD &X_tg,
+		       int nIter,
+		       double CUT_err) const 
+{
+  //vector-dim checks
+  if (X_tg.size()!=TXMap::fnDoF) {
+    Error("Gradient", "X_tg wrong size; got %i, expected %u",(int)X_tg.size(),TXMap::fnDoF); 
+    return -1e30; 
+  }
+  
+  double RMS=1e30; 
+  for (unsigned int ii=0; ii<nIter; ii++) {
+    
+    array<RVecD,TXMap::fnDoF_fp> dfi_dxj = {
+      Gradient(fCoeffs[0], X_tg), 
+      Gradient(fCoeffs[1], X_tg),
+      Gradient(fCoeffs[2], X_tg)
+    }; 
+    //compute the gradient, jacobian, etc. 
+    RVecD fi_minus_zi = Eval(X_tg) - X_fp; 
+
+    RVecD F(TXMap::fnDoF, 0.); 
+    
+    for (unsigned int i=0; i<TXMap::fnDoF_fp; i++)
+      for (unsigned int j=0; j<TXMap::fnDoF; j++)
+	F[j] += fi_minus_zi[i]*dfi_dxj[i][j];
+    
+    array<RMatrixD,TXMap::fnDoF_fp> dfi_dxj_dxk = {
+      Jacobian(fCoeffs[0], X_tg), 
+      Jacobian(fCoeffs[1], X_tg),
+      Jacobian(fCoeffs[2], X_tg)
+    }; 
+    
+    RMatrixD J(TXMap::fnDoF,TXMap::fnDoF, 0.); J.ReportSingular()=false;  
+    
+    for (unsigned int i=0; i<TXMap::fnDoF_fp; i++)
+      for (unsigned int j=0; j<TXMap::fnDoF; j++)
+        for (unsigned int k=0; k<TXMap::fnDoF; k++)
+          J.at(j,k) += dfi_dxj[i][j]*dfi_dxj[i][k] + fi_minus_zi[i]*dfi_dxj_dxk[i].at(j,k); 
+    
+    
+    
+    RVecD d_Xtg = - J.Solve(F); if (d_Xtg.size()==0) break; 
+
+    RMS = APEX::Length( Eval(X_tg) - X_fp ); 
+    /*
+    cout << "{X_tg error, d_Xtg mod} = ";
+    cout << TString::Format("{% .6f, % .6f}",
+			    RMS,
+			    APEX::Length(d_Xtg)) << endl; */ 
+    
+    X_tg += d_Xtg; 
+    
+    if (RMS < CUT_err) return RMS; 
+  }
+
+  return RMS; 
+}
+//_____________________________________________________________________________
+double TXMap::SolveFor_Xtg(const RVecD &X_fp, RVecD &X_tg,
+                           const double x_pivot,
+                           const unsigned int pivot_index,
+                           const int nIter) const
+{
+  if (X_fp.size() != TXMap::fnDoF_fp) {
+    Error("SolveFor_Xtg", "given vector X_fp is wrong size: got %u, should be %u",(unsigned int)X_fp.size(), TXMap::fnDoF_fp);
+    return {}; 
+  }
+
+  if (pivot_index>=TXMap::fnDoF) {
+    Error("SolveFor_Xtg", "pivot index %u out-of-range; max is %u",pivot_index,TXMap::fnDoF); 
+    return {}; 
+  }
+
+  //Info("SolveFor_Xtg", "Solve~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~"); 
+  
+  //create a (very coarse) first guess
+  X_tg = RVecD(TXMap::fnDoF,0.);  
+  X_tg[pivot_index] = x_pivot;
+
+  //DEBUG 24 July 24
+  RVecD X_tg_old = X_tg;
+
+  //make a copy of this vector which is 1-dim smaller, which exlcudes the pivot index (which will stay fixed)
+  RVecD X_tg_sub(X_tg); X_tg_sub.erase(X_tg_sub.begin()+pivot_index); 
+
+  //use newton's method; iterate 'nIter' times.
+  for (int t=0; t<nIter; t++) {
+    
+    RMatrixD J(TXMap::fnDoF_fp,TXMap::fnDoF-1); 
+    
+    //make it so that if a J sub-matrix is singular, it doesn't spit out an error message (rather, we just break the iteration-loop)
+    J.ReportSingular()=false; 
+    
+    //compute the jacobian
+    for (unsigned int i=0; i<TXMap::fnDoF_fp; i++) { 
+      //Use the coefficients we computed earlier to find the
+      //gradient of our map at our current 'best guess'. f
+      
+      RVecD grad = Gradient(fCoeffs[i], X_tg); 
+     
+      
+      //cout << "Grad(X_tg) = {"; for (double xx : grad)  {cout << TString::Format("% .4f ",xx);} cout << "}\n";
+
+      //eliminate the pivot-element from the jacobian (to make it square)...
+      grad.erase(grad.begin()+pivot_index); 
+
+      for (unsigned int j=0; j<TXMap::fnDoF-1; j++) J.at(i,j) = grad.at(j); 
+    }
+    
+    /* cout << "Jacobian: ";
+    J.Print(); 
+    
+    cout << "Eval(X_tg) = {"; for (double xx : Eval(X_tg))  {cout << TString::Format("% .4f ",xx);} cout << "}\n";
+    cout << "X_fp =       {"; for (double xx : X_fp)        {cout << TString::Format("% .4f ",xx);} cout << "}\n"; */
+
+    //now that we have the (3x3 sub-matrix of the) jacobian, we can apply newton's method:    
+    RVecD dX_tg = J.Solve(Eval(X_tg) - X_fp); 
+
+    //first, check if J is invertible. the 'RMatrixD::Solve' method returns an empty RVecD in this case.
+    if (dX_tg.size()==0 || hasNAN_RVecD(dX_tg)) break; 
+    
+    X_tg_sub += -dX_tg;
+
+    //there's got to be a less clunky way to do this, but this is just for the prototype of this code. 
+    unsigned int j=0; 
+    for (unsigned int i=0; i<TXMap::fnDoF; i++) if (i!=pivot_index) { X_tg[i] = X_tg_sub[j]; j++; }
+  }
+  double RMS=0.; int k=0;     
+  for (double xfp_test : Eval(X_tg)) { RMS += pow(X_fp[k]-xfp_test,2); k++; }
+  
+  return sqrt(RMS); 
+}
+//_____________________________________________________________________________
+void TXMap::CreateRays(const RVecD &X_fp, const RVecD &X_tg) 
+{ 
+  fRays.clear(); //fRays.reserve(f_nRays); 
+
+  const double s = 0.25e-3;
+
+  const double max_error = 1e-6; 
+  
+  unsigned int pivotElem=0; 
+
+  //0-point
+  fRays_tg.push_back(X_tg); 
+  
+  // //__________________________________________________________________________
+  // //
+  // // finds the next point.
+  // //
+  // // Returns the 'error' of the solver (correction step)
+  // // returns NaN if next point could not be found.
+  // // 
+  auto findNextPt = [this,&pivotElem,&X_fp](RVecD &X_tg, double s) {
+    //get the j-matrix
+    RMatrixD J_sub(TXMap::fnDoF_fp,TXMap::fnDoF-1); 
+    RVecD J_i4(TXMap::fnDoF-1); 
+    
+    for (uint i=0; i<TXMap::fnDoF_fp; i++) { UInt_t jj=0; 
+      auto grad = this->Gradient(this->fCoeffs[i], X_tg); 
+      for (uint j=0; j<TXMap::fnDoF; j++) {
+	if (j!=pivotElem) { J_sub.at(i,jj) = grad[j]; jj++; } else { J_i4[i] = grad[j]; }
+      }
+    }
+    
+    J_sub.ReportSingular()=false;
+
+    RVecD dX_tg = J_sub.Solve(J_i4);  
+
+    if (dX_tg.size()==0) return APEX::kNAN_double; 
+    
+    dX_tg.insert(dX_tg.begin()+pivotElem, -1.);
+
+    //normalize our 'linear guess' vector (to the length 's')    
+    dX_tg = s*APEX::Unit(dX_tg);// <- this is a helper function which normailizes an RVecD
+    
+    
+    RVecD X_tg_i0 = X_tg; 
+    
+    X_tg += dX_tg; 
+
+    //DEBUG
+    RVecD X_tg_ip = X_tg;
+    
+    //now, 'correct' this guess
+    //if (Find_Xtg(X_fp, X_tg_i, 50, 1e-9) > max_error) return false;
+    
+    double err = this->Find_Xtg(X_fp, X_tg, 50, 1e-6); 
+    
+    //cout << TString::Format("ds/s=%0.4f, ", Length(X_tg-X_tg_ip)/s);
+    //cout << TString::Format("s'/s=%0.5f\n", Length(X_tg-X_tg_i0)/s);
+    return err;   
+  }; 
+  
+  RVecD X_tg_i = X_tg;  
+  
+
+  //find the rays using the 'negative sense' ( -s )
+  for (unsigned int t=0; t<f_nRays; t++) {
+    if (findNextPt(X_tg_i, -s) > max_error) break; 
+    //now, we have a new solution for X_tg
+    fRays_tg.push_back(X_tg_i); 
+  }
+  
+  //reverse order of the vector (we just looked for 'negative-sense' solutions
+  UInt_t i0(0), i1(fRays_tg.size()-1); 
+  while (i0<i1) {
+    RVecD temp = fRays_tg.at(i1);
+    fRays_tg.at(i1) = fRays_tg.at(i0);
+    fRays_tg.at(i0) = temp;
+    i0++;
+    i1--;
+  }
+  
+  X_tg_i = X_tg;
+
+  //find the rays using the 'positive sense' ( +s )
+  for (unsigned int t=0; t<f_nRays; t++) {
+    if (findNextPt(X_tg_i,  s) > max_error) break; 
+    //now, we have a new solution for X_tg
+    fRays_tg.push_back(X_tg_i);
+  }
+
+  fRays.clear(); 
+  fRays.reserve(fRays_tg.size()); 
+  //Now, convert all rays to HCS
+  for (const RVecD &X_tg_i : fRays_tg) {
+        
+    //now, covert these 'target rays' (in TCS) into 'TrackRay_t' objects (in HCS).
+    RVecD X_hcs = X_tg_i;
+    
+    //this is the trajectory of this target ray in TCS
+    TVector3 dir( X_hcs[2], X_hcs[3], 1. ); 
+    
+    APEX::Coord::RotateTV3( dir, APEX::Coord::kTarget_to_Hall, f_isRHRS );
+
+    //this is the intercept point of this track ray with the sieve-plane
+    TVector3 r0( X_hcs[0], X_hcs[1], f_Z_sieve );
+    
+    APEX::Coord::TransformTV3( r0, APEX::Coord::kTarget_to_Hall, f_isRHRS );
+
+    TVector3 r0_tcs( r0.X() - (dir.X()/dir.Z())*r0.Z(),
+		     r0.Y() - (dir.Y()/dir.Z())*r0.Z(),
+		     0. );
+    
+    fRays.push_back( TrackRay_t( r0_tcs.X(),
+				 r0_tcs.Y(),
+				 dir.X()/dir.Z(),
+				 dir.Y()/dir.Z() ) );
+  }
+  
+  
+  int rays_made = fRays.size(); 
+  //Info("CreateRays", "N. Rays created: %i/%i", 2*f_nRays +1, rays_made);
+
+  f_nRays=rays_made; 
+  
+  f_raysConstructed=(f_nRays>=2); 
+  /*if (!f_raysConstructed) {
+    Warning("CreateRays",
+	    "Only %i rays were constructed, must have at least 2...",(int)f_nRays);
+	    return; // f_nRays; 
+	    }*/ 
+  //return f_nRays; 
+  f_dInd = 1./((double)f_nRays-1); 
+}
+//_____________________________________________________________________________
+void TXMap::GetPointAtZ(double &x, double &y, const double z, const double index) const
+{
+  //placeholder until I find a better way to do this. 
+  //
+  // basically, feed this function an 'index' =[0,1], which will return the 'point' at the target (Z-val) corresponding to that 'ray'
+  // then, once it's found the two rays which are bounds 
+  if (fRays.size()<2) {
+    Error("GetPointAtZ", "Rays not initialized successfully (or not at all). min is 2 rays, there are %i.", (int)fRays.size());
+    return; 
+  }
+
+  int i0(TMath::FloorNint(index/f_dInd));
+  i0 = min<int>(f_nRays-2,i0); 
+  i0 = max<int>(0,i0); 
+  int i1(i0+1);  
+
+  double x0,y0;
+  double x1,y1; 
+
+  fRays[i0].GetPosAtZ(x0,y0,z); 
+  fRays[i1].GetPosAtZ(x1,y1,z); 
+
+  double di = index/f_dInd - ((double)i0); 
+
+  x = (x1-x0)*di + x0;
+  y = (y1-y0)*di + y0; 
+}
+//_____________________________________________________________________________
+void TXMap::Get_TgCoords(RVecD &r, const double index) const
+{
+  if (fRays_tg.size()<2) {
+    Error("Get_TgCoords", "Rays not initialized successfully (or not at all). min is 2 rays, there are %i.", (int)fRays_tg.size());
+    return; 
+  }
+
+  int i0(TMath::FloorNint(index/f_dInd));
+  i0 = min<int>(f_nRays-2,i0); 
+  i0 = max<int>(0,i0); 
+  int i1(i0+1);  
+
+  double di = index/f_dInd - ((double)i0); 
+
+  r = fRays_tg[i0] + (fRays_tg[i1]-fRays_tg[i0])*di; 
+}
+//_____________________________________________________________________________
+void TXMap::TrackRay_t::GetPosAtZ(double &x, double &y, const double z) const
+{
+  //Get the x & y pos of this ray at some z-point. 
+  // Note: this is all in Hall-coords. 
+  x = z*dxdz + x0; 
+  y = z*dydz + y0;
+}
+//_____________________________________________________________________________
+RVecD TXMap::Get_coeffs(const EFPCoordinate coord) const 
+{
+  RVecD coeffs; coeffs.reserve(fCoeffs[coord].size()); 
+  for (const Coeff_t &ai : fCoeffs[coord]) coeffs.push_back(ai.val); 
+  return coeffs; 
+}
+//_____________________________________________________________________________
+bool TXMap::Check_Xtg(const RVecD X_tg) const
+{
+  //for now, this will just perform a very siple 1d-cut on both 
+  // x_tg & y_tg, but in the future I'm planning to make it 
+  // a more sophisticated, selective cut logic which will do a 
+  // much better job at rejecting unrealistic track trajectories
+  // in targ-coords. -seth
+  //check the i-th coordinate 
+  for (unsigned int i=0; i<fBounds.size(); i++) 
+    if (!fBounds[i].CheckBound(X_tg.at(i))) return false;
+
+  return true; 
+}
+//_____________________________________________________________________________
+void TXMap::Build_coeffs(const TNPoly &poly, EFPCoordinate coord)
+{  
+  const TString here = "Build_coeffs";
+	
+  const int nElems = poly.Get_nElems(); 
+  
+  //check to see if this polynomial has been initialized 
+  if (nElems < 1) {
+    Error(here,"Polynomial has 0 elements. cannot build coefficients.");
+    return; 
+  }
+  
+  //if we let this vector know beforehand how big it will be, this
+  // will be a bit faster.
+  fCoeffs[coord].clear(); 
+  fCoeffs[coord].reserve(nElems);
+  
+  //compute the polynomial for each element (at the given x-value)
+  for (int e=0; e<nElems; e++) {
+
+    //this is temporary, until i change the type of the 'pows' vec to std::array<int,fnDoF>;
+    auto pws = poly.Get_elemPowers(e);  
+    std::array<int,TXMap::fnDoF> pows; for (int i=0; i<4; i++) pows[i]=pws[i];
+
+    //now, add the new element (look in TXMap.h for definition of 'Coeff_t' struct)
+    fCoeffs[coord].push_back({
+	.val    = APEX::ComputePol(poly.Get_elemPoly(e), fX_fp),
+	.powers = pows
+      }); 
+  } 
+}
+//_____________________________________________________________________________
+ClassImp(TXMap)
+
+

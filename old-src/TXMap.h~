@@ -1,0 +1,147 @@
+#ifndef Podd_TXMap_h_
+#define Podd_TXMap_h_
+
+//////////////////////////////////////////////////////////////////////////
+//
+// TXMap
+// the optics map is going to be used per-event to evaluate possible positions
+// which a track may take. 
+//
+//////////////////////////////////////////////////////////////////////////
+
+//#include "THaPhysicsModule.h"
+#include <vector>
+#include <array>
+#include <map>
+#include <algorithm>
+#include "TString.h" 
+#include "TObject.h"
+#include "ApexUtils.h"
+#include "TNPoly.h"
+#include "ROOT/RVec.hxx"
+#include "RMatrixD.h"
+
+using RVecD = ROOT::VecOps::RVec<double>;
+
+//_________________________________________________________________________________
+class TXMap : public TObject { 
+
+  //FIXES: REMOVE BEFORE FLIGHT
+  //
+  //  -  delete 'fRays_tg' if no longer needed. just using it to debug for now. 
+  //  -  delete 'Get_TgCoords()' method if no longer needed. same reason. 
+
+public:
+  
+  TXMap() {};
+  TXMap(const double x,
+	const TNPoly &y,
+	const TNPoly &dxdz,
+	const TNPoly &dydz,
+        const bool isRHRS=false);
+    
+  virtual ~TXMap();
+    
+  //evaluate X_tg coordinate 
+  RVecD Eval(const RVecD &X_tg) const;
+  
+  //get X-fp that this map is defined at
+  double Get_x() const { return fX_fp; }
+    
+  //get coefficients that have been built by this map
+  RVecD Get_coeffs(const APEX::EFPCoordinate coord) const; 
+
+  //perform newton's-method iterations to solve for a 'valid' X_tg to
+  //match the given X_fp
+  double SolveFor_Xtg(const RVecD &X_fp, RVecD &X_tg, 
+		      const double x_pivot,
+                      const unsigned int pivot_index,
+		      const int nIter=10) const;
+
+  void CreateRays(const RVecD &X_fp,
+		  const RVecD &X_tg); 
+  
+  //this is one potential method to access the 'rays'
+  //'index' will be normalied to 1
+  void GetPointAtZ(double &x, double &y, const double z, const double index) const; 
+  
+  //performs effectivley the same funct. as above, but returns values in target-coords
+  void Get_TgCoords(RVecD &r, const double index) const;
+
+  double Find_Xtg(const RVecD &X_fp, 
+                  RVecD &X_tg, 
+                  int max_iter=10,
+		  double CUT_err=1e-6) const; 
+
+  
+  bool RaysCreated() const { return f_raysConstructed; } 
+
+
+  //these methods down here are meant to superscede the above.
+  
+  
+  
+  
+private:
+    
+  double fX_fp;
+  bool f_isRHRS; 
+  //of the 4-DoF in Target-coords, which element will we use to scan all possible
+  //
+  unsigned int f_pivotElem; 
+  
+  double f_Z_sieve; 
+
+  static const unsigned int fnDoF=4; 
+  static const unsigned int fnDoF_fp=3; 
+  
+  //number of 'track rays' to be casted to the target
+  unsigned int f_nRays;
+
+  //defined as 1/f_nRays;
+  double f_dInd; 
+
+  struct TrackRay_t { 
+    //these will be in hall-coordinates.
+    double x0,y0,dxdz,dydz;   
+    TrackRay_t(double xx=0.,double yy=0.,double dx=0.,double dy=0.) 
+      : x0(xx),y0(yy),dxdz(dx),dydz(dy) {}; 
+
+    void GetPosAtZ(double &x, double &y, const double z) const; 
+  };
+  bool f_raysConstructed; 
+  
+  std::vector<TrackRay_t> fRays; 
+  //this creates rays to cast onto the target, (N. = f_nRays); 
+
+  //DEBUG - same as above, but in target-coords
+  std::vector<RVecD> fRays_tg;
+
+  struct Bound_t { 
+    double min, max;
+    bool CheckBound(const double x) const { return (x<max) && (x>min); } 
+  };
+
+  //checks a given Xtg coordinate, to see if it will be discarded or not
+  bool Check_Xtg(const RVecD X_tg) const; 
+
+  //these govern constraints on what target-coordinate values we will search over
+  std::vector<Bound_t> fBounds; 
+   
+  struct Coeff_t {
+    double val;
+    std::array<int,TXMap::fnDoF> powers; 
+  };
+  std::vector<Coeff_t> fCoeffs[TXMap::fnDoF_fp];
+
+  RVecD     Gradient(const std::vector<Coeff_t> &A, const RVecD &X_tg) const;
+  double    EvalPoly(const std::vector<Coeff_t> &A, const RVecD &X_tg) const; 
+  RMatrixD  Jacobian(const std::vector<Coeff_t> &A, const RVecD &X_tg) const; 
+  
+  void Build_coeffs(const TNPoly &poly, APEX::EFPCoordinate coord);
+  
+  ClassDef(TXMap,0); 
+};
+//_________________________________________________________________________________
+
+#endif

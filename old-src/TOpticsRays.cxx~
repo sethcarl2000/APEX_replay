@@ -1,0 +1,154 @@
+//*-- Author :    Seth Hall   15-Dec-24
+
+//////////////////////////////////////////////////////////////////////////
+//     
+// TOpticsRays
+// responsible for computing all possible target trajectories associated with
+// a single X-fp vector (i.e. 'rays'). 
+//
+//////////////////////////////////////////////////////////////////////////
+
+// \/\/ comment from senior dev Muon
+//
+//  aqQ1`B               V;PPPPPPPPPPPPPPPPPPPPL;................./
+//
+
+#include "TOpticsRays.h"
+#include "OpticsPolynomials.h"
+#include "OpticsVectors.h"
+#include "RMatrixD.h" 
+#include <vector>
+#include <cmath> 
+#include <array>
+
+using namespace std; 
+using uint = unsigned int; 
+
+//_________________________________________________________________________________________
+TXfp TOpticsRays::Compute_Xfp(const TXtg &Xtg) const
+{
+  //assuming that poly's have been initialized
+  return TXfp( fPolys_reverse[0]->Eval(Xtg),
+	       fPolys_reverse[1]->Eval(Xtg),
+	       fPolys_reverse[2]->Eval(Xtg),
+	       fPolys_reverse[3]->Eval(Xtg) ); 
+}
+//_________________________________________________________________________________________
+double TOpticsRays::Find_Xtg(const TXfp &Xfp,
+			     TXtg &Xtg,
+			     uint max_iterations,
+			     double min_error) const
+{
+  //converge to a value of Xtg which most closely matches the given Xfp.
+  double rms = std::nan("1"); 
+  
+  for (uint i=0; i<max_iterations; i++) {
+    
+    
+    //the gradients of each coordinate (Xfp), with respect to each coordinate (of Xtg)
+    double dfi_dxj[4][5];
+    
+    for (uint i=0; i<4; i++)
+      for (uint j=0; j<5; j++)
+	dfi_dxj[i][j] = fPolys_reverse[i]->df_dxj(Xtg, j);
+    
+    
+    double fi_minus_zi[4];
+    //compute difference between model (fi) and actual (Xfp)
+    TXfp fi = Compute_Xfp(Xtg);
+    
+    for (uint i=0; i<4; i++)
+      fi_minus_zi[i] = fi.at(i) - Xfp.get(i); 
+    
+    
+    RVecD Fx(5);
+    
+    for (uint j=0; j<5; j++)
+      for (uint i=0; i<4; i++)
+	Fx[j] += fi_minus_zi[i]*dfi_dxj[i][j];
+    
+    
+    //now, compute the Jacobian (starts out as a 5x5 matrix with all 0-s)
+    RMatrixD Jx(5,5, 0.); Jx.ReportSingular()=false; 
+    
+    for (uint j=0; j<5; j++)
+      for (uint k=0; k<5; k++)
+	for (uint i=0; i<4; i++)
+	  Jx.at(j,k)
+	    += dfi_dxj[i][j]*dfi_dxj[i][k]
+	    +  fi_minus_zi[i]*fPolys_reverse[i]->df_dxj_dxk(Xtg, j, k); 
+    
+    //now, actually finding our new iteration is simple:
+    RVecD Jx_Fx = Jx.Solve(Fx);
+    
+    if (Jx_Fx.size()<5) break; 
+
+    Xtg += -Jx_Fx; 
+    
+    //check how far off our new iteration is
+    rms = Compute_Xfp(Xtg).Distance(Xfp); 
+    
+    if (rms < min_error) break; 
+  }
+  
+  return rms; 
+} 
+//_________________________________________________________________________________________
+void TOpticsRays::Make_rays(const TXfp &Xfp, const TXtg &Xtg)
+{
+  fRays.clear(); 
+
+  const double s = 0.200e-3; //the distance (in Xtg coords) between steps
+  
+  const double min_error = 15e-6;
+
+  unsigned int pivotElem(0);
+
+  fRays.push_back(Xtg); 
+
+  auto findNextPoint = [&pivotElem,&Xfp,&min_error,&s](TXtg &Xtg)
+  {
+    RMatrixD J_sub(4,4, 0.); //this is the jacobian, with one column 'moved' to the rhs
+    RVecD J_pivot(4, 0.); 
+    
+    for (uint i=0; i<4; i++) { uint jj=0; 
+      for (uint j=0; j<5; j++) { //loop over all 5 Xtg-coordinates, EXCEPT the pivot-element
+	
+	if (j==pivotElem) { //if j==pivotElem, fill out the pivot-vector
+	  
+	  J_pivot[i]     = fPolys_reverse[i]->df_dxj(Xtg, j);
+	  
+	} else            {
+	  
+	  J_sub.at(i,jj) = fPolys_reverse[i]->df_dxj(Xtg, j);
+	  jj++; 
+	}
+	
+      }
+    }//for (uint i=0; i<4; i++)
+
+    //solve this linear system
+    RVecD dXtg = J_sub.Solve(J_pivot); 
+
+    if (dXtg.size()==0) return std::nan("1"); 
+    
+    //now, put our 'guessed' element back in
+    dXtg.insert( dXtg.begin()+pivotElem, -1. );
+
+    dXtg = s*APEX::Unit(dXtg); //<- helper-function which normalizes an RVecD
+
+    //now actually find the error, and 
+    return Find_Xtg(Xfp, Xtg, 50, min_error);
+  }; 
+
+  
+}
+//_________________________________________________________________________________________
+
+// Additional comments from senior dev muon
+// 
+//  w33333333333333333333333333333333333333333333333333333333333333333333333333333333333
+//  3333333333
+
+ClassImp(TRPoly);
+

@@ -1,0 +1,64 @@
+#!/bin/bash
+
+#archive replays from runs=[$1, $2] (both ends inclusive)
+
+run_first=$1
+run_last=$2
+
+path_current=$(pwd)
+
+path_cache=/cache/mss/halla/apex/prod/fullProdReplay_April-2024
+
+cd $path_current
+
+cd $VOLATILE_DIR/production
+
+path_archive=../compressed-runs/production_runs_$run_first-$run_last.tar.gz
+
+let run=$(( $run_first - 1 ))
+
+echo "moving runs $run_first to $run_last to archive..." 
+
+str_files=""
+
+N_found=0
+let range=$(( $run_last - $run_first + 1 ))
+
+while [[ $run -lt $run_last ]]; do 
+    
+    let run++
+    
+    if test -f replay.$run.root; then
+    	
+	let N_found++
+	str_files+=" replay.$run.root"
+    fi	
+done
+
+#check to see how big the 'raw' file size is
+size_MB=$(ls -l $str_files | awk '{sum += $5} END{ print sum}')
+
+let size_MB=$(( size_MB / 1000000 ))
+
+echo "in range [$run_first, $run_last], $N_found/$range runs found (total size: $size_MB MB)" 
+
+echo "compressing runs..."  
+
+
+
+tar -czvf $path_archive $str_files
+
+size_archive_MB=$(ls -l $path_archive | awk '{sum += $5} END{ print sum}')
+let size_archive_MB=$(( size_archive_MB / 1000000 ))
+
+echo -e "done.\nfinal archive size: $size_archive_MB MB"
+
+echo "Putting archive on cache.." 
+
+mv $path_archive $path_cache/.
+
+jcache put /cache/halla/apex/prod/fullProdReplay_April-2024/production_runs_$run_first-$run_last.tar.gz
+
+echo "done."
+
+cd $path_current

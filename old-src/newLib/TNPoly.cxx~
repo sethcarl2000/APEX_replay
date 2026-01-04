@@ -1,0 +1,243 @@
+//*-- Author :    Seth Hall   09-Jul-24
+
+//////////////////////////////////////////////////////////////////////////
+//     
+// TNPoly
+// This is the backbone of the 'reverse optics' model.
+// effectivley, all it is is a polynomial, with a appendable list of elements,
+// defined on some R^n space.
+// In the case of the reverse-optics, it will be defined on an R^4 space,
+//  + using 3 polynomials in conjunction lets you make a f:R^4->R^3 map.
+//  
+//     
+//////////////////////////////////////////////////////////////////////////
+
+#include <cmath>
+#include "TNPoly.h"
+
+using RVecD = ROOT::VecOps::RVec<double>;
+
+using namespace std;
+
+TNPoly::TNPoly(const int nDoF, const int order) :
+  fnDoF(nDoF)
+{  
+  if (order>0) {
+    fOrder = order;
+    autoConstructPoly(order,nDoF);
+  }
+}
+TNPoly::~TNPoly() {/*destructor*/};
+//_____________________________________________________________________________
+vector<double> TNPoly::Eval_noCoeff(const vector<double> X) const
+{
+  //check to make sure that the input vector is the right size
+  if ((int)X.size() != fnDoF) {
+    Error("TNPoly::Eval_noCoeff", "Size of input vector (%i) does not match poly\
+ nDoF (%i)", (int)X.size(), fnDoF);
+    return {};
+  }
+
+  vector<double> vals; vals.reserve(Get_nElems());
+  
+  for (TNPolyElem *elem : fElems) {
+
+    double val=1.;
+
+    for (int i=0; i<fnDoF; i++) {
+      if (elem->powers.at(i)>0) {
+	val *= pow( X.at(i), elem->powers.at(i) );
+
+	if (val != val) {
+	  Error("TNPoly::Eval_noCoeff",
+		"NaN Val reached! pow,x=(%i, %+0.3e), x-vec position=%i/%i",
+		elem->powers.at(i),
+		X.at(i),
+		i+1,(int)X.size());
+	  return vals;
+	}
+
+      }
+    }
+    //check to see if this is the one element for which all pows. are zero
+    vals.push_back( val );
+  }
+
+  return vals;
+}
+//_____________________________________________________________________________
+double TNPoly::Eval(const vector<double> *const coeff, const vector<double> X) const
+{
+  if (coeff->size() != Get_nElems()) { 
+    Error("TNPoly::Eval()",
+	  "Wrong number of coeffs. given; expected %i, recieved %i.",
+	  Get_nElems(),
+	  (int)coeff->size() );
+    return -1e30;
+  }
+        
+  if ((int)X.size() != fnDoF) { 
+    Error("TNPoly::Eval_noCoeff", "Size of input vector (%i) does not match poly nDoF (%i)", (int)X.size(), fnDoF);
+    return -1e30;
+  }
+      
+  //now, actually evaluate
+  double val=0.; int ii=0; 
+
+  //for each element, raise each val in X to the right power, the multiply
+  // by the coressponding coeff. 
+  for (TNPolyElem *elem : fElems) {
+	
+    double elem_val=1.;
+	
+    for (int i=0; i<fnDoF; i++) {
+      if (elem->powers.at(i)>0) { 
+	elem_val *= pow( X.at(i), elem->powers.at(i) );
+	    
+	//check to see if elem_val is NaN. 
+	if (elem_val != elem_val) {
+	  Warning("TNPoly::Eval_noCoeff",
+		  "NaN Val reached! pow,x=(%i, %+0.3e), x-vec position=%i/%i",
+		  elem->powers.at(i),
+		  X.at(i),
+		  i+1,(int)X.size() );
+	}
+	    
+      }
+    }
+    //check to see if this is the one element for which all pows. are zero
+    val += elem_val * coeff->at(ii); ii++; 
+	
+  }//for (TNPolyElem *elem : fElems) 
+      
+  return val;
+}
+//_____________________________________________________________________________
+ROOT::RVec<double> TNPoly::Gradient(const vector<double> *const coeff, const vector<double> X) const
+{
+  if (coeff->size() != Get_nElems()) { 
+    Error("TNPoly::Eval()",
+	  "Wrong number of coeffs. given; expected %i, recieved %i.",
+	  Get_nElems(),
+	  (int)coeff->size() );
+    return {};
+  }
+  
+  if ((int)X.size() != fnDoF) { 
+    Error("TNPoly::Eval_noCoeff", "Size of input vector (%i) does not match poly nDoF (%i)", (int)X.size(), fnDoF);
+    return {};
+  }
+
+  ROOT::RVec<double> grad(fnDoF,0.); 
+  
+  //now, actually evaluate
+  int ii=0; 
+
+  
+  //for each element, raise each val in X to the right power, the multiply
+  // by the coressponding coeff. 
+  for (TNPolyElem *elem : fElems) {
+
+    ROOT::RVec<double> grad_elem; grad_elem.reserve(fnDoF);   
+  
+    double elem_val(1.);
+    
+    for (int i=0; i<fnDoF; i++) {
+      if (elem->powers.at(i)>0) { 
+	elem_val *= pow( X.at(i), elem->powers.at(i) ); 	    
+      }
+    }
+    elem_val *= coeff->at(ii); 
+    
+    //then, use the power rule to compute the deriv. of this elem.
+    // with respect to each element of 'x'. 
+    for (int d=0; d<fnDoF; d++) {
+      if (elem->powers.at(d)<1) {
+	grad_elem.push_back(0.);
+      } else                    {
+	grad_elem.push_back( ((double)elem->powers.at(d))*elem_val/X.at(d) );
+      }
+    }
+    
+    //now add this vec to the gradient vec
+    grad += grad_elem; 
+    ii++; 
+    
+  }//for (TNPolyElem *elem : fElems) 
+      
+  return grad;
+}
+//_____________________________________________________________________________
+vector<double> TNPoly::Get_elemPoly(const int i) const
+{
+  if (i >= Get_nElems() ||
+      i < 0) {
+    Warning("TNPoly::Get_elemPoly(int)",
+	    "Invalid element-index requested; %i, max is %i",i,Get_nElems()-1);
+    return {};
+  }
+  return fElems.at(i)->poly;
+}
+//_____________________________________________________________________________
+vector<int> TNPoly::Get_elemPowers(const int i) const
+{
+  if (i >= Get_nElems() ||
+      i < 0) {
+    Warning("TNPoly::Get_elemPowers(int)",
+	    "Invalid element-index requested; %i, max is %i",i,Get_nElems()-1);
+    return {};
+  }
+  return fElems.at(i)->powers;
+}
+//_____________________________________________________________________________
+void TNPoly::autoConstructPoly(const int max_power, const int nDoF)
+{
+  vector<int> powers(max_power,0); 
+  
+  while (1) {
+    //create a new poly element with our current 'powers'
+    auto elem = new TNPolyElem;
+          
+    for (int x=0; x<nDoF; x++) {
+      int myPow=0;
+      for (int xPow : powers) if (powers[xPow]==x) myPow++;
+
+      elem->powers.push_back(myPow);
+    }
+          
+    /*cout << "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~" << endl; 
+      for (int p=0; p<max_power; p++) { 
+      for (int d=0; d<nDoF+1; d++) cout << (powers.at(p)==d?1:0) << " ";
+      cout << endl; 
+      }*/ 
+
+    /*cout << "elem : "; 
+      for (int d=0; d<nDoF; d++) cout << elem->powers.at(d) << ","; 
+      cout << endl; */ 
+
+    fElems.push_back( elem );
+          
+    //now, increase to the next set of powers
+    for (int it1=powers.size()-1; it1>=0; it1--) { 
+      //go back up and reset higher powers
+            
+      if (powers.at(it1)<nDoF) {
+	powers.at(it1) += 1; 
+	for (int it2=it1+1; it2<powers.size(); it2++) {
+	  powers.at(it2) = powers.at(it1);
+	}
+	break; 
+      }
+            
+      if (it1==0) {
+	//cout << "polynomial size = " << elems.size() << endl; 
+	return; 
+      }
+            
+    }//for (int it1=powers.size()-1 ... [power-escalating group]        
+  }//while (1)
+}
+//_____________________________________________________________________________
+
+ClassImp(TNPoly)
+

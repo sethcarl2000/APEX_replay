@@ -1,0 +1,33 @@
+#ifdef __CINT__
+
+#pragma link off all globals;
+#pragma link off all classes;
+#pragma link off all functions;
+
+#pragma link C++ class THRS+; 
+#pragma link C++ class THRS::VDC+;
+#pragma link C++ class TS2Hit+; 
+#pragma link C++ class TvdcHit+;
+#pragma link C++ class THitGroup+; 
+#pragma link C++ class THitCluster+; 
+#pragma link C++ class TChamberPair+; 
+#pragma link C++ class TEventHandler+; 
+#pragma link C++ class TvdcTrack+; 
+#pragma link C++ class TNPoly+;
+#pragma link C++ class TXMap+; 
+#pragma link C++ class TOpticsModel+;
+#pragma link C++ class TXfp+; 
+#pragma link C++ class TXtg+; 
+#pragma link C++ class TRPoly+; 
+#pragma link C++ class TFPoly+; 
+#pragma link C++ class TOpticsRays+; 
+#pragma link C++ class RMatrixD+; 
+#pragma link C++ class TReactVertex+; 
+/*#pragma link C++ class UserDetector+;
+#pragma link C++ class UserScintillator+;
+#pragma link C++ class UserApparatus+;
+#pragma link C++ class UserModule+;
+#pragma link C++ class UserEvtHandler+;
+#pragma link C++ class SkeletonModule+;*/ 
+
+#endif

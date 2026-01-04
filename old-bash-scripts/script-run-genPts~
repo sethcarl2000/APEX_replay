@@ -1,0 +1,35 @@
+#!/bin/bash
+
+#SBATCH --nodes 1
+#SBATCH --partition production
+#SBATCH --account halla
+#SBATCH --ntasks 1
+#SBATCH --cpus-per-task 8
+#SBATCH --output=/volatile/halla/apex/full_replay/slurm/out/%x.%j.out
+#SBATCH --error=/volatile/halla/apex/full_replay/slurm/err/%x.%j.err
+#SBATCH --time=0:50:00
+#SBATCH --mem-per-cpu=2000
+
+run=$1
+arm=$2
+
+ls $VOLATILE_DIR/production/decode.$run.* > $VOLATILE_DIR/decode_files.$run.list 
+
+part=-1 
+
+while read -r filePath_input; do 
+    
+    let part++
+    
+    filePath_output="$VOLATILE_DIR/production/replay.$run.subfile-$part.root"
+    
+    echo "PROCESSING SUB-FILE $part ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~" 
+    echo "input:  $filePath_input"
+    echo "output: $filePath_output"
+    
+    analyzer -l -b -q 'track_replay_macro.C("'$filePath_input'","'$filePath_output'",'$arm')'
+    #rm $filePath_input
+    
+done < "$VOLATILE_DIR/decode_files.$run.list" 
+
+rm $VOLATILE_DIR/decode_files.$run.list

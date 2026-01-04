@@ -1,0 +1,56 @@
+#!/bin/bash
+
+#SBATCH --nodes 1
+#SBATCH --partition production
+#SBATCH --account halla
+#SBATCH --ntasks 1
+#SBATCH --cpus-per-task 8
+#SBATCH --output=/volatile/halla/apex/full_replay/slurm/out/%x.%j.out
+#SBATCH --error=/volatile/halla/apex/full_replay/slurm/err/%x.%j.err
+#SBATCH --time=0:50:00
+#SBATCH --mem-per-cpu=2500
+
+run=$1
+arm=$2
+
+ls $RAWFILE_DIR/apex_$run.* > $VOLATILE_DIR/raw_files.$run.list 
+
+part=-1 
+
+while read -r inFile_decode; do 
+    
+    let part_decode++
+    
+    outFile_decode="$VOLATILE_DIR/production/decode.$run.$part_decode.root"
+    
+    echo "PROCESSING SUB-FILE $part_decode ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~" 
+    echo "input:  $inFile_decode"
+    echo "output: $outFile_decode"   
+    
+    analyzer -l -b -q 'setup_fullReplay.C("'$inFile_decode'", "'$outFile_decode'",1e7)'
+    #now, replay this run
+    ls $VOLATILE_DIR/production/decode.$run.$part_decode* > $VOLATILE_DIR/decode_files.$run.list 
+    
+    part_replay=-1 
+    
+    while read -r inFile_replay; do 
+	
+	let part_replay++
+	
+	outFile_replay="$VOLATILE_DIR/production/replay.$run.subrun-$part_decode.$part_replay.root"
+	
+	echo "PROCESSING SUB-FILE $part ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~" 
+	echo "input:  $inFile_replay"
+	echo "output: $outFile_replay"
+	
+	analyzer -l -b -q 'track_replay_macro.C("'$inFile_replay'","'$outFile_replay'",'$run')'
+	
+	rm $inFile_replay
+	
+    done < "$VOLATILE_DIR/decode_files.$run.list" 
+    
+    rm $VOLATILE_DIR/decode_files.$run.list
+    
+done < "$VOLATILE_DIR/raw_files.$run.list" 
+
+rm $VOLATILE_DIR/raw_files.$run.list

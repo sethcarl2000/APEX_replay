@@ -1,0 +1,14 @@
+#!/bin/bash
+
+#SBATCH --nodes 1
+#SBATCH --partition production
+#SBATCH --account halla
+#SBATCH --ntasks 1
+#SBATCH --mem-per-cpu 1024
+#SBATCH --job-name gen_fitPts
+#SBATCH --time 2:45:00
+
+cp output_trees/tracks.$1.root output_trees/pts/lowT.$4.$1.root
+
+analyzer -l -b -q 'macro_plots/gen_lowT_pts.C('$2', '$3', '$1', false, "output_trees/pts/lowT.'$4'.", "replay/out.")'
+

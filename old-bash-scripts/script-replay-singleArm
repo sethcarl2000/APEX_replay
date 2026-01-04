@@ -1,0 +1,41 @@
+#!/bin/bash
+
+#SBATCH --nodes 1
+#SBATCH --partition production
+#SBATCH --account halla
+#SBATCH --ntasks 1
+#SBATCH --cpus-per-task 8
+#SBATCH --output=/volatile/halla/apex/full_replay/slurm/out/%x.%j.out
+#SBATCH --error=/volatile/halla/apex/full_replay/slurm/err/%x.%j.err
+#SBATCH --time=0:50:00
+#SBATCH --mem-per-cpu=2000
+
+run=$1
+arm=$2
+stem_input=$3
+stem_output=$4
+
+if [ "$arm" != "R" ]&&[ "$arm" != "L" ]; then
+    echo "Error: 2nd arg (arm) invalid. must be 'L' or 'R'";
+    exit 1;
+fi
+
+if [ $arm = "R" ]; then arm="true"; fi
+if [ $arm = "L" ]; then arm="false"; fi
+
+part=-1
+
+for path_input in $(ls -1 $stem_input.$run.*)
+do	       
+    let part++
+    
+    path_output="$stem_output.$run.part-$part.root"
+    
+    echo "PROCESSING SUB-FILE $part ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~" 
+    echo "input:  $path_input"
+    echo "output: $path_output"
+    
+    analyzer -l -b -q "vdc_tracking_singleArm.C(1e7,$arm,$run,\"$path_input\",\"$path_output\")"
+
+done
+    
