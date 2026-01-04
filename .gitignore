@@ -5,4 +5,6 @@ src/build
 # vscode files
 .vscode
 
-
+# data files for testing
+data
+data/* 
