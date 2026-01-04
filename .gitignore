@@ -2,5 +2,7 @@
 old-src/build
 src/build
 
+# vscode files
+.vscode
 
 
