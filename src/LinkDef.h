@@ -5,5 +5,6 @@
 #pragma link off all functions;
 
 #pragma link C++ class TapexS2Hit+; 
+#pragma link C++ class TapexEventHandler+; 
 
 #endif 

@@ -31,11 +31,13 @@ find_package(ROOT 6.20 REQUIRED COMPONENTS Core RIO Physics)
 #   Define sources and headers
 set(sources 
     TapexS2Hit.cxx
+    TapexEventHandler.cxx
 )
 
 set(headers 
     TapexS2Hit.h
     TapexS2PMTOffsets.h
+    TapexEventHandler.h
 )
 
 #---------------------------------------------------------
