@@ -53,6 +53,7 @@ set(headers
     TapexVDCNamespace.h
     TapexVDCHit.h
     TapexVDCHitGroup.h
+    TapexVDCHitCluster.h 
 )
 
 #---------------------------------------------------------
