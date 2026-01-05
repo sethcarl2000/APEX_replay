@@ -32,12 +32,16 @@ find_package(ROOT 6.20 REQUIRED COMPONENTS Core RIO Physics)
 set(sources 
     TapexS2Hit.cxx
     TapexEventHandler.cxx
+    TapexVDCNamespace.cxx
+    TapexVDCHit.cxx
 )
 
 set(headers 
     TapexS2Hit.h
     TapexS2PMTOffsets.h
     TapexEventHandler.h
+    TapexVDCNamespace.h
+    TapexVDCHit.h
 )
 
 #---------------------------------------------------------

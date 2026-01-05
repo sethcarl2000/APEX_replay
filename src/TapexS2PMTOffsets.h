@@ -1,6 +1,8 @@
 /**
  * @file TapexS2PMTOffsets
  * @brief Tables of S2 PMT offsets
+ * 
+ * These are the raw-time offsets computed for each S2 PMT
  */
 
 #ifndef TapexS2PMTOffsets_H

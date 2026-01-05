@@ -11,7 +11,7 @@
  * @brief Class which manages drift model and other global event info    
  * 
  * This class is responsible for providing access to the VDC drift model for both arms, 
- * as well as other global event info. 
+ * as well as other global event info, like expected VDC wire-TDC rms values, as a function of beam current
  * 
  ***/
 class TapexEventHandler : public TObject { 
@@ -30,7 +30,7 @@ class TapexEventHandler : public TObject {
   
   bool ActiveArm() const { return f_activeArm; }
   
-  TapexS2Hit* GeTapexS2Hit() { return f_activeArm ? fS2Hit_Right : fS2Hit_Left; }
+  TapexS2Hit* GetS2Hit() { return f_activeArm ? fS2Hit_Right : fS2Hit_Left; }
     
   //un-blurred drift function
   double Drift_X( double tau, double slope, int derivative=0 ) const; 

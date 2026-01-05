@@ -4,18 +4,19 @@
 #include <TObject.h> 
 
 ////////////////////////////////////////////////////////////////////////////////////
+/***
+ * @class TapexS2Hit 
+ * 
+ * @brief Class containing one S2-scintillator hit      
+ * 
+ * This class processes a single S2-scintillator hit for the [L/R]-HRS, including the conversion between raw and calibrated
+ * S2 TDC times. 
+ * 
+ ***/
 class TapexS2Hit : public TObject { 
   
  public: 
-  /***
-   * @class TapexS2Hit 
-   * 
-   * @brief Class containing one S2-scintillator hit      
-   * 
-   * This class processes a single S2-scintillator hit for the [L/R]-HRS, including the conversion between raw and calibrated
-   * S2 TDC times. 
-   * 
-   ***/
+  
   TapexS2Hit( bool arm=true, int paddle=-1, double T_pmtL=-1e30, double T_pmtR=-1e30 ); 
   
   virtual ~TapexS2Hit() {/*noop*/}; 
