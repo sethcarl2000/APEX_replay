@@ -43,6 +43,7 @@ set(sources
     TapexEventHandler.cxx
     TapexVDCNamespace.cxx
     TapexVDCHit.cxx
+    TapexVDCHitGroup.cxx
 )
 
 set(headers 
@@ -51,6 +52,7 @@ set(headers
     TapexEventHandler.h
     TapexVDCNamespace.h
     TapexVDCHit.h
+    TapexVDCHitGroup.h
 )
 
 #---------------------------------------------------------
