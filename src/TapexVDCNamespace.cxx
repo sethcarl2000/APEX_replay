@@ -12,6 +12,7 @@ namespace {
 //___________________________________________________________________________________________________________________________
 double VDC::WirePos(const bool is_RHRS, const int plane, const int wire_num) 
 {
+#ifdef RANGE_CHECKS
     //check that the plane and wire number are valid
     if ((plane < 0 || plane >= n_planes) || (wire_num < 0 || wire_num >= n_wires)) {
         std::ostringstream oss; 
@@ -19,13 +20,14 @@ double VDC::WirePos(const bool is_RHRS, const int plane, const int wire_num)
         throw std::invalid_argument(oss.str()); 
         return ret_nan; 
     }
-
+#endif 
     //now, return the wire position. note that wire 0 is at the highest u/v position, and the last wire is at the lowest 
     return (is_RHRS ? R_plane_wire0[plane] : L_plane_wire0[plane]) - wire_spacing*((double)wire_num);
 }
 //___________________________________________________________________________________________________________________________
 int VDC::WireNum(const bool is_RHRS, const int plane, const double position)
 {
+#ifdef RANGE_CHECKS
     //check that the plane and wire number are valid
     if (plane < 0 || plane >= n_planes) {
         std::ostringstream oss; 
@@ -33,7 +35,7 @@ int VDC::WireNum(const bool is_RHRS, const int plane, const double position)
         throw std::invalid_argument(oss.str()); 
         return -1; 
     }
-
+#endif 
     double offset = is_RHRS ? R_plane_wire0[plane] : L_plane_wire0[plane];
     int wire_num = (int)std::round((offset - position)/wire_spacing);
     

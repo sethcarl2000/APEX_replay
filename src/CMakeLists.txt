@@ -15,6 +15,15 @@ if (DEBUG)
 endif()
 
 #---------------------------------------------------------
+#   Define this preprocessor macro to range-checks for user-defined collections of objects
+#   as well as constexpr namespace arrays.
+#   this effects performance, makes errors easier to interpret during development 
+option(RANGE_CHECKS "Enable Range-check exceptions on user-defined classes" ON)
+if (RANGE_CHECKS)
+    add_compile_definitions(RANGE_CHECKS)
+endif()
+
+#---------------------------------------------------------
 #   Which include directories to use. 
 set(CMAKE_CXX_STANDARD
     17
