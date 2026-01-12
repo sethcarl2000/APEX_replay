@@ -44,6 +44,7 @@ set(sources
     TapexVDCNamespace.cxx
     TapexVDCHit.cxx
     TapexVDCHitGroup.cxx
+    TapexVDCChamberPair.cxx
 )
 
 set(headers 
@@ -54,6 +55,8 @@ set(headers
     TapexVDCHit.h
     TapexVDCHitGroup.h
     TapexVDCHitCluster.h 
+    TapexVDCChamberPair.h 
+    TapexVDCTrack.h
 )
 
 #---------------------------------------------------------

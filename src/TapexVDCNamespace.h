@@ -8,6 +8,8 @@
 #ifndef TapexVDCNamespace_H
 #define TapexVDCNamespace_H
 
+#include <TVector3.h>
+
 namespace VDC {
 
     //number of VDC planes
@@ -48,6 +50,13 @@ namespace VDC {
     //given an arm [R/L] and a VDC plane, return the wire number of the closest wire
     int WireNum(const bool is_RHRS, const int plane, const double position); 
 
+    //rotates a displacement (or direction) from the UVW coordinate system to the XYZ (trasnport) coordinate system
+    TVector3 UVW_to_XYZ(const TVector3& X); 
+
+    //rotates a displacement (or direction) from the XYZ (trasnport) coordinate system to the UVW coordinate system
+    TVector3 XYZ_to_UVW(const TVector3& X); 
+
+    
 }; 
 
 
