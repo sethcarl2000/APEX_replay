@@ -1451,14 +1451,12 @@ void TvdcTrack::SetPair_Lo( TChamberPair *pLo ) {
   fGroup[1] = fPair_Lo->GetGroup_V();
   UpdateTrackInfo(); 
 } 
-void TvdcTrack::Set_uv_Hi( const double u, 
-			   const double v ) { 
+void TvdcTrack::Set_uv_Hi( const double u, const double v ) { 
   if(fPair_Hi) { fPair_Hi->Set_uv( u,v ); } 
   else         { fIntercept[2]=v; fIntercept[3]=u; }
   UpdateTrackInfo(); 
 }
-void TvdcTrack::Set_uv_Lo( const double u, 
-			   const double v ) { 
+void TvdcTrack::Set_uv_Lo( const double u, const double v ) { 
   if(fPair_Lo) { fPair_Lo->Set_uv( u,v ); } 
   else         { fIntercept[0]=v; fIntercept[1]=u; }
   UpdateTrackInfo(); 
@@ -1597,8 +1595,11 @@ void TvdcTrack::Compute_Theta_Phi( const bool arm,
 }  
 TVector3 TvdcTrack::ComputeIntercept_w(const double w) const {
     
-  return TVector3( fIntercept[1] + ( w - fW[1] )/fSlope_u, 
-		   fIntercept[0] + ( w - fW[0] )/fSlope_v, w ); 
+  return TVector3( 
+    fIntercept[1] + ( w - fW[1] )/fSlope_u, 
+		fIntercept[0] + ( w - fW[0] )/fSlope_v, 
+    w 
+  ); 
 }
 TVector3 TvdcTrack::ComputeIntercept_z(const double z) const {
   

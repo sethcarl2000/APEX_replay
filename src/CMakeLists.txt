@@ -44,19 +44,20 @@ set(sources
     TapexVDCNamespace.cxx
     TapexVDCHit.cxx
     TapexVDCHitGroup.cxx
-    TapexVDCChamberPair.cxx
+#    TapexVDCChamberPair.cxx
 )
 
 set(headers 
+    EventCounter.h
     TapexS2Hit.h
     TapexS2PMTOffsets.h
     TapexEventHandler.h
     TapexVDCNamespace.h
     TapexVDCHit.h
     TapexVDCHitGroup.h
-    TapexVDCHitCluster.h 
-    TapexVDCChamberPair.h 
-    TapexVDCTrack.h
+#    TapexVDCHitCluster.h 
+#    TapexVDCChamberPair.h 
+#    TapexVDCTrack.h
 )
 
 #---------------------------------------------------------

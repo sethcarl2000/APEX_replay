@@ -22,6 +22,12 @@ int TapexVDCHitGroup::WireNum(unsigned int h) const
     return fHits[h].wNum(); 
 }
 //____________________________________________________________________________________________________________________
+void TapexVDCHitGroup::operator=(const TapexVDCHitGroup &rhs)
+{
+    fHits  = rhs.GetHits();
+    fPlane = rhs.GetPlane(); 
+}
+//____________________________________________________________________________________________________________________
 double TapexVDCHitGroup::WirePos(unsigned int h) const 
 {
 #ifdef RANGE_CHECKS

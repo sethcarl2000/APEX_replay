@@ -21,7 +21,9 @@ class TapexVDCHitGroup : public TObject {
   
  public:   
   TapexVDCHitGroup(int plane=-1) : fPlane{plane} {};
-  
+
+  void operator=(const TapexVDCHitGroup&); 
+
   ~TapexVDCHitGroup() {}; 
   
   void AddHit(const TapexVDCHit& hit) { fHits.push_back(hit); } 
@@ -36,6 +38,10 @@ class TapexVDCHitGroup : public TObject {
   
   TapexVDCHit& GetHit( unsigned int h );
 
+  std::vector<TapexVDCHit> GetHits() const { return fHits; }
+
+  int GetPlane() const { return fPlane; }
+
   int    FirstWire() const { return fHits.front().wNum(); } 
   
   double LoEdge()    const { return fHits.back().wPos(); } 
@@ -47,6 +53,8 @@ class TapexVDCHitGroup : public TObject {
   
   double W()        const { return fHits.at(0).W(); }
   
+  /// empty collection of all hits
+  void Clear() { fHits.clear(); }
   
 private: 
   std::vector<TapexVDCHit> fHits; 
