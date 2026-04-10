@@ -9,11 +9,11 @@
 ###########################################################
 
 # Place where output .root files will be 
-Output_path="$VOLATILE_DIR/optics/decode"
+Output_path="$VOLATILE_DIR/decode"
 #.[run].root
 
 # Variable .odef to use
-OutDef_path="outDefs/optics.odef"
+OutDef_path="outDefs/full_replay.odef"
 
 # Decode MB per min
 DECODE_MB_per_min=300
