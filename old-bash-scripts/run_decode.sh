@@ -74,8 +74,8 @@ PrintParams()
     echo " OutDef_path = '$OutDef_path' "
     echo "    | Path to variable definitions"
     echo 
-    echo " mem_per_cpu = $mem_per_cpu MB"
-    echo "    | Path to variable definitions"
+    echo " mem = $mem_per_cpu MB"
+    echo "    | ram that will be reqeused for each slurm job"
     echo;
 }
 
@@ -192,7 +192,7 @@ do
 
     echo -n "(~ $minutes_decode mins). "
     
-    command="--job-name=decode_$Run --time=$minutes_decode script-run-decode $Run $Output_path $OutDef_path --mem-per-cpu=$mem_per_cpu"
+    command="--job-name=decode_${Run} --time=${minutes_decode} script-run-decode ${Run} ${Output_path} ${OutDef_path} --mem=${mem_per_cpu}"
     
     # decide whether to run on priority or production (-z for priority)
     if [ $Run_priority = "true" ]
