@@ -8,18 +8,6 @@
 # 
 ###########################################################
 
-# Place where output .root files will be 
-Output_path="$VOLATILE_DIR/decode"
-#.[run].root
-
-# Variable .odef to use
-OutDef_path="outDefs/full_replay.odef"
-
-# Decode MB per min
-DECODE_MB_per_min=300
-
-# Mem-per-cpu, in mb
-mem_per_cpu=3500
 
 ####################
 #  Main program
@@ -59,8 +47,25 @@ Help()
     echo "  -m  -  Request memory-per-cpu in MB (use '-p' to see default)"
     echo
 }
+#set apex replay env
+source set_apex_replay_env.sh 
+cd ${PATH_APEX_REPLAY}
+
 TestOnly="false"
 Run_priority="false"
+
+# Place where output .root files will be 
+Output_path="${PATH_APEX_VOLATILE}/decode"
+#.[run].root
+
+# Variable .odef to use
+OutDef_path="outDefs/full_replay.odef"
+
+# Decode MB per min
+DECODE_MB_per_min=300
+
+# Mem-per-cpu, in mb
+mem_per_cpu=3500
 
 
 PrintParams()
@@ -107,7 +112,7 @@ RawMB=0
 GetRawMB()
 {
     local n_rawBytes=0
-    n_rawBytes=$(ls -l "$RAWFILE_DIR/apex_$Run."* 2>/dev/null | awk '{sum += $5} END{ print sum}')
+    n_rawBytes=$(ls -l "${PATH_APEX_CACHE}/apex_$Run."* 2>/dev/null | awk '{sum += $5} END{ print sum}')
     RawMB=$(( $n_rawBytes / 1000000 ))
 }
 
@@ -195,7 +200,7 @@ do
 
     echo -n "(~ $minutes_decode mins). "
     
-    command="--job-name=apex_decode_${Run} --time=${minutes_decode} script-run-decode ${Run} ${Output_path} ${OutDef_path} --mem=${mem_per_cpu}"
+    command="--job-name=apex_decode_${Run} --time=${minutes_decode} scripts/run-decode ${Run} ${Output_path} ${OutDef_path} --mem=${mem_per_cpu}"
     
     # decide whether to run on priority or production (-z for priority)
     if [ $Run_priority = "true" ]
