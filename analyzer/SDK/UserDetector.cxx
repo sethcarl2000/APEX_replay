@@ -5,8 +5,9 @@
 // UserDetector                                                              //
 //                                                                           //
 // Example of a user-defined detector class. This class implements a         //
-// completely new detector from scratch. Only Decode() performs non-trivial  //
-// work. CoarseProcess/FineProcess should be implemented as needed.          //
+// completely new detector from scratch. Only ReadDatabase() and StoreHit()  //
+// perform slightly non-trivial work. CoarseProcess/FineProcess must be      //
+// implemented as needed.                                                    //
 //                                                                           //
 // See UserScintillator for an example of a detector class where the         //
 // behavior of an existing detector (scintillator) is modified and extended. //
@@ -15,26 +16,30 @@
 
 #include "UserDetector.h"
 #include "VarDef.h"
-#include "THaEvData.h"
 #include "THaDetMap.h"
 #include "TMath.h"
+#include "Helper.h"
 // Needed in CoarseProcess/FineProcess if implemented
 #include "THaTrack.h"
 #include "TClonesArray.h"
-
-#include <cassert>
 #include <iostream>
+#include <sstream>
+#include <stdexcept>
 
 using namespace std;
+using namespace Podd;
+
+// Example of a hardcoded parameter (arbitrary value, see ReadDatabase).
+// Generally not recommended. The day will come when someone needs more than this.
+static const int MAXCHAN = 100;
 
 // Constructors should initialize all basic-type member variables to safe
 // default values. In particular, all pointers should be either zeroed or
 // assigned valid data.
 //_____________________________________________________________________________
 UserDetector::UserDetector( const char* name, const char* description,
-				  THaApparatus* apparatus )
-  : THaNonTrackingDetector(name,description,apparatus),
-    fNhit(0), fRawADC(0), fCorADC(0)
+                            THaApparatus* apparatus )
+  : THaNonTrackingDetector(name, description, apparatus)
 {
   // Constructor
 }
@@ -44,9 +49,17 @@ UserDetector::~UserDetector()
 {
   // Destructor. Remove variables from global list.
 
+  // Unfortunately, we can't rely on one of the base classes to remove our
+  // variables because of the way virtual functions are resolved in the scope
+  // of destructors.
+  // The following calls THaAnalysisObject::DefineVariablesWrapper(), and
+  // the virtual function call to DefineVariables(kDelete) within that function
+  // resolves to the DefineVariables implementation in this class, which would
+  // not be the case if called from THaAnalysisObject's destructor.
+  // Hence, RemoveVariables() should be called from the destructor of
+  // every class that defines its own global variables through the standard
+  // DefineVariables() mechanism, like this one does.
   RemoveVariables();
-  delete [] fRawADC;
-  delete [] fCorADC;
 }
 
 //_____________________________________________________________________________
@@ -57,8 +70,8 @@ Int_t UserDetector::ReadDatabase( const TDatime& date )
   // 'date' contains the date/time of the run being analyzed.
   //
   // This routine is written for the simple file-based database scheme
-  // of Analyzer 1.x. The format of the database file is completely up to the
-  // author of the detector class. Here, we use tag/value pairs to allow
+  // of Analyzer 1.x. The format of the database file is up to the
+  // author of the detector class. Here, we use key/value pairs to allow
   // for a free file format.
 
   const char* const here = "ReadDatabase";
@@ -71,12 +84,10 @@ Int_t UserDetector::ReadDatabase( const TDatime& date )
   FILE* file = OpenFile( date );
   if( !file ) return kFileError;
 
-  // Storage and default values for data from database. To prevent memory
-  // leaks when re-initializing, all dynamically allocated memory should
-  // be deleted here, and the corresponding variables should be zeroed.
-  // All vectors should be cleared unless they are required database
-  // parameters. (If an optional parameter is not found in the database,
-  // its value remains unchanged.)
+  // All vectors should be cleared and all conditions variables should be set
+  // to default values here.
+  // NB: fPed and fGain will be set to default values below in case there are
+  // no values for them in the database.
   Int_t nelem = 0;
   Double_t angle = 0.0;
   fPed.clear();
@@ -93,17 +104,28 @@ Int_t UserDetector::ReadDatabase( const TDatime& date )
 
   // Read the database. This may throw exceptions, so we put it in a try block.
   Int_t err = 0;
+
+  // Automatically adjust the data type
   try {
+    // Automatically determine which data type constants correspond to Data_t.
+    // This can be ignored/removed if the member variables are hardcoded as
+    // Float_t or Double_t.
+//  VarType kDataType  = std::is_same<Data_t, Float_t>::value ? kFloat  : kDouble;
+    VarType kDataTypeV = std::is_same<Data_t, Float_t>::value ? kFloatV : kDoubleV;
+
     // Set up an array of database requests. See VarDef.h for details.
+    // If an optional parameter is not found in the database, the value of its
+    // associated variable remains unchanged.
     const DBRequest request[] = {
       // Required items
       { "detmap",    &detmap, kIntV },         // Detector map
-      { "nelem",     &nelem,  kInt, 0, 0, -1}, // Number of elements (e.g. PMTs)
+      { "nelem",     &nelem,  kInt,       0, false, -1}, // Number of elements (e.g. PMTs)
       // Optional items
-      { "angle",     &angle,  kDouble, 0, 1 }, // Rotation angle about y (deg)
-      { "pedestals", &fPed,   kFloatV, 0, 1 }, // Pedestals
-      { "gains",     &fGain,  kFloatV, 0, 1 }, // Gains
-      { 0 }                                    // Last element must be NULL
+      { "angle",     &angle,  kDouble,    0, true }, // Rotation angle about y (deg)
+      //== CAUTION: kDoubleV here must match the type of Data_t
+      { "pedestals", &fPed,   kDataTypeV, 0, true }, // Pedestals (optional)
+      { "gains",     &fGain,  kDataTypeV, 0, true }, // Gains (optional)
+      { nullptr }                                    // Last element must be nullptr
     };
 
     // Read the requested values
@@ -119,7 +141,7 @@ Int_t UserDetector::ReadDatabase( const TDatime& date )
   // Catch exceptions here so that we can close the file and clean up
   catch(...) {
     fclose(file);
-    throw;
+    throw; // Just rethrow the exception to exit, unless we have a better idea
   }
 
   // Normal end of reading the database
@@ -130,16 +152,16 @@ Int_t UserDetector::ReadDatabase( const TDatime& date )
   // Check all configuration values for sanity. This is the more tedious, but
   // nevertheless very important part of reading the database. In addition to
   // simple checking, this part may also include computation of derived
-  // configuration parameters, for instance an allowed hitpattern or
-  // geometry limits. See the call to DefineAxes below as an example.
+  // configuration parameters, for instance an allowed hit pattern or
+  // geometry parameters. See the call to DefineAxes below as an example.
   if( nelem <= 0 ) {
     Error( Here(here), "Cannot have zero or negative number of elements. "
 	   "Fix database." );
     return kInitError;
   }
-  if( nelem > 100 ) {
-    Error( Here(here), "Illegal number of elements = %d. Must be <= 100. "
-	   "Fix database.", nelem );
+  if( nelem > MAXCHAN ) {
+    Error( Here(here), "Illegal number of elements = %d. Must be <= %d. "
+	   "Fix database.", nelem, MAXCHAN );
     return kInitError;
   }
 
@@ -149,8 +171,11 @@ Int_t UserDetector::ReadDatabase( const TDatime& date )
   // Resizing a detector is hardly ever necessary for a given analysis,
   // so this catches database errors and simplifies the design of this class.
   if( fIsInit && nelem != fNelem ) {
-    Error( Here(here), "Cannot re-initalize with different number of elements. "
-	   "(was: %d, now: %d). Detector not re-initialized.", fNelem, nelem );
+    ostringstream ostr;
+    ostr << "Cannot re-initialize with different number of elements. "
+         << "(was: " << fNelem << ", now: " << nelem << "). "
+         << "Detector not re-initialized.";
+    Error( Here(here), "%s", ostr.str().c_str() );
     return kInitError;
   }
 
@@ -160,25 +185,29 @@ Int_t UserDetector::ReadDatabase( const TDatime& date )
   // Check detector map size. We assume that each detector element (e.g. paddle)
   // has exactly one hardware channel. This could be different, e.g. if each PMT
   // is read by an ADC and a TDC, etc. Modify as appropriate.
-  Int_t nchan = fDetMap->GetTotNumChan();
-  if( nchan != nelem ) {
-    Error( Here(here), "Incorrect number of detector map channels = %d. Must "
-	   "equal nelem = %d. Fix database.", nchan, nelem );
+  UInt_t nchan = fDetMap->GetTotNumChan(), nval = nelem;
+  if( nchan != nval ) {
+    ostringstream ostr;
+    ostr << "Incorrect number of detector map channels = " << nchan
+         << ". Must equal nelem = " << nval << ". Fix database.";
+    Error( Here(here), "%s", ostr.str().c_str() );
     return kInitError;
   }
 
   // Check if the sizes of the arrays we read make sense.
   // NB: If we have an empty vector here, there was no database entry for it.
-  if( !fPed.empty() && fPed.size() != static_cast<Vflt_t::size_type>(nelem)) {
-    Error( Here(here), "Incorrect number of pedestal values = %d. Must match "
-	   "nelem = %d. Fix database.",
-	   static_cast<Int_t>(fPed.size()), nelem );
+  if( !fPed.empty() && fPed.size() != nval) {
+    ostringstream ostr;
+    ostr << "Incorrect number of pedestal values = " << fPed.size()
+         << ". Must match nelem = " << nval << ". Fix database.";
+    Error( Here(here), "%s", ostr.str().c_str() );
     return kInitError;
   }
-  if( !fGain.empty() && fGain.size() != static_cast<Vflt_t::size_type>(nelem)) {
-    Error( Here(here), "Incorrect number of gain values = %d. Must match "
-	   "nelem = %d. Fix database.",
-	   static_cast<Int_t>(fGain.size()), nelem );
+  if( !fGain.empty() && fGain.size() != nval) {
+    ostringstream ostr;
+    ostr << "Incorrect number of gain values = " << fGain.size()
+         << ". Must match nelem = " << nval << ". Fix database.";
+    Error( Here(here), "%s", ostr.str().c_str() );
     return kInitError;
   }
 
@@ -192,36 +221,25 @@ Int_t UserDetector::ReadDatabase( const TDatime& date )
   // Use the rotation angle to set the axes vectors
   // (required for display functions, for instance)
   // See THaDetectorBase::DefineAxes for details.
-  const Float_t degrad = TMath::Pi()/180.0;
+  const Double_t degrad = TMath::Pi()/180.0;
   DefineAxes(angle*degrad);
 
-  // With analyzer 1.5 and earlier, arrays that are to be exported as global
-  // variables (i.e. event-by-event analysis results) must still be C-style
-  // arrays, not vectors. Set them up here if not already done.
-  if( !fIsInit ) {
-    // Use assertions to check for program logic errors ("should never happen")
-    assert( fRawADC == 0 && fCorADC == 0 );
-    fRawADC = new Float_t[ fNelem ];
-    fCorADC = new Float_t[ fNelem ];
+  fIsInit = true;
 
-    fIsInit = true;
-  }
   return kOK;
 }
 
 //_____________________________________________________________________________
 Int_t UserDetector::DefineVariables( EMode mode )
 {
-  // Define (or delete) global variables of the detector
-
-  if( mode == kDefine && fIsSetup ) return kOK;
-  fIsSetup = ( mode == kDefine );
+  // Define (or delete) global variables of this detector
 
   RVarDef vars[] = {
-    { "nhit",  "Number of hits",  "fNhit" },
-    { "adc",   "Raw ADC values",  "fRawADC" },
-    { "adc_c", "Corrected ADCs",  "fCorADC" },
-    { 0 }
+    { "nhit",  "Number of hits",  "GetNhits()" },
+    { "chan",  "Channel number",  "fEventData.fChannel" },
+    { "adc",   "Raw ADC value",   "fEventData.fRawADC" },
+    { "adc_c", "Calibrated ADC",  "fEventData.fCalADC" },
+    { nullptr }
   };
   return DefineVarsFromList( vars, mode );
 }
@@ -229,62 +247,52 @@ Int_t UserDetector::DefineVariables( EMode mode )
 //_____________________________________________________________________________
 void UserDetector::Clear( Option_t* opt )
 {
-  // Reset per-event data.
+  // Reset per-event data. This function is called before Decode() for
+  // every event.
 
   THaNonTrackingDetector::Clear(opt);
-
-  fNhit = 0;
-  if( fIsInit ) {
-    assert( fRawADC != 0 && fCorADC != 0 );
-    memset( fRawADC, 0, fNelem*sizeof(Float_t) );
-    memset( fCorADC, 0, fNelem*sizeof(Float_t) );
-  }
+  fEventData.clear();
 }
 
 //_____________________________________________________________________________
-Int_t UserDetector::Decode( const THaEvData& evdata )
+Int_t UserDetector::StoreHit( const DigitizerHitInfo_t& hitinfo, UInt_t data )
 {
-  // Decode data.
-  // Read all channels with hits specified in  the detector map.
-  // Assume single-hit hardware, i.e. only one hit per channel.
-  // Store results in fRawADC array. Compute corrected ADC values
-  // (pedestal-subtracted, scaled by gain factor) here as well since
-  // all the required data is available.
+  // Simple example method for storing decoded data.
+  // NB: All detectors use THaDetectorBase::Decode as the default Decode method.
+  //
+  // This is called from THaDetectorBase::Decode for every hit belonging to this
+  // detector in the current event. The THaDetectorBase::Decode method assumes
+  // single-hit hardware, i.e. only one hit per channel. If multiple hits per
+  // channel need to be analyzed, the detector class needs to override Decode.
+  //
+  // As an alternative to writing a StoreHit method, one can add DetectorData
+  // objects to the fDetectorData vector (which is provided in THaDetectorBase).
+  // This would be done during initialization, typically in ReadDatabase.
 
-  // Clear event-by-event data
-  Clear();
+  // Use the logical detector channel to index the data. The logical channel
+  // is calculated in THaDetMap::Module::ConvertToLogicalChannel as
+  // d->first + hardware_channel - d->lo, where 'd' refers to the detector
+  // map "Module" (= line in the database) corresponding to the frontend
+  // where the hit was registered. It typically runs from 0 to nelem-1.
+  Int_t chan = hitinfo.lchan;
 
-  // Loop over all modules defined in the detector map
-
-  for( Int_t i = 0; i < fDetMap->GetSize(); i++ ) {
-    THaDetMap::Module* d = fDetMap->GetModule( i );
-
-    // Loop over all channels that have a hit.
-    for( Int_t j = 0; j < evdata.GetNumChan( d->crate, d->slot ); j++) {
-
-      Int_t chan = evdata.GetNextChan( d->crate, d->slot, j );
-      if( chan < d->lo || chan > d->hi ) continue;   // Not one of my channels
-
-      // Get the data. This detector is assumed to have only single hit (hit=0)
-      Int_t data = evdata.GetData( d->crate, d->slot, chan, 0 );
-
-      // Get the detector channel number, starting at 0
-      Int_t k = chan - d->lo + d->first;
-
-      // Always ensure that index values are sane
-      if( k<0 || k>=fNelem ) {
-#ifdef WITH_DEBUG
-	// Indicates bad database
-	Warning( Here("Decode()"), "Illegal detector channel: %d", k );
+  // Check if 'chan' is in range here as a bugcheck of the detector map logic.
+  // Like asserts, such bugchecks may be skipped for better performance when
+  // compiling production code with -DNDEBUG. Or you may keep them for more
+  // safety, especially when some value depends on unpredictable input data.
+#ifndef NDEBUG
+  if( chan < 0 || chan >= fNelem )
+    throw std::logic_error("UserDetector::StoreHit: invalid logical channel");
 #endif
-	continue;
-      }
-      fRawADC[k] = static_cast<Float_t>( data );
-      fCorADC[k] = (fRawADC[k] - fPed[k]) * fGain[k];
-      fNhit++;
-    }
-  }
-  return fNhit;
+
+  // Copy the data to its destination. Here, we use a custom data structure
+  // to store the logical channel number, raw data and calibrated data. This
+  // provides a variable size vector of data for each event, holding only
+  // the channels with data.
+  fEventData.emplace_back(chan, data, (data - fPed[chan]) * fGain[chan]);
+
+  // The return value is currently ignored by THeDetectorBase::Decode.
+  return 0;
 }
 
 //_____________________________________________________________________________
@@ -304,20 +312,20 @@ Int_t UserDetector::FineProcess( TClonesArray& /* tracks */ )
 }
 
 //_____________________________________________________________________________
-static void PrintArray( const Float_t* arr, Int_t size )
-{
-  // Helper function for Print()
-
-  if( size <= 0 ) {
-    cout << "(empty)";
-  } else {
-    for( Int_t i = 0; i < size; ++i ) {
-      cout << arr[i];
-      if( i+1 != size )  cout << ", ";
-    }
-  }
-  cout << endl;
-}
+// Helper macro to print a single field of a structure in a std::vector.
+#define PrintArrayField(txt,var,field)           \
+  cout << (txt) << " = ";                        \
+  {                                              \
+     if( (var).empty() )                         \
+       cout << "(empty)";                        \
+     else {                                      \
+       for( auto it = (var).begin();             \
+                 it != (var).end(); ++it ) {     \
+         cout << (*it).field;                    \
+         if( it+1 != (var).end() ) cout << ", "; \
+       }                                         \
+     }                                           \
+  } cout << endl;
 
 //_____________________________________________________________________________
 void UserDetector::Print( Option_t* opt ) const
@@ -329,11 +337,12 @@ void UserDetector::Print( Option_t* opt ) const
   THaDetector::Print(opt);
   cout << "detmap = "; fDetMap->Print();
   cout << "nelem = " << fNelem << endl;
-  cout << "pedestals = "; PrintArray( &fPed[0],  fNelem );
-  cout << "gains = ";     PrintArray( &fGain[0], fNelem );
-  cout << "nhits = " << fNhit << endl;
-  cout << "rawadc = ";    PrintArray( fRawADC,   fNelem );
-  cout << "coradc = ";    PrintArray( fCorADC,   fNelem );
+  cout << "pedestals = "; PrintArray( fPed );
+  cout << "gains = ";     PrintArray( fGain );
+  cout << "nhits = " << fEventData.size() << endl;
+  PrintArrayField("channel", fEventData, fChannel)
+  PrintArrayField("rawadc", fEventData, fRawADC)
+  PrintArrayField("coradc", fEventData, fCalADC)
 }
 
 ////////////////////////////////////////////////////////////////////////////////

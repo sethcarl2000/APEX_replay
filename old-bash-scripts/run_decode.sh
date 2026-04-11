@@ -159,6 +159,9 @@ if [ $Run_priority = "false" ]; then echo "running on production partition."; fi
 
 #check to make sure there's at least one raw file to decode
 
+# set the proper environment variables
+source ./set_apex_replay_env.sh
+
 if [ $LastRun -le $Run ];
 then
     echo "Processing run $Run"
@@ -192,16 +195,18 @@ do
 
     echo -n "(~ $minutes_decode mins). "
     
-    command="--job-name=decode_${Run} --time=${minutes_decode} script-run-decode ${Run} ${Output_path} ${OutDef_path} --mem=${mem_per_cpu}"
+    command="--job-name=apex_decode_${Run} --time=${minutes_decode} script-run-decode ${Run} ${Output_path} ${OutDef_path} --mem=${mem_per_cpu}"
     
     # decide whether to run on priority or production (-z for priority)
     if [ $Run_priority = "true" ]
     then
 	command="--partition=priority ${command}";
     fi
-    
-    
-    if [ $TestOnly = "true" ]; then command="--test-only ${command}"; fi
+        
+    if [ $TestOnly = "true" ]; then
+	echo "<${0}>: command string: ${command}" 
+	command="--test-only ${command}";
+    fi
     
     eval "sbatch ${command}" 
         

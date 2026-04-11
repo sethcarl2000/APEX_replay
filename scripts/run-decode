@@ -29,14 +29,14 @@ for path_input in $(ls -1 ${PATH_APEX_CACHE}/apex_$run.*)
 do 
     part=$(($part + 1))
     
-    path_output="$stem_output.$run.part-$part.root"
+    path_output="${stem_output}.${run}.part-${part}.root"
     
     echo "<${0}>: PROCESSING SUB-FILE $part ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~" 
     echo "<${0}>: input:  $path_input"
     echo "<${0}>: output: $path_output"
     echo "<${0}>: ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~"
     
-    analyzer -l -b -q 'macros/decode_run.C("'$path_input'", "'$path_output'","'$path_odef'")'
+    ./${ANALYZER_EXE} -l -b -q 'macros/decode_run.C("'$path_input'", "'$path_output'","'$path_odef'")'
     echo "<${0}>: done with sub-file $part. ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~"
 done
     

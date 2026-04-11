@@ -5,4 +5,5 @@ src/build
 # emacs backups
 *~
 
-
+# analyzer build files
+analyzer/build 

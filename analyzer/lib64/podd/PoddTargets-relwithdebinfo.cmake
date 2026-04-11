@@ -13,8 +13,8 @@ set_target_properties(Podd::Decode PROPERTIES
   IMPORTED_SONAME_RELWITHDEBINFO "libdc.so.1.6"
   )
 
-list(APPEND _IMPORT_CHECK_TARGETS Podd::Decode )
-list(APPEND _IMPORT_CHECK_FILES_FOR_Podd::Decode "${_IMPORT_PREFIX}/lib64/libdc.so.1.6.6" )
+list(APPEND _cmake_import_check_targets Podd::Decode )
+list(APPEND _cmake_import_check_files_for_Podd::Decode "${_IMPORT_PREFIX}/lib64/libdc.so.1.6.6" )
 
 # Import target "Podd::HallA" for configuration "RelWithDebInfo"
 set_property(TARGET Podd::HallA APPEND PROPERTY IMPORTED_CONFIGURATIONS RELWITHDEBINFO)
@@ -23,8 +23,8 @@ set_target_properties(Podd::HallA PROPERTIES
   IMPORTED_SONAME_RELWITHDEBINFO "libHallA.so.1.6"
   )
 
-list(APPEND _IMPORT_CHECK_TARGETS Podd::HallA )
-list(APPEND _IMPORT_CHECK_FILES_FOR_Podd::HallA "${_IMPORT_PREFIX}/lib64/libHallA.so.1.6.6" )
+list(APPEND _cmake_import_check_targets Podd::HallA )
+list(APPEND _cmake_import_check_files_for_Podd::HallA "${_IMPORT_PREFIX}/lib64/libHallA.so.1.6.6" )
 
 # Commands beyond this point should not need to know the version.
 set(CMAKE_IMPORT_FILE_VERSION)

@@ -1,5 +1,5 @@
 
-#include "def_apex.h"
+#include "${PATH_APEX_REPLAY}/include/def_apex.h"
 
 #include <fstream>
 

@@ -55,7 +55,7 @@ TestOnly="false"
 Run_priority="false"
 
 # Place where output .root files will be 
-Output_path="${PATH_APEX_VOLATILE}/decode"
+Output_path="${PATH_APEX_VOLATILE}/decode/decode"
 #.[run].root
 
 # Variable .odef to use
@@ -73,7 +73,7 @@ PrintParams()
     echo
     echo "Default parameters: (Change in run_decode.sh)"
     echo 
-    echo " Output_path = '$Output_path.[run].root' "
+    echo " Output_path = '${Output_path}.[run].root' "
     echo "    | Path to output .root files"
     echo 
     echo " OutDef_path = '$OutDef_path' "
@@ -181,6 +181,7 @@ while [ $Run -lt $LastRun ]
 do
     let Run++ 
 
+    echo 
     echo -n "Run $Run: "
     
     #check to see how many raw files there are
@@ -200,7 +201,7 @@ do
 
     echo -n "(~ $minutes_decode mins). "
     
-    command="--job-name=apex_decode_${Run} --time=${minutes_decode} scripts/run-decode ${Run} ${Output_path} ${OutDef_path} --mem=${mem_per_cpu}"
+    command="--job-name=apex_decode_${Run} --time=${minutes_decode} --mem=${mem_per_cpu} scripts/run-decode ${Run} ${Output_path} ${OutDef_path}"
     
     # decide whether to run on priority or production (-z for priority)
     if [ $Run_priority = "true" ]
@@ -209,6 +210,7 @@ do
     fi
         
     if [ $TestOnly = "true" ]; then
+	echo 
 	echo "<${0}>: command string: ${command}" 
 	command="--test-only ${command}";
     fi
