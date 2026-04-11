@@ -3,9 +3,11 @@
 source /home/sethhall/.login
 
 
-
 export PATH_APEX_REPLAY="/work/halla/apex/disk1/sethhall/apex_replay"
 #export PATH_APEX_ANALYZER="${PATH_APEX_REPLAY}/analyzer" 
+
+# set path to our DB files 
+DB_DIR="${PATH_APEX_REPLAY}/analyzer/DB"
 
 # check to see if we have the apex library loaded
 # echo -n "<${0}>: checking for apex library in LD_LIBRARY_PATH... "
@@ -38,17 +40,42 @@ export PATH_APEX_REPLAY="/work/halla/apex/disk1/sethhall/apex_replay"
 #now, add back in *our* version of the analyzer 
 #export LD_LIBRARY_PATH="${ANALYZER_LD_PATH}:${NEW_LD_LIBRARY_PATH}" 
 
-LOADED_APEX=0
-while read -d ':' line; do
-    if [[ "${line}" == "${PATH_APEX_REPLAY}/src/build" ]]; then
-	LOADED_APEX=1 
-    fi  
-done < <(echo "${LD_LIBRARY_PATH}")
+function find-path-in-list () {
+    while read -d ':' line; do
+	if [[ "${line}" == "${2}" ]]; then
+	    echo "found"
+	    exit 0
+	fi
+    done < <(echo "${1}")
+    echo "not found"
+    exit 0
+}
 
-if [[ ${LOADED_APEX} == 0 ]]; then
+
+
+LOADED_APEX=$(find-path-in-list "${LD_LIBRARY_PATH}" "${PATH_APEX_REPLAY}/src/build")
+#while read -d ':' line; do
+#    if [[ "${line}" == "${PATH_APEX_REPLAY}/src/build" ]]; then
+#	LOADED_APEX=1 
+#	break; 
+#    fi  
+#done < <(echo "${LD_LIBRARY_PATH}")
+
+if [[ ${LOADED_APEX} == "not found" ]]; then
+    echo "<${0}> apex lib not yet loaded" 
     export LD_LIBRARY_PATH="${PATH_APEX_REPLAY}/src/build:${LD_LIBRARY_PATH}"
+else
+    echo "<${0}> apex lib already loaded"
 fi
 
+APEX_IN_INCLUDE_DIR=$(find-path-in-list "${ROOT_INCLUDE_PATH}" "${PATH_APEX_REPLAY}/src")
+
+if [[ ${APEX_IN_INCLUDE_DIR} == "not found" ]]; then
+    echo "<${0}> apex not yet in include path. adding..."
+    export ROOT_INCLUDE_PATH="${ROOT_INCLUDE_PATH}:${PATH_APEX_REPLAY}/src"
+else 
+    echo "<${0}> apex src already in root include path"
+fi
 
 # now, let's define some other environment variables:
 export PATH_APEX_CACHE="/cache/halla/apex/raw"
