@@ -13,6 +13,7 @@
 #pragma link C++ class TChamberPair+; 
 #pragma link C++ class TEventHandler+; 
 #pragma link C++ class TvdcTrack+; 
+#pragma link C++ class THaApexShower+; 
 /*#pragma link C++ class TNPoly+;
 #pragma link C++ class TXMap+; 
 #pragma link C++ class TOpticsModel+;

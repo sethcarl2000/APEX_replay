@@ -26,6 +26,7 @@ set(src
   ApexUtils.cxx
   RMatrixD.cxx
   TReactVertex.cxx
+  THaApexShower.cxx
 )
 
 # Headers.

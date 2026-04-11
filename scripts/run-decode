@@ -36,7 +36,7 @@ do
     echo "<${0}>: output: $path_output"
     echo "<${0}>: ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~"
     
-    ./${ANALYZER_EXE} -l -b -q 'macros/decode_run.C("'$path_input'", "'$path_output'","'$path_odef'")'
+    analyzer -l -b -q 'macros/decode_run.C("'$path_input'", "'$path_output'","'$path_odef'")'
     echo "<${0}>: done with sub-file $part. ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~"
 done
     
