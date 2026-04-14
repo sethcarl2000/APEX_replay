@@ -34,6 +34,14 @@ namespace ApexVDC
 
     /// @return w-position (vertical) of the plane (m)
     double w( const bool is_RHRS, const int plane );
+    
+    /// w-values (coordinate normal-vertical to plane) of each RHRS vdc plane (m)
+    constexpr double kW_RHRS[ApexVDC::kN_planes] = { 0, 0.026, 0.333245, 0.359245 };
+    /// w-values (coordinate normal-vertical to plane) of each RHRS vdc plane (m)
+    constexpr double kW_LHRS[ApexVDC::kN_planes] = { 0, 0.026, 0.335344, 0.361444 };
+
+    /// @brief name of the namespace as a const char array
+    constexpr char kNamespaceName[] = "ApexHRS";
 
 };
 

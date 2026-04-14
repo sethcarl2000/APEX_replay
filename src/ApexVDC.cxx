@@ -16,10 +16,8 @@ namespace {
     constexpr double VDC_wire0_L[ApexVDC::kN_planes] = { 0.77852, 0.77852, 1.02718, 1.02718 }; 
 
     //w-value of each plane (equivalent to det-coords z-value)
-    constexpr double VDC_w_R[ApexVDC::kN_planes] = { 0, 0.026, 0.333245, 0.359245 };
-    constexpr double VDC_w_L[ApexVDC::kN_planes] = { 0, 0.026, 0.335344, 0.361444 };
-
-    constexpr char kNamespaceName[] = "ApexHRS";
+    constexpr double fW_RHRS[ApexVDC::kN_planes] = { 0, 0.026, 0.333245, 0.359245 };
+    constexpr double fW_LHRS[ApexVDC::kN_planes] = { 0, 0.026, 0.335344, 0.361444 };
 };
 
 namespace ApexVDC 
@@ -132,7 +130,7 @@ double w( const bool is_RHRS, const int plane )
     return kNaN_double; 
   }
   
-  return (is_RHRS) ? VDC_w_R[plane] : VDC_w_L[plane]; 
+  return (is_RHRS) ? fW_RHRS[plane] : fW_LHRS[plane]; 
 }
 //_______________________________________________________________________________________________________________________
 //_______________________________________________________________________________________________________________________
