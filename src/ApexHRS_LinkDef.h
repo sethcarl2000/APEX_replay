@@ -33,5 +33,6 @@
 // apex analysis classes 
 #pragma link C++ class TapexS2Hit+; 
 #pragma link C++ class TapexEventHandler+; 
+#pragma link C++ class ApexVDC::Hit+; 
 
 #endif

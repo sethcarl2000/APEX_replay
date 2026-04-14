@@ -16,7 +16,11 @@ set(PACKAGE ApexHRS)
 # List only the implementation files (*.cxx). For every implementation file
 # there must be a corresponding header file (*.h).
 set(src
-  ApexHRS.cxx
+  #ApexHRS.cxx
+  TapexS2Hit.cxx
+  TapexEventHandler.cxx
+  ApexVDC.cxx
+  ApexVDCHit.cxx
   ApexUtils.cxx
   RMatrixD.cxx
   TReactVertex.cxx
@@ -29,7 +33,7 @@ string(REPLACE .cxx .h headers "${src}")
 
 # If you have any extra headers needed for building the ROOT dictionary,
 # add them here. Otherwise leave this line commented out.
-#list(APPEND headers UserClassHeader.h)
+#list(APPEND headers ...)
 
 # If you have other headers NOT needed for the ROOT dictionary but needed for
 # the library, add them here as shown in the line commented out below.
