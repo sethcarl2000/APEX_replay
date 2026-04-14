@@ -35,5 +35,7 @@
 #pragma link C++ class TapexEventHandler+; 
 #pragma link C++ class ApexVDC::Hit+; 
 #pragma link C++ class ApexVDC::HitGroup+; 
+#pragma link C++ class ApexVDC::HitCluster+; 
+#pragma link C++ class ApexVDC::ChamberPair+; 
 
 #endif
