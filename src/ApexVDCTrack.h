@@ -15,9 +15,8 @@ namespace ApexVDC
 class Track { 
   
  public: 
-  //      This is the track object, which handles self-refinement, 
-  //      as well as acting as a container for its constituent points. 
-  
+  // This is the track object, which handles self-refinement, 
+  // as well as acting as a container for its constituent points. 
   Track( TapexEventHandler *event=0, 
 	     ChamberPair *pLo=0, 
 	     ChamberPair *pHi=0 ); 
@@ -182,8 +181,8 @@ class Track {
   void Set_isGoodTrack(bool isGood) { f_isGoodTrack =isGood; } 
   bool IsGoodTrack() const { return f_isGoodTrack; }
     
-  static TVector3 Rotate_uvw_to_xyz( const TVector3 vec ); 
-  static TVector3 Rotate_xyz_to_uvw( const TVector3 vec ); 
+  static TVector3 Rotate_uvw_to_xyz( const TVector3& vec ); 
+  static TVector3 Rotate_xyz_to_uvw( const TVector3& vec ); 
   
   static void Compute_Theta_Phi( const bool arm, 
 				 const double intercepts[4], 
@@ -206,8 +205,9 @@ class Track {
   
   ChamberPair *fPair_Hi; 
   ChamberPair *fPair_Lo; 
-  
-  double fW[4]; 
+
+  /// VDC plane w-coordinate (normal-up from vdc plane) (m)
+  const double* fW; 
   double fIntercept[4]; 
   
   double fPlane_RMS[4]; //per-plane RMS

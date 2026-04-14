@@ -24,6 +24,7 @@ set(src
   ApexVDCHitGroup.cxx
   ApexVDCHitCluster.cxx
   ApexVDCChamberPair.cxx
+  ApexVDCTrack.cxx
   ApexUtils.cxx
   RMatrixD.cxx
   TReactVertex.cxx
