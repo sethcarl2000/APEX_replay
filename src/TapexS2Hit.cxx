@@ -17,7 +17,7 @@ namespace {
 }
 
 ////////////////////////////////////////////////////////////////////////////////////
-TS2Hit::TS2Hit( bool arm, int paddle, double T_pmtL, double T_pmtR ) {
+TapexS2Hit::TapexS2Hit( bool arm, int paddle, double T_pmtL, double T_pmtR ) {
   
   f_isRightArm =arm; 
   fPaddle      =paddle; 
@@ -36,7 +36,7 @@ TS2Hit::TS2Hit( bool arm, int paddle, double T_pmtL, double T_pmtR ) {
   
   fY = 0; 
 }
-double TS2Hit::Compute_RealTime() {
+double TapexS2Hit::Compute_RealTime() {
   
   //check to make sure that the PMTs registered non-null times
   if (std::fabs(fRawTime_pmtL) > 1e7 || 
@@ -59,7 +59,7 @@ double TS2Hit::Compute_RealTime() {
   
   return 0.5*(fRealTime_pmtR + fRealTime_pmtL); 
 }
-void TS2Hit::Make_twinHit( TS2Hit *neighbor ) { 
+void TapexS2Hit::Make_twinHit( TapexS2Hit *neighbor ) { 
   
   fTime = 0.5*(fTime + neighbor->Time()); 
   

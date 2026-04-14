@@ -4,16 +4,16 @@
 #include <TObject.h> 
 
 ////////////////////////////////////////////////////////////////////////////////////
-class TS2Hit : public TObject { 
+class TapexS2Hit { 
   
  public: 
   /***
    *      Tracks information for S2m hits of either arm, including the ability 
    *      to convert between raw/realtime. 
    ***/
-  TS2Hit( bool arm=true, int paddle=-1, double T_pmtL=-1e30, double T_pmtR=-1e30 ); 
+  TapexS2Hit( bool arm=true, int paddle=-1, double T_pmtL=-1e30, double T_pmtR=-1e30 ); 
   
-  virtual ~TS2Hit() {/*noop*/}; 
+  virtual ~TapexS2Hit() {/*noop*/}; 
   
   bool   IsCoinc()      const { return fIsCoinc; }
   bool   Is_RightArm()  const { return f_isRightArm; } 
@@ -32,7 +32,7 @@ class TS2Hit : public TObject {
   
   //this hit is now a 'twin'-hit, i.e., both this paddle (and its neighbor) were 
   // likely triggerd by the same particle. merge it with its neighbor. 
-  void Make_twinHit(TS2Hit *neighbor); 
+  void Make_twinHit(TapexS2Hit *neighbor); 
 
   bool Is_twinHit() const { return f_isTwinHit; }
     
@@ -57,7 +57,7 @@ class TS2Hit : public TObject {
   
   double Compute_RealTime(); //const; 
   
-  ClassDef(TS2Hit,0); 
+  ClassDef(TapexS2Hit,0); 
 };
 /////////////////////////////////////////////////////////////////////////////////
 
