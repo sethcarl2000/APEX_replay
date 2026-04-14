@@ -13,15 +13,14 @@
 #pragma link C++ class TChamberPair+; 
 #pragma link C++ class TEventHandler+; 
 #pragma link C++ class TvdcTrack+; 
-#pragma link C++ class THaApexShower+; 
-/*#pragma link C++ class TNPoly+;
+#pragma link C++ class TNPoly+;
 #pragma link C++ class TXMap+; 
 #pragma link C++ class TOpticsModel+;
 #pragma link C++ class TXfp+; 
 #pragma link C++ class TXtg+; 
 #pragma link C++ class TRPoly+; 
 #pragma link C++ class TFPoly+; 
-#pragma link C++ class TOpticsRays+;*/  
+#pragma link C++ class TOpticsRays+; 
 #pragma link C++ class RMatrixD+; 
 #pragma link C++ class TReactVertex+; 
 /*#pragma link C++ class UserDetector+;

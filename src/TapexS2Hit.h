@@ -1,25 +1,19 @@
 #ifndef TapexS2Hit_H 
-#define TapexS2Hit_H
+#define TapexS2Hit_H 
 
 #include <TObject.h> 
 
 ////////////////////////////////////////////////////////////////////////////////////
-/***
- * @class TapexS2Hit 
- * 
- * @brief Class containing one S2-scintillator hit      
- * 
- * This class processes a single S2-scintillator hit for the [L/R]-HRS, including the conversion between raw and calibrated
- * S2 TDC times. 
- * 
- ***/
-class TapexS2Hit : public TObject { 
+class TS2Hit : public TObject { 
   
  public: 
+  /***
+   *      Tracks information for S2m hits of either arm, including the ability 
+   *      to convert between raw/realtime. 
+   ***/
+  TS2Hit( bool arm=true, int paddle=-1, double T_pmtL=-1e30, double T_pmtR=-1e30 ); 
   
-  TapexS2Hit( bool arm=true, int paddle=-1, double T_pmtL=-1e30, double T_pmtR=-1e30 ); 
-  
-  virtual ~TapexS2Hit() {/*noop*/}; 
+  virtual ~TS2Hit() {/*noop*/}; 
   
   bool   IsCoinc()      const { return fIsCoinc; }
   bool   Is_RightArm()  const { return f_isRightArm; } 
@@ -38,7 +32,7 @@ class TapexS2Hit : public TObject {
   
   //this hit is now a 'twin'-hit, i.e., both this paddle (and its neighbor) were 
   // likely triggerd by the same particle. merge it with its neighbor. 
-  void Make_twinHit(TapexS2Hit *neighbor); 
+  void Make_twinHit(TS2Hit *neighbor); 
 
   bool Is_twinHit() const { return f_isTwinHit; }
     
@@ -63,7 +57,7 @@ class TapexS2Hit : public TObject {
   
   double Compute_RealTime(); //const; 
   
-  ClassDef(TapexS2Hit,0); 
+  ClassDef(TS2Hit,0); 
 };
 /////////////////////////////////////////////////////////////////////////////////
 

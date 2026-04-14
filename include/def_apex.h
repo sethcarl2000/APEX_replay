@@ -1,11 +1,12 @@
 //////// Definition file /////////
 
-#ifndef ROOT_SF_DEF
-#define ROOT_SF_DEF
+#ifndef def_apex_H
+#define def_apex_H
 
 #include <string>
 //#include <functor>
 #include <vector>
+#include <ROOT/RDataFrame.hxx>
 
 #include "TROOT.h"
 
@@ -28,8 +29,6 @@ TString ONLINE_ROOTFILE_DIR = "/adaqfs/home/a-onl/apex/HallA-APEX-Online/replay/
 TString ROOTFILE_DIR = "/adaqfs/home/a-onl/apex/HallA-APEX-Online/replay/apex_root/Rootfiles/apex_%d.root";
 
 Bool_t isRHRS = true; 
-
-TMultiLayerPerceptron *mlp_coarse;
 
 const Bool_t kArm_Right = true;
 const Bool_t kArm_Left  = false; 
