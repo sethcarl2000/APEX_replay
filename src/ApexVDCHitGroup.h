@@ -43,7 +43,7 @@ private:
   const double kNull_double=-1e30; 
   const int    kNull_int   =-999; 
 
-  ClassDef(HitGroup,0); 
+  ClassDef(HitGroup,1); 
 }; 
 
 }; 

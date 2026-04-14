@@ -64,9 +64,9 @@ class TapexEventHandler {
   double Interpolate( const double x, 
 		      const double *X, 
 		      const double *Y, 
-		      const int nPts   ) const; 
+		      const int nPts ) const; 
   
-  ClassDef(TapexEventHandler,0);
+  ClassDef(TapexEventHandler,1);
 }; 
 
 #endif 

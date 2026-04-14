@@ -57,7 +57,7 @@ class TapexS2Hit {
   
   double Compute_RealTime(); //const; 
   
-  ClassDef(TapexS2Hit,0); 
+  ClassDef(TapexS2Hit,1); 
 };
 /////////////////////////////////////////////////////////////////////////////////
 

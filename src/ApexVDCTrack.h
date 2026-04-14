@@ -264,10 +264,8 @@ class Track {
   
   bool f_isGoodTrack;  
   
-  ClassDef(Track,0); 
+  ClassDef(Track,1); 
 }; 
-
-
 
 };
 

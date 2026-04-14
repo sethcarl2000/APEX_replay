@@ -43,7 +43,7 @@ class Hit {
   
   double fW; 
   
-  ClassDef(Hit,0);
+  ClassDef(Hit,1);
 }; 
 
 };

@@ -70,7 +70,7 @@ class ChamberPair {
   double fSlope_u; 
   double fSlope_v; 
   
-  ClassDef(ChamberPair,0); 
+  ClassDef(ChamberPair,1); 
 };
 
 }; 

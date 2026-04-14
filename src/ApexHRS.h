@@ -22,192 +22,6 @@
 using namespace std; 
 
 /////////////////////////////////////////////////////////////////////////////////
-class TapexVDCHit : public TObject { 
- 
- public: 
-  //TapexVDCHit(); 
-  TapexVDCHit( int plane=-999, 
-	   double wire=-1e30, 
-	   double rawTime=-1e30, 
-	   TapexEventHandler *event=0 );
-  
-  ~TapexVDCHit() {/*noop*/}; 
-  
-  //void FillHit(int plane, double wire, double rawTime); 
-  double Time() const { return fRealTime; }
-  double wPos() const { return fWirePos; } 
-  int    wNum() const { return fWireNum; } 
-  void SetArm(bool arm) { f_isRightArm=arm; }
-  bool IsRightArm() const { return f_isRightArm; } 
-  
-  double GetRawTime() const { return fRawTime; }
-  void   SetRawTime(const double rawTime); 
-  
-  double W()     const { return fW; } 
-  
-  int    Plane() const { return fPlane; } 
-  
-  static double WireSpacing() { return 4.2426e-3; } 
-  
-  static double RawTime( const bool   is_RightArm, 
-			 const int    plane, 
-			 const int    wireNum, 
-			 const double realTime ); 
-  
-  static int    WireNum( const bool   is_RightArm, 
-			 const int    plane, 
-			 const double wirePos ); 
-  
-  static double WirePos( const bool   is_RightArm, 
-			 const int    plane, 
-			 const int    wireNum ); 
-
- private: 
-  TapexEventHandler *fEvent; 
-  int    fPlane;
-  double fRawTime; 
-  int    fWireNum; 
-  double fWirePos; 
-  double fRealTime;  
-  bool   f_isRightArm=true; 
-  
-  double fW; 
-  const double fWireSpacing = 4.2426e-3; 
-  
-  double GetRealTime( double rawTime ) const; 
-  double GetWirePos( int wire )        const; 
-  double GetWireNum( double pos  )     const; 
-  
-  ClassDef(TapexVDCHit,0);
-}; 
-/////////////////////////////////////////////////////////////////////////////////
-class THitGroup : public TObject { 
-  
- public:   
-  THitGroup(int plane=-1);// { fPlane=plane; } 
-  
-  ~THitGroup(); 
-  
-  void AddHit( TapexVDCHit* hit ) { fHits.push_back(hit); } 
-  
-  void AddHit( double wire, double rawTime ); 
-  
-  unsigned int Nhits() const { return fHits.size(); }
-    
-  double WirePos( unsigned int h ) const; 
-  int    WireNum( unsigned int h ) const; 
-  double    Time( unsigned int h ) const; 
-  
-  TapexVDCHit* GetHit( unsigned int h ) { return fHits.at(h); } 
-  
-  int    FirstWire()  const; 
-  
-  double LoEdge()   const; 
-  double HiEdge()   const; 
-  
-  double Span()     const { return HiEdge()-LoEdge(); }
-  
-  bool IsRightArm() const { return fHits.at(0)->IsRightArm(); }
-  
-  double W()        const { return fHits.at(0)->W(); }
-  
-  
-private: 
-  std::vector<TapexVDCHit*> fHits; 
-  int fPlane; 
-  
-  const double kNull_double=-1e30; 
-  const int    kNull_int   =-999; 
-
-  ClassDef(THitGroup,0); 
-};
-/////////////////////////////////////////////////////////////////////////////////
-class THitCluster : public TObject { 
-  
- public: 
-  THitCluster(THitGroup *group=0, 
-	      const double intercept=0, 
-	      const double eta=0); 
-    
-  ~THitCluster() {/*noop*/}; 
-  
-  THitGroup* GetGroup() { return fGroup; }
-  
-  double Intercept() const { return fIntercept; }
-  double Eta()       const { return fEta_score; }
-  
- private: 
-  THitGroup *fGroup; 
-  double fIntercept; 
-  double fEta_score; 
-  
-  ClassDef(THitCluster,0); 
-};
-/////////////////////////////////////////////////////////////////////////////////
-class TChamberPair : public TObject { 
-  
- public: 
-  TChamberPair( bool is_loChamber=true,
-		double u=0,
-		double v=0,
-	        THitGroup *Group_U=0, 
-	        THitGroup *Group_V=0,
-		int unique_id=-1); 
-  
-  TChamberPair( bool is_loChamber, 
-		THitCluster *clust_u, 
-		THitCluster *clust_v,
-		int unique_id=-1); 
-  
-  ~TChamberPair() {/*noop*/}; 
-  
-  double u() const { return fu; }
-  double v() const { return fv; }
-  
-  void Set_u(double u) { fu=u; }
-  void Set_v(double v) { fv=v; }
-  
-  void Get_uv(double &u, double &v) { u=fu; v=fv; }
-  void Set_uv(double u, double v)   { fu=u; fv=v; }
-  
-  THitGroup* GetGroup_U() { return fGroup_U; }
-  THitGroup* GetGroup_V() { return fGroup_V; }
-  
-  bool Is_loChamber() const { return f_isLoChamber; }
-  
-  void SetSlope_uv( double mu, double mv )   { fSlope_u=mu; fSlope_v=mv; }
-  void GetSlope_uv( double &mu, double &mv ) { mu=fSlope_u; mv=fSlope_v; }
-  
-  double ClosestWirePos_Lo( double x ) const; 
-  double ClosestWirePos( const double x ) const; 
-  
-  int Get_ID() const { return fUnique_ID; }
-  
-  int N_tracks() const { return fTracks.size(); }
-  
-  void Add_track   ( TObject *track ) { fTracks.push_back( track ); }
-  
-  void Remove_track( TObject *track ); 
-  
-  TObject* GetTrack( unsigned int h ) { return fTracks.at(h); } 
-  
- private: 
-  int fUnique_ID; 
-  std::vector<TObject*> fTracks; 
-  //this will be used so that tracks can tell if they're using the same clusters
-  
-  bool f_isLoChamber; 
-  THitGroup *fGroup_U; 
-  THitGroup *fGroup_V; 
-  double fu; 
-  double fv; 
-  
-  double fSlope_u; 
-  double fSlope_v; 
-  
-  ClassDef(TChamberPair,0); 
-};
-/////////////////////////////////////////////////////////////////////////////////
 class TvdcTrack : public TObject { 
   
  public: 
@@ -259,7 +73,7 @@ class TvdcTrack : public TObject {
   
   void Set_params( const double params[5] ); 
   
-  THitGroup *GetGroup(int plane) { return fGroup[plane]; }
+  ApexVDC::HitGroup *GetGroup(int plane) { return fGroup[plane]; }
     
   double Slope_u(); 
   double Slope_v(); 
@@ -352,11 +166,11 @@ class TvdcTrack : public TObject {
   
   
   //
-  void Set_goodPointGroup( int plane, THitGroup *goodPointGroup ) {
+  void Set_goodPointGroup( int plane, ApexVDC::HitGroup *goodPointGroup ) {
     f_goodPointGroup[plane] = goodPointGroup; 
   }
   
-  THitGroup *Get_goodPointGroup( int plane ) { 
+  ApexVDC::HitGroup *Get_goodPointGroup( int plane ) { 
     return f_goodPointGroup[plane]; 
   }
   
@@ -450,10 +264,10 @@ class TvdcTrack : public TObject {
   
   double fT0=0.; 
   
-  THitGroup *fGroup[4]; 
+  ApexVDC::HitGroup *fGroup[4]; 
   
   //this tracks the 'good points' which agree well enough with the final track
-  THitGroup *f_goodPointGroup[4]; 
+  ApexVDC::HitGroup *f_goodPointGroup[4]; 
   
   double fSlope_u; 
   double fSlope_v; 
