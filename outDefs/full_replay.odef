@@ -1,0 +1,126 @@
+#             ---------------- VDC planes ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+#~~~~~~~~~~~~~~~~~~~~~Right 
+Block L.vdc.*.wire        # wire numbers of wires which were activated
+Block L.vdc.*.rawtime	  # same as above, but the raw times.
+#~~~~~~~~~~~~~~~~~~~~~Left  
+Block R.vdc.*.wire        # wire numbers of wires which were activated
+Block R.vdc.*.rawtime	  # same as above, but raw times. 
+
+
+#             --------------- S2m planes ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Block *.s2.lt	          # uncalib. TDC L-pmt
+Block *.s2.rt	          # uncalib. TDC R-pmt
+Block *.s2.ra 	          # uncalib. ADC L-pmt
+Block *.s2.la 	          # uncalib. ADC R-pmt
+
+
+
+#             --------------- Pre-Shower Calorimeter ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+#~~~~~~~~~~~~~~~~~~~~Right
+Variable R.ps.a_c	  # calibrated ADC amplitudes
+#~~~~~~~~~~~~~~~~~~~~Left
+Variable L.prl1.a_c       
+
+
+#             --------------- Post-Shower Calorimeter ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+#~~~~~~~~~~~~~~~~~~~~Right
+Variable R.sh.a_c		  
+#~~~~~~~~~~~~~~~~~~~~Left
+Variable L.prl2.a_c
+
+
+#             --------------- Fast Rasters ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Block *.Raster2.rawcur.x
+Block *.Raster2.rawcur.y
+
+Block *.Raster2.rawslope.x
+Block *.Raster2.rawslope.y
+
+
+#             --------------- Gas Cherenkov Counter ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Block *.cer.t_c		  # corrected TDC times
+Block *.cer.a_c		  # pedistal-corrected ADC times
+Block *.cer.asum_p	  # sum of ADC minus Pedistal values
+Block *.cer.asum_c	  # sum of corrected ADC values
+
+
+#             ~~~~~~~~~~~~~~~ Beam Position Monitors ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Variable *.BPMA.x
+Variable *.BPMA.y
+       
+Variable *.BPMB.x
+Variable *.BPMB.y
+
+	 
+# Block R.trg.* 
+# Block L.trg.*
+
+      
+# =========================================================================
+# Epics ("E") Tree variables
+begin epics
+  # ------------------------------
+  HacR_alignAGL
+  APEXPOS		
+
+  HacR_D1_P0rb	
+  HALLA:p
+  HALLA:dpp  
+
+  # ------------------------------
+  # LVDT angles and mispointings
+  HacL_CalcAngle
+  HacL_CalcPoint
+  HacR_CalcAngle
+  HacR_CalcPoint
+  # ------------------------------
+
+  # ------------------------------
+  # BCM
+  hac_bcm_dvm1_read
+  hac_bcm_dvm2_read
+  hac_bcm_average
+  hac_unser_read
+  hac_unser_current
+  hac_bcm_dvm1_current
+  hac_bcm_dvm2_current
+  IBC0L02Current 
+  IBC3H00CRCUR4
+  HA:K224:Current
+  # ------------------------------	
+
+  # ------------------------------
+  # BPM
+  IPM1C12.XPOS
+  IPM1C12.YPOS
+  IPM1H04A.XPOS
+  IPM1H04A.YPOS
+  IPM1H04E.XPOS
+  IPM1H04E.YPOS
+  IPM1H04B.XPOS
+  IPM1H04B.YPOS
+  IPM1H04C.XPOS
+  IPM1H04C.YPOS
+  IPM1H04D.XPOS
+  IPM1H04D.YPOS
+  # ------------------------------
+
+  FCupsCORRECTED.VAL
+
+  HacL_alignAGL
+  HacL_D1_P0rb	
+
+  HacL_Q1_LS450:FLD_DATA
+  HacL_Q2_LS450:FLD_DATA
+  HacL_Q3_LS450:FLD_DATA
+  HacL_D1_NMR:SIG	
+  HacL_D_LS450:FLD_DATA
+  
+  HacR_Q1_LS450:FLD_DATA
+  HacR_Q2_LS450:FLD_DATA
+  HacR_Q3_LS450:FLD_DATA
+  HacR_D1_NMR:SIG	
+  HacR_D_LS450:FLD_DATA
+
+ end epics
+# =========================================================================

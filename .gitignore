@@ -8,3 +8,8 @@ src/build
 # data files for testing
 data
 data/* 
+# emacs backups
+*~
+
+# analyzer build files
+analyzer/build 

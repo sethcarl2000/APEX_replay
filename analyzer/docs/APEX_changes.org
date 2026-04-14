@@ -1,0 +1,96 @@
+Description of changes made to analyzer for APEX (2019 run analysis)
+
+
+* VDC 
+  
+** TTD (Time To Distance)
+
+- added Lookup table TTD method with class THaVDCLookupTTDConv.C
+  - DB params are:
+    - ttd_table.nbins (number of bins in table)
+    - ttd_table.low (lowest value of time table bin corresponds to)
+    - ttd_table.table (table values with nbins entries)
+    - ttd_table.R ('radius' in angular correction)
+    - ttd_table.theta0 ('central angle in angular correction)
+
+- Use of Lookup table  or Analytic TTD is controlled by parameter in VDC DB
+  - ttd.converter
+    - set to 
+      - AnalyticTTDConv (for analytic) 
+      - LookupTTDConv (for Lookup table)
+
+- added angular correction to Analytic TTD
+  - intended to be used such that previous existing Analytic TTD parameters do not angular part (only first a1 and a2 params are non-zero)
+  - analogous to angular correction in Lookup table
+  - in DB params are:
+    - ttd_table.R_Ana ('radius' in angular correction)
+    - ttd_table.theta0_Ana ('central angle in angular correction)
+    - (named such as they are similar to equivalent Lookup table parameters)
+
+
+
+** 3 Parameter fitting and timing offset approximation
+
+
+- 3 Parameter (3P) fitting added for APEX as large number of clusters/ track may have large timing offser (the third parameter in fitting a cluster along with slope and position)
+  - done via ROOT::Math::Minimizer (thus slower than 2 Parameter (2P) fitting)
+  - control in DB
+    - Fitmode parameter controls which type of fitting is used
+      - header file of THaVDCCluster  has enum with different options:
+	- 0 = kLinear ('normal' (and preffered) 2P fitting)
+	- 1 = kTwoParam (2P fitting using minimiser (not recommended currently))
+	- 2 = kThreeParam (3P fitting using minimiser)
+	- 3 = kT0 (older attempt at 3P fitting without minimiser but does not currently work)
+
+
+- alternative to 3P fitting is to use 2P fitting but with approximation for timing offset: call this 2PA fit
+  - timing offset approximation can then be used to later times in cluster and thus the fit (slope and position) obtained
+  - parameter in DB to compensate for difference between timing offset approximation and value from 3P fitting (empirical)
+    - t0.app_adj (in seconds)
+  - parameter in DB to control if timing offset approximation is used
+    - ttd.ConvMode
+      - 0 (false) if approximation is not used
+      - otherwise true (conventionally 1 in DB) if approximation is used
+
+
+
+
+
+
+
+** tracking algorithm 
+
+Several changes/ adapations to tracking algorithm made for APEX
+
+- Added function 'IsInUsedArea(Double_t x, Double_t y)' to THaVDCPlane
+  - stricter version of existing 'IsInActiveArea(Double_t x, Double_t y)'
+  - tests if x and y (in DCS) for U and V cluster are within observed distribution for APEX
+    - XLim and YLim used to define this in DB
+  - added CalcDetCoordsVPlane( const THaVDCCluster* vcl, const THaVDCCluster* ucl)  to THaVDCChamber
+    - equivalent to existing CalcDetCoords( const THaVDCCluster* vcl, const THaVDCCluster* ucl) but projects coords on to V plane rather than U plane
+    - provides additional test of coords
+    
+
+- Changed 'error' or 'Goodness of Match' (GoM) of track to include timing offset differences between tracks
+  - overall error of track sum of projection differences between upper and lower chamber (and vice versa) in x and y and sum of timing offset differences between clusters (scaled by 1/2 to account for degrees of freedom)
+    - these are all scaled by resolutions/ variances such that projection difference and timing offset differences can be combined
+      - X and Y resoltuion for each chamber in DB form n.V.res where n = (0 (lower) or 1 (upper)) and V = (X or Y) (value in metres)
+	- 1.X.res (lower chamber X)
+	- 2.Y.res (upper chamber Y)
+      - timing offset resolution (value in seconds)
+	- t0.res 
+
+
+- Tracks re-ordered by sum of magnitudes of timing offsets in each cluster
+  - once multiple tracks have passed all cuts then all should be plausible
+  - optimal track should then be related to smallest overall timing offset: larger timing offset increases likelihood that track is not associated with trigger
+
+
+- Added option to remove 'ambiguous' cluster pairs
+  - This removes cluster pairs (U and V clusters in one chamber that pass plausibility cuts) that have more than one plausible match with cluster pairs in the other chamber: GoM between cluster pair and more than one cluster pair in other chamber is beneath cutoff
+    - idea of this is to remove clusters/ tracks where according to resolutions there are more than one plausible track that could be formed by the algorithm: avoids ambiguities but loses events
+  - option in DB is 'AmbiClusters'
+    - 1 (true) in DB to use ambiguous cluster selection
+    - 0 (false) in DB to not use ambiguous cluster selection (previous standardm method)
+  - if this option is not used then clusters will be used in tracks for which they have the smallest GoM
+

@@ -1,0 +1,39 @@
+# This odef file is for checking the BPM readings
+
+Block *.Raster2.rawcur.x
+Block *.Raster2.rawcur.y
+
+# =========================================================================
+# Epics ("E") Tree variables
+begin epics
+
+  # left arm magnet power-supply settings
+  HacL_Q2_HP3458A:IOUT
+  HacL_D1_HP3458A:IOUT
+  HacL_Q3_HP3458A:IOUT
+
+  # right arm magnet power-supply settings
+  HacR_Q2_HP3458A:IOUT
+  HacR_D1_HP3458A:IOUT
+  HacR_Q3_HP3458A:IOUT
+  
+  
+  # left & right arm momentum
+  HacL_D1_P0rb		
+  HacR_D1_P0rb
+
+  # average beam-current readout	
+  hac_bcm_average
+
+  
+  # A & B bpms
+  IPM1H04A.XPOS
+  IPM1H04A.YPOS
+  IPM1H04B.XPOS
+  IPM1H04B.YPOS
+
+  # beam energy
+  HALLA:p 
+  
+ end epics
+# =========================================================================

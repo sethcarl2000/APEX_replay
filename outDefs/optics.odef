@@ -1,0 +1,70 @@
+#             ----------------VDC planes ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+#~~~~~~~~~~~~~~~~~~~~~Right 
+Block L.vdc.*.wire        # wire numbers of wires which were activated
+Block L.vdc.*.rawtime	  # same as above, but the raw times.
+#~~~~~~~~~~~~~~~~~~~~~Left  
+Block R.vdc.*.wire        # wire numbers of wires which were activated
+Block R.vdc.*.rawtime	  # same as above, but raw times. 
+
+
+#             ---------------S2m planes ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Block *.s2.lt	          # uncalib. TDC L-pmt
+Block *.s2.rt	          # uncalib. TDC R-pmt
+
+
+#             ---------------Pre-Shower Calorimeter ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+#~~~~~~~~~~~~~~~~~~~~Right
+Variable R.ps.a_c	  # calibrated ADC amplitudes
+#~~~~~~~~~~~~~~~~~~~~Left
+Variable L.prl1.a_c       
+
+
+#             ---------------Post-Shower Calorimeter ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+#~~~~~~~~~~~~~~~~~~~~Right
+Variable R.sh.a_c		  
+#~~~~~~~~~~~~~~~~~~~~Left
+Variable L.prl2.a_c
+
+
+#             ---------------Gas Cherenkov Counter ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Block *.cer.t_c		  # corrected TDC times
+Block *.cer.a_c		  # pedistal-corrected ADC times	
+
+
+#             ---------------Fast Rasters ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Block *.Raster2.rawcur.x
+Block *.Raster2.rawcur.y
+
+Block *.Raster2.rawslope.x
+Block *.Raster2.rawslope.y
+
+
+#             ---------------BPMs ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Block *.BPMA.x
+Block *.BPMA.y
+Block *.BPMB.x
+Block *.BPMB.y
+
+
+# =========================================================================
+# Epics ("E") Tree variables
+begin epics
+  
+  # average beam-current readout	
+  hac_bcm_average
+
+  # A & B bpms
+  IPM1H04A.XPOS
+  IPM1H04A.YPOS
+  IPM1H04B.XPOS
+  IPM1H04B.YPOS
+
+  # left & right arm momentum
+  HacL_D1_P0rb		
+  HacR_D1_P0rb
+
+  # beam energy
+  HALLA:p 
+  
+end epics
+# =========================================================================
