@@ -7,6 +7,8 @@
 
 namespace ApexVDC
 {
+    
+class Track; 
 
 class ChamberPair { 
   
@@ -48,15 +50,15 @@ class ChamberPair {
   
   int N_tracks() const { return fTracks.size(); }
   
-  void Add_track   ( TObject *track ) { fTracks.push_back( track ); }
+  void Add_track   ( Track *track ) { fTracks.push_back( track ); }
   
-  void Remove_track( TObject *track ); 
+  void Remove_track( Track *track ); 
   
-  TObject* GetTrack( unsigned int h ) { return fTracks.at(h); } 
+  Track* GetTrack( unsigned int h ) { return fTracks.at(h); } 
   
  private: 
   int fUnique_ID; 
-  std::vector<TObject*> fTracks; 
+  std::vector<Track*> fTracks; 
   //this will be used so that tracks can tell if they're using the same clusters
   
   bool f_isLoChamber; 
