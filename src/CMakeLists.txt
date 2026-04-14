@@ -21,6 +21,7 @@ set(src
   TapexEventHandler.cxx
   ApexVDC.cxx
   ApexVDCHit.cxx
+  ApexVDCHitGroup.cxx
   ApexUtils.cxx
   RMatrixD.cxx
   TReactVertex.cxx

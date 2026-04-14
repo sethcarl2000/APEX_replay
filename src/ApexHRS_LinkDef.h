@@ -8,7 +8,7 @@
 #pragma link C++ class THRS::VDC+;
 #pragma link C++ class TapexS2Hit+; 
 #pragma link C++ class TapexVDCHit+;
-#pragma link C++ class THitGroup+; 
+#pragma link C++ class ApexVDC::HitGroup+; 
 #pragma link C++ class THitCluster+; 
 #pragma link C++ class TChamberPair+; 
 #pragma link C++ class TapexEventHandler+; 
@@ -34,5 +34,6 @@
 #pragma link C++ class TapexS2Hit+; 
 #pragma link C++ class TapexEventHandler+; 
 #pragma link C++ class ApexVDC::Hit+; 
+#pragma link C++ class ApexVDC::HitGroup+; 
 
 #endif
