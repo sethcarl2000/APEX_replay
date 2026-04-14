@@ -6,12 +6,12 @@
 
 #pragma link C++ class THRS+; 
 #pragma link C++ class THRS::VDC+;
-#pragma link C++ class TS2Hit+; 
-#pragma link C++ class TvdcHit+;
+#pragma link C++ class TapexS2Hit+; 
+#pragma link C++ class TapexVDCHit+;
 #pragma link C++ class THitGroup+; 
 #pragma link C++ class THitCluster+; 
 #pragma link C++ class TChamberPair+; 
-#pragma link C++ class TEventHandler+; 
+#pragma link C++ class TapexEventHandler+; 
 #pragma link C++ class TvdcTrack+; 
 #pragma link C++ class TNPoly+;
 #pragma link C++ class TXMap+; 
@@ -29,5 +29,9 @@
 #pragma link C++ class UserModule+;
 #pragma link C++ class UserEvtHandler+;
 #pragma link C++ class SkeletonModule+;*/ 
+
+// apex analysis classes 
+#pragma link C++ class TapexS2Hit+; 
+#pragma link C++ class TapexEventHandler+; 
 
 #endif
