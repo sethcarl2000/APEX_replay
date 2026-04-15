@@ -4,6 +4,7 @@
 #include <ApexVDCTrack.h>
 #include <math.h> 
 #include <ROOT/RVec.hxx>
+#include <ApexUtils.h> 
 
 //
 // Refine tracks from the hi-chamber using newton's method
@@ -13,6 +14,8 @@ void refine_track(
     const int nCycles=10, 
     double sigma=25e-9 ) 
 { 
+    using APEX::square; 
+
     /// @return 'true' if x is nan
     auto is_nan = [](double x) { return x != x; }; 
 
@@ -101,7 +104,7 @@ void refine_track(
                 
                 if ( std::fabs(Chi) > Chi_cutoff*sigma ) continue; 
                 
-                double Eta = TMath::Exp( -0.5*TMath::Power(Chi/sigma,2) ); 
+                double Eta = TMath::Exp( -0.5*square(Chi/sigma) ); 
                 
                 double m = trk.Slope(p); 
                 
@@ -111,7 +114,7 @@ void refine_track(
 
                 J_ii[p] 
                 += (Chi * trk.Get_T_model(p,group->WirePos(h),2)  
-                + TMath::Power(trk.Get_T_model(p,group->WirePos(h),1),2))*m*m*Eta; 
+                + square(trk.Get_T_model(p,group->WirePos(h),1)))*m*m*Eta; 
                 
                 J_4i[p] 
                 +=  -Eta * m * trk.Get_T_model(p,group->WirePos(h),1); 
@@ -119,7 +122,7 @@ void refine_track(
                 J_44 += Eta; 
                 
                 objective_eta[p] 
-                += TMath::Exp( -0.5*TMath::Power(Chi/measure_sigma,2) ); 
+                += TMath::Exp( -0.5*square(Chi/measure_sigma) ); 
                 
             }//for (uint h=0; h<trk->pGet_N(p); 
 
