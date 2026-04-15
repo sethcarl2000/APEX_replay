@@ -2,13 +2,18 @@
 //APEX headers
 #include <ApexVDCTrack.h>
 #include <ApexVDC.h> 
-#include <stdexcept> 
+#include <ApexUtils.h> 
+//ROOT headers
 #include <TString.h> 
 #include <TMatrixD.h> 
 #include <TVectorD.h> 
 //stdlib headers
 #include <math.h> 
 #include <limits> 
+#include <stdexcept> 
+
+using APEX::kNaN_double;
+using APEX::kNull_int; 
 
 namespace {
     
@@ -36,12 +41,6 @@ namespace {
          0.500000,  0.707107,  0.500000,
         -0.707107,  0.000000,  0.707107 
     }; 
-
-    //junk double to return on function failure 
-    constexpr double kNaN_double = std::numeric_limits<double>::quiet_NaN(); 
-    
-    //junk int to return on function failure
-    constexpr int kNull_int = -9999; 
 
     constexpr char report_prefix[] = "ApexVDC::Track"; 
 }

@@ -194,6 +194,9 @@ class Track {
   TVector3 ComputeIntercept_w(const double w) const; 
   
   TVector3 ComputeIntercept_z(const double z) const;   
+
+  //use the uniqueness of each track's memory address to define a unique instance of a track
+  bool operator==(const ApexVDC::Track& rhs) { return (this)==(&rhs); }
   
  private: 
   TapexEventHandler *fEvent;

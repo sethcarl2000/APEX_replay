@@ -35,6 +35,9 @@ class HitGroup {
   bool IsRightArm() const { return fHits.front().IsRightArm(); }
   
   double W()        const { return fHits.front().W(); }
+
+  //delete all hits
+  void Clear() { fHits.clear(); }
   
 private: 
   std::vector<Hit> fHits; 

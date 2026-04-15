@@ -2,10 +2,10 @@
 #include <ApexVDCHitGroup.h> 
 #include <stdexcept> 
 #include <TString.h> 
+#include <ApexUtils.h> 
 
-namespace {
-    constexpr double kNaN_double = std::numeric_limits<double>::quiet_NaN(); 
-};
+using APEX::kNaN_double;
+using APEX::kNull_int; 
 
 namespace ApexVDC
 {
@@ -32,7 +32,7 @@ int    HitGroup::WireNum( unsigned int h ) const
         kNamespaceName, __func__, 
         Nhits()-1, h
     ));
-    return kNaN_double; 
+    return kNull_int; 
   }
   
   return fHits[h].wNum(); 

@@ -71,8 +71,14 @@ namespace APEX {
   ROOT::RVec<double> Unit( const ROOT::RVec<double> &v ); 
   
   
-  //some NaN declarations
-  static constexpr double kNAN_double = std::numeric_limits<double>::quiet_NaN();  
+  // NaN (double)
+  constexpr double kNaN_double = std::numeric_limits<double>::quiet_NaN();  
+
+  // junk integer value to return on function failure
+  constexpr int kNull_int = -999999;
+  
+  //return square of arg
+  inline double square(double x) { return x*x; } 
   
   namespace Graphic {
     void VLine(TH1 *hist, double x, unsigned int color=1, unsigned int style=1); 
