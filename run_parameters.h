@@ -1,6 +1,8 @@
 #ifndef run_parameters_H
 #define run_parameters_H
 
+#include <ApexVDC.h> 
+
 
 /// @brief a basic namespace of constant parameters which effect the function of the VDC track reconstruction algorithm 
 namespace run_parameters {
@@ -15,6 +17,38 @@ namespace run_parameters {
 
     /// this cut is how we determine if two adjacent S2 hits are 'twin' hits (likely caused by the same particle)
     constexpr double kCUT_S2_twinHit_timeErr =5e-9; 
+
+    // spacing between coarse-grained grid-search 
+    constexpr double kGridSpacing = ApexVDC::kWireSpacing/10.; 
+
+    //min eta of one plane (during grid-searching). 
+    // this is analogous to the num. of points found
+    constexpr double kCUT_minEta = 1.950; 
+
+    //track cuts
+    constexpr double TRK_CUT_Dt     = 40e-9; 
+    constexpr double TRK_CUT_xParam = 1.55; 
+    constexpr double TRK_CUT_Eta    = 3.750; 
+    constexpr double TRK_measureSigma = 5e-9; 
+    constexpr int    TRK_CUT_nGoodPts_min_perPlane = 2; //good points per plane
+    constexpr int    TRK_CUT_nGoodPts_min          = 12;   
+
+    //for numerically-evaluated integrals with gaussians, this is the number of points sampled 
+    constexpr int    kGausIntPoints = 20; 
+
+    constexpr double CUT_ph_min[] = { -0.012 , -0.018 };
+    constexpr double CUT_ph_max[] = {  0.012 ,  0.008 };   
+
+    constexpr double CUT_th_min[] = { -0.018 , -0.020 };
+    constexpr double CUT_th_max[] = {  0.018 ,  0.018 }; 
+        
+    constexpr double CUT_xParam = 2.00; 
+
+    //window to cut on S2 coincidence hits 
+    constexpr double CUT_twinHit_timeErr =5e-9; 
+    
+    // if true, then multitrheadding is enabled 
+    constexpr bool kEnableMT{true}; 
 
 };
 

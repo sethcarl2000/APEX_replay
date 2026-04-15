@@ -1,7 +1,7 @@
 #ifndef compute_trackdata_H
 #define compute_trackdata_H 
 
-#include "run_parameters.h"
+#include "../run_parameters.h"
 #include <ApexVDCTrack.h> 
 #include <math.h> 
 

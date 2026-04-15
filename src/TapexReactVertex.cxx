@@ -2,7 +2,7 @@
 
 //////////////////////////////////////////////////////////////////////////
 //     
-// TReactVertex
+// TapexReactVertex
 //
 // Computes the reaction-vertex 
 //     
@@ -25,7 +25,7 @@
 #include <iostream>*/
 
 #include "ROOT/RVec.hxx"
-#include "TReactVertex.h" 
+#include "TapexReactVertex.h" 
 #include <ROOT/RDataFrame.hxx>
 #include "TFile.h"
 #include "TVector2.h"
@@ -38,7 +38,7 @@ using namespace std;
 using RVecD = ROOT::RVec<double>; 
 
 //_____________________________________________________________________________
-TReactVertex::TReactVertex(bool isRHRS,
+TapexReactVertex::TapexReactVertex(bool isRHRS,
 			   TString path_decode,
 			   TString target,
 			   TString treeName)
@@ -58,7 +58,7 @@ TReactVertex::TReactVertex(bool isRHRS,
     // then we will search for whichever wire it wanted to use
     if (auto findWire = fWireMap.find(target); findWire == fWireMap.end()) {
       //wire-name given is invalid
-      Warning("TReactVertex",
+      Warning("TapexReactVertex",
 	      "Target-name passed: '%s', but this name does not match any wire-name. Proceeding without any optic-wire selected..",
 	      target.Data());
     } else {
@@ -66,7 +66,7 @@ TReactVertex::TReactVertex(bool isRHRS,
       f_isWireMode=true;
       
       fWire = findWire->second; 
-      Info("TReactVertex",
+      Info("TapexReactVertex",
 	   "Engaging optics-wire mode.. (Target name = %s)", fWire.name.Data() );
     }
   }
@@ -100,27 +100,27 @@ TReactVertex::TReactVertex(bool isRHRS,
   
   //do some basic checks before we start
 
-  //you can launch TReactVertex in 'no-decode' mode, in which you're just using it
+  //you can launch TapexReactVertex in 'no-decode' mode, in which you're just using it
   // basically to store optics wire-data.
   if (path_decode=="") return;
     
   auto file = unique_ptr<TFile>(new TFile(path_decode.Data()));
   
   if (!file || file->IsZombie()) {
-    Error("TReactVertex()", "Pointer to file \"%s\" invalid. Check path?",
+    Error("TapexReactVertex()", "Pointer to file \"%s\" invalid. Check path?",
 	  path_decode.Data());
     return;
   }
   
   
   if (!file->IsOpen() || file->IsZombie()) {
-    Error("TReactVertex()", "File \"%s\" is zombie / is not open.", path_decode.Data());
+    Error("TapexReactVertex()", "File \"%s\" is zombie / is not open.", path_decode.Data());
     return;
   }
     
   //now, check to make sure that the right trees are present
   if (!file->GetListOfKeys()->Contains("E")) {
-    Error("TReactVertex",
+    Error("TapexReactVertex",
 	  "File \"%s\" does not contain Epics tree (E). React-vertex & raster set to 0,0",
 	  path_decode.Data()); 
     return;    
@@ -154,7 +154,7 @@ TReactVertex::TReactVertex(bool isRHRS,
 
   //now, check to make sure that the right trees are present
   if (!file->GetListOfKeys()->Contains("T")) {
-    Error("TReactVertex",
+    Error("TapexReactVertex",
 	  "File \"%s\" does not contain CODA tree (T). Avg. Raster set to 0,0",
 	  path_decode.Data()); 
     return;    
@@ -163,6 +163,9 @@ TReactVertex::TReactVertex(bool isRHRS,
 
   //now, we can compute the average raster position, which we will need later to
   // compute the beam-position on a per-event basis. 
+  bool is_mt_enabled = ROOT::IsImplicitMTEnabled(); 
+  if (is_mt_enabled) ROOT::DisableImplicitMT(); 
+
   ROOT::RDataFrame dT("T", path_decode.Data()); 
     
   auto findAvgRast = [&dT](TString rastName)
@@ -170,7 +173,7 @@ TReactVertex::TReactVertex(bool isRHRS,
     double rastMin(1e30), rastMax(-1e30);
 
     auto avg = dT
-      .Range(0,10e3)
+      .Range(0,20e3)
       .Define("rast", [&rastMin,&rastMax](double rast)
       {
 	if (rast < rastMin) rastMin=rast;
@@ -193,18 +196,21 @@ TReactVertex::TReactVertex(bool isRHRS,
 				yRast[1]-yRast[0] ); 
 			
     
-  Info("TReactVertex", "Done with initial react-point calculations");
+  Info("TapexReactVertex", "Done with initial react-point calculations");
+
+  //reset this to its previous value
+  if (is_mt_enabled) ROOT::EnableImplicitMT(); 
   
   f_hasData = true; 
 }
 //_____________________________________________________________________________
-TVector3 TReactVertex::Compute_reactVertex(double rastX, double rastY) const
+TVector3 TapexReactVertex::Compute_reactVertex(double rastX, double rastY) const
 {
   //NOTE: this is given in hall-coordinates (HCS), in meters, from the APEX
   // scattering-chamber center. 
   if (!f_hasData) {
     Error("Compute_reactVertex",
-	  "TReactVertex not created with valid run-data, cannot compute react-vertex.");
+	  "TapexReactVertex not created with valid run-data, cannot compute react-vertex.");
     return TVector3(0,0,0);
   }
   
@@ -239,11 +245,11 @@ TVector3 TReactVertex::Compute_reactVertex(double rastX, double rastY) const
   return react_point; 
 }
 //_____________________________________________________________________________
-TVector2 TReactVertex::Get_beamCenter() const
+TVector2 TapexReactVertex::Get_beamCenter() const
 {
   if (!f_hasData) {
     Error("Get_beamCenter",
-	  "TReactVertex not created with valid run-data, cannot compute beam-center.");
+	  "TapexReactVertex not created with valid run-data, cannot compute beam-center.");
     return TVector2(0,0);
   }
 
@@ -253,7 +259,7 @@ TVector2 TReactVertex::Get_beamCenter() const
   return fBeamCenter; 
 }
 //_____________________________________________________________________________
-TReactVertex::OpticsWire_t TReactVertex::Get_wire() const {
+TapexReactVertex::OpticsWire_t TapexReactVertex::Get_wire() const {
 
   if (!f_isWireMode) {
     Warning("Get_wire", "Wire requested, but not in wire-mode, so wire returned is null.");
@@ -261,6 +267,6 @@ TReactVertex::OpticsWire_t TReactVertex::Get_wire() const {
   return fWire;
 }
 //_____________________________________________________________________________
-ClassImp(TReactVertex)
+ClassImp(TapexReactVertex)
 
 

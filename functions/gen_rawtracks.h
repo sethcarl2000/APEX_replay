@@ -2,9 +2,9 @@
 #define gen_rawtracks_H
 
 //APEX headers
-#include "run_parameters.h"
-#include "functions/grid_search.h"
-#include "functions/theta_phi_model.h"
+#include "../run_parameters.h"
+#include "grid_search.h"
+#include "theta_phi_model.h"
 #include <TapexEventHandler.h>
 #include <ApexVDCTrack.h> 
 #include <ApexVDCChamberPair.h> 

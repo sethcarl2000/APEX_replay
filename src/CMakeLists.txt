@@ -27,7 +27,7 @@ set(src
   ApexVDCTrack.cxx
   ApexUtils.cxx
   RMatrixD.cxx
-  TReactVertex.cxx
+  TapexReactVertex.cxx
   THaApexShower.cxx
 )
 

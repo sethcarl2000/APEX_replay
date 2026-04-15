@@ -5,7 +5,7 @@
 #include <ApexVDCHitGroup.h> 
 #include <TapexEventHandler.h> 
 #include <math.h> 
-#include "run_parameters.h"
+#include "../run_parameters.h"
 
 /////////////////////////////////////////////////////////////////////////////
 double grid_search( 

@@ -1,9 +1,9 @@
-#ifndef Podd_TReactVertex_h_
-#define Podd_TReactVertex_h_
+#ifndef Podd_TapexReactVertex_h_
+#define Podd_TapexReactVertex_h_
 
 //////////////////////////////////////////////////////////////////////////
 //
-// TReactVertex
+// TapexReactVertex
 // Handles computation of the react vertex. 
 //
 //////////////////////////////////////////////////////////////////////////
@@ -18,21 +18,19 @@
 #include <map> 
 
 //_________________________________________________________________________________
-class TReactVertex : public TObject { 
+class TapexReactVertex { 
 
 public:
   
-  TReactVertex() {};
+  TapexReactVertex() {};
   
   enum EOpticsTarget { kNone=0, kV1,kV2,kV3, kH1,kH2,kH3,kH4 }; 
   
-  TReactVertex(bool isRHRS,
+  TapexReactVertex(bool isRHRS,
 	       TString path_decode,
 	       TString target="",
 	       TString treeName="T");
-  
-  ~TReactVertex() {}; 
-  
+
   TVector3 Compute_reactVertex(double rastX,
 			       double rastY) const; 
   
@@ -58,7 +56,7 @@ private:
   
   OpticsWire_t fWire;
 
-  const std::map<TString,TReactVertex::OpticsWire_t> fWireMap = {
+  const std::map<TString,TapexReactVertex::OpticsWire_t> fWireMap = {
     {"V1", {.name="V1", .isVertical=true,  .x=-3.225e-3, .y= 0e-3,     .z=-196.214e-3}},
     {"V2", {.name="V2", .isVertical=true,  .x=-0.725e-3, .y= 0e-3,     .z=   3.786e-3}},
     {"V3", {.name="V3", .isVertical=true,  .x= 1.725e-3, .y= 0e-3,     .z= 203.786e-3}},
@@ -88,7 +86,7 @@ private:
   //the x-y span of the raster, throughout the run (in HCS)
   TVector2 fRaster_amplitude; 
   
-  ClassDef(TReactVertex,0); 
+  ClassDef(TapexReactVertex,1); 
 };
 //_________________________________________________________________________________
 

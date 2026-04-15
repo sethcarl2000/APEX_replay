@@ -32,7 +32,7 @@ int    HitGroup::WireNum( unsigned int h ) const
         kNamespaceName, __func__, 
         Nhits()-1, h
     ));
-    return kNull_int; 
+    return APEX::kNull_int; 
   }
   
   return fHits[h].wNum(); 

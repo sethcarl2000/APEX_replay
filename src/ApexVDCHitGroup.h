@@ -42,9 +42,6 @@ class HitGroup {
 private: 
   std::vector<Hit> fHits; 
   int fPlane; 
-  
-  const double kNull_double=-1e30; 
-  const int    kNull_int   =-999; 
 
   ClassDef(HitGroup,1); 
 }; 

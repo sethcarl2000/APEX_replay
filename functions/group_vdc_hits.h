@@ -5,7 +5,7 @@
 #include <ApexVDCHit.h> 
 #include <ApexVDCHitGroup.h> 
 #include <TapexEventHandler.h> 
-#include "run_parameters.h"
+#include "../run_parameters.h"
 // ROOT headers
 #include <ROOT/RVec.hxx>
 #include <ROOT/RDataFrame.hxx> 

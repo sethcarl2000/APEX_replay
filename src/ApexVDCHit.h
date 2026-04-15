@@ -17,6 +17,8 @@ class Hit {
 	   double rawTime=-1e30, 
 	   const TapexEventHandler *event=0 );
 
+  Hit& operator=(const Hit& rhs) = default; 
+
   //void FillHit(int plane, double wire, double rawTime); 
   double Time() const { return fRealTime; }
   double wPos() const { return fWirePos; } 

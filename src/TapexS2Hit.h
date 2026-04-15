@@ -52,10 +52,11 @@ class TapexS2Hit {
   bool f_isTwinHit=false; 
   
   double fX, fY, fZ; 
+
   
-  double fPaddleWidth_X = 0.13975; //in m
+  static constexpr double fPaddleWidth_X = 0.13975; //in m
   
-  const double fTDC_resolution = 0.5e-9; 
+  static constexpr double fTDC_resolution = 0.5e-9; 
   
   double Compute_RealTime(); //const; 
   

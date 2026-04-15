@@ -1,6 +1,6 @@
 
 #include <ApexVDCChamberPair.h>
-
+#include <algorithm> 
 
 namespace ApexVDC
 {
@@ -36,5 +36,10 @@ ChamberPair::ChamberPair( bool is_loChamber,
   
   fUnique_ID = unique_id; 
 }
+void ChamberPair::Remove_track(Track* track)
+{
+  std::remove_if( fTracks.begin(), fTracks.end(), [track](const Track* rhs){ return track==rhs; }); 
+}
+
 
 }; 

@@ -5,8 +5,8 @@
 #include <ApexVDCHitCluster.h>
 #include <ApexVDCChamberPair.h> 
 #include <ApexVDCTrack.h> 
-#include "functions/grid_search.h"
-#include "run_parameters.h"
+#include "grid_search.h"
+#include "../run_parameters.h"
 #include <math.h> 
 #include <TVector3.h> 
 

@@ -43,6 +43,9 @@ namespace {
     }; 
 
     constexpr char report_prefix[] = "ApexVDC::Track"; 
+
+    //speed of light
+    constexpr double kC = 2.99e8; 
 }
 
 namespace ApexVDC
@@ -96,8 +99,8 @@ void Track::UpdateTrackInfo() {
   
   //these are the 'speeds' of the particle in the 'U' or 'V' direction, assuming 
   // the overall speed of the particle is 'c'. 
-  fC_u = fC * S_uvw[0]; 
-  fC_v = fC * S_uvw[1]; 
+  fC_u = kC * S_uvw[0]; 
+  fC_v = kC * S_uvw[1]; 
   
   //compute focal plane intercept
   f_FPInt_xyz = ComputeIntercept_z(0.); 
@@ -222,8 +225,8 @@ void Track::Set_S2int_angles( double s2x,
   fS2_u = S2u[0]; 
   fS2_v = S2u[1]; 
     
-  fC_u = fC * S_uvw[0]; 
-  fC_v = fC * S_uvw[1]; 
+  fC_u = kC * S_uvw[0]; 
+  fC_v = kC * S_uvw[1]; 
   
   UpdateTrackInfo(); 
 }

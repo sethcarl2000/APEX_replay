@@ -236,9 +236,6 @@ class Track {
   
   double fEta; 
   
-  const double fC = 2.99e8; 
-  
-  
   //target & fp coordinates
   double f_fp_y;     //focal-plane coords
   double f_fp_theta; 

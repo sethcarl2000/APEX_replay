@@ -2,15 +2,15 @@
 #define generate_vdc_tracks_H
 
 // APEX headers
-#include "functions/group_vdc_hits.h"
-#include "functions/grid_search.h"
-#include "functions/gen_rawtracks.h"
-#include "functions/refine_track.h"
-#include "functions/gen_pairs.h"
-#include "functions/compute_trackdata.h"
-#include "functions/compute_track_error.h"
-#include "functions/theta_phi_model.h"
-#include "run_parameters.h"
+#include "group_vdc_hits.h"
+#include "grid_search.h"
+#include "gen_rawtracks.h"
+#include "refine_track.h"
+#include "gen_pairs.h"
+#include "compute_trackdata.h"
+#include "compute_track_error.h"
+#include "theta_phi_model.h"
+#include "../run_parameters.h"
 #include <EventCounter.h> 
 #include <TapexEventHandler.h> 
 #include <ApexVDCHitGroup.h> 

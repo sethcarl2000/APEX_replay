@@ -19,7 +19,6 @@
 #include <iostream> 
 #include <cmath> 
 
-#define DISABLE_EPICS
 
 using namespace std; 
 using namespace ROOT::VecOps; 
@@ -49,7 +48,6 @@ int vdc_track_replay(
     (max_entries > 0 ? Form("%lli",max_entries) : "no event cap") 
   ); 
 
-#ifndef DISABLE_EPICS
   //find the central-momentum of both arms using EPICS vars
   ROOT::EnableImplicitMT(); 
   ROOT::RDataFrame d_E("E", path_infile.data());
@@ -59,17 +57,16 @@ int vdc_track_replay(
     Error(__func__,"Epics tree 'E' of path \"%s\" is empty!",path_infile.data());
     return -1; 
   }
-    
+
   const double momentum_RHRS
-    = d_E.Histo1D({"","",200,-1,-1},"HacR_D1_P0rb")->GetMean();
+    = d_E.Histo1D({"","",200,-1,-1},"HacR_D1_P0rb")->GetMean() * 1000.;
   
   const double momentum_LHRS
-    = d_E.Histo1D({"","",200,-1,-1},"HacL_D1_P0rb")->GetMean();
+    = d_E.Histo1D({"","",200,-1,-1},"HacL_D1_P0rb")->GetMean() * 1000.;
 
   Info(__func__, 
     "Momentum reported by RHRS/LHRS: %.f / %.f (MeV)", momentum_RHRS, momentum_LHRS
   ); 
-#endif 
 
   //initialize the react vertex
   //create the 'TReactVertex' object, which computes the reaction vertex,
@@ -77,8 +74,10 @@ int vdc_track_replay(
   TapexReactVertex react_vertex( kLHRS, path_infile );
 
 
-  //check status of multithreadding 
-  if (run_parameters::kEnableMT && max_entries < 0 ) {
+  const bool single_threadding = max_entries > 0 || (!run_parameters::kEnableMT);
+
+  //check status of multithreadding d
+  if (!single_threadding) {
   
     if (!ROOT::IsImplicitMTEnabled()) ROOT::EnableImplicitMT();
     Info(__func__, "Multithreadding is enabled. Thread pool size: %i", ROOT::GetThreadPoolSize());
@@ -99,6 +98,9 @@ int vdc_track_replay(
 
   printf("Processing %lli events.\n", total_events); 
 
+  if (single_threadding) {
+    rna = rna.Get().Range(0, total_events);
+  }
 
   //create S2 hits
   rna.Define("R_S2_hits", [](const RVec<double>& R_pmt, const RVec<double>& L_pmt)
@@ -119,7 +121,7 @@ int vdc_track_replay(
   
   EventCounter nPass_coinc = rna.Count(); 
 
-  //first, generate tracks in the right arm 
+  /*/first, generate tracks in the right arm 
   EventCounter nPass_1group_R, nPass_1pair_R, nPass_1raw_R, nPass_1real_R; 
 
   rna = generate_vdc_tracks(kRHRS, rna.Get(), 
@@ -137,7 +139,7 @@ int vdc_track_replay(
     nPass_1pair_L, 
     nPass_1raw_L, 
     nPass_1real_L
-  ); 
+  );*/ 
 
   printf("n. events with at least 1 coinc in each arm: %llu\n", *nPass_coinc); 
 

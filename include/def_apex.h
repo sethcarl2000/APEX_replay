@@ -210,8 +210,6 @@ const bool kPoints_Linear =true;
 const bool kPoints_Fit    =false; 
 
 
-const Double_t VDC_max_realTime = 400e-9; 
-const Double_t VDC_min_realTime = -40e-9; 
 
 const int maxNum_newTrack = 80; 
 

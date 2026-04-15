@@ -4,14 +4,14 @@
 // APEX headers
 #include <TapexS2Hit.h> 
 #include <TapexEventHandler.h>
-#include "run_parameters.h"
+#include "../run_parameters.h"
 // ROOT headers
 #include <ROOT/RVec.hxx>
 // stdlib headers
 #include <cmath> 
 
 ROOT::VecOps::RVec<TapexS2Hit> generate_S2_hits(
-    TapexEventHandler& evt, 
+    const bool is_RHRS,
     const ROOT::RVec<double>& PMT_R, 
     const ROOT::RVec<double>& PMT_L )
 {
@@ -22,7 +22,7 @@ ROOT::VecOps::RVec<TapexS2Hit> generate_S2_hits(
     
     for (int p=0; p<TapexS2Hit::N_paddles(); p++) { 
       
-        TapexS2Hit hit( evt.ActiveArm(), p, PMT_R[p], PMT_L[p] );
+        TapexS2Hit hit( is_RHRS, p, PMT_R[p], PMT_L[p] );
         
         //check if it's a coinc-hit
         if ( !hit.IsCoinc() ) continue; 

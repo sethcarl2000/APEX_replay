@@ -22,7 +22,8 @@
 #pragma link C++ class TFPoly+; 
 #pragma link C++ class TOpticsRays+; 
 #pragma link C++ class RMatrixD+; 
-#pragma link C++ class TReactVertex+; 
+#pragma link C++ class TapexReactVertex+; 
+#pragma link C++ class THaApexShower+; 
 /*#pragma link C++ class UserDetector+;
 #pragma link C++ class UserScintillator+;
 #pragma link C++ class UserApparatus+;
