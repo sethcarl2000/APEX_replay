@@ -87,8 +87,8 @@ namespace {
 TapexEventHandler::TapexEventHandler( bool arm, 
 			      double beamCurrent,
 			      int runNumber, 
-			      TapexS2Hit *fHit_R, 
-			      TapexS2Hit *fHit_L ) { 
+			      const TapexS2Hit *fHit_R, 
+			      const TapexS2Hit *fHit_L ) { 
   f_activeArm  =arm; 
   
   fRunNumber = runNumber; 

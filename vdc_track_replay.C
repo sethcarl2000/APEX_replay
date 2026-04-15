@@ -4,6 +4,7 @@
 #include "functions/generate_vdc_tracks.h"
 #include "functions/generate_S2_hits.h"
 #include "functions/fit_gaus_to_hist.h"
+#include "functions/gen_coinc_events.h"
 #include <TapexReactVertex.h> 
 #include <TapexS2Hit.h> 
 #include <EventCounter.h> 
@@ -46,7 +47,13 @@ int vdc_track_replay(
   Long64_t max_entries=-1
 )
 {
-  printf("<%s> " 
+
+  using namespace std; 
+  using namespace ROOT::VecOps; 
+  using RVecD = ROOT::RVec<double>; 
+  using namespace units; 
+
+  std::printf("<%s> " 
     "In funciton call body.\n"
     "--input file      %s\n"
     "--output file     %s\n"
@@ -59,10 +66,6 @@ int vdc_track_replay(
     (max_entries > 0 ? Form("%lli",max_entries) : "no event cap") 
   ); 
   
-  using namespace std; 
-  using namespace ROOT::VecOps; 
-  using RVecD = ROOT::RVec<double>; 
-  using namespace units; 
 
   //get which arm we're dealing with 
   auto arm_it = kArmModeOpt.find(arm_mode_str); 
@@ -70,6 +73,7 @@ int vdc_track_replay(
     Error(__func__, "Arm mode option passed is invalid: %s", arm_mode_str.c_str());
     return -1; 
   }
+  //
   const ArmMode::Bit arm_mode = arm_it->second; 
 
   //these are just for readability 
@@ -126,7 +130,7 @@ int vdc_track_replay(
   //max number of events to run 
   const Long64_t total_events = (max_entries > 0) ? min<Long64_t>( max_entries, total_events_in_file ) : total_events_in_file; 
 
-  printf("Processing %lli events.\n", total_events); 
+  std::printf("Processing %lli events.\n", total_events); 
 
   if (single_threadding) {
     rna = rna.Get().Range(0, total_events);
@@ -151,9 +155,15 @@ int vdc_track_replay(
   rna = rna.Get()
     .Filter(vec_is_nonempty<TapexS2Hit>, {"R_S2_hits"}) 
     .Filter(vec_is_nonempty<TapexS2Hit>, {"L_S2_hits"}); 
+  
+  EventCounter rptr_nPass_coinc = rna.Count(); 
 
   //now, we will generate the coinc-time.
   //this histogram will be the 'subtraction' of all coinc-times  
+  double dt_sigma, dt_center; 
+
+  EventCounter rptr_nPass_1event; 
+
   if (both_arms_active()) {
 
     auto hist_dt = rna.Get()
@@ -172,15 +182,54 @@ int vdc_track_replay(
       
       }, {"R_S2_hits", "L_S2_hits"}) 
       
-      .Histo1D<RVecD>({"h_dt", "coinc_times;s;", 200, -60*ns, +60*ns }, "dt");
+      .Histo1D<RVecD>({"h_dt", "coinc_times;s;", 200, -75*ns, +75*ns }, "dt");
 
-      //hist_dt->DrawCopy(); 
-      double dt_center, dt_sigma;
-      fit_gaus_to_hist( (TH1D*)hist_dt->Clone("test_h"), 20*ns, dt_center, dt_sigma, true);
-      
+    fit_gaus_to_hist( (TH1D*)hist_dt->Clone("test_h"), 20*ns, dt_center, dt_sigma);
+
+    std::printf(
+      " central coinc-time (S2_r - S2_l): %.2f ns\n"
+      " central coinc-time sigma: %.3f ns (cut is %.3f stddev-s from center)\n",
+      dt_center/ns, 
+      dt_sigma/ns, run_parameters::kS2_coinc_sigma_cut
+    );  
+
   }
   
-  EventCounter rptr_nPass_coinc = rna.Count(); 
+  //create TeventHandler objets 
+  switch (arm_mode) {
+
+    //if both arms are active, then generate events based on coincidences between the left & right arms. 
+    case ArmMode::kBoth :  {
+      rna = rna.Get()
+        .Define("coinc_events", [dt_center, dt_sigma](
+          double beam_current, 
+          unsigned int run_number, 
+          const RVec<TapexS2Hit>& R_hits, 
+          const RVec<TapexS2Hit>& L_hits )
+        {
+          return gen_coinc_events(
+            dt_center, dt_sigma * run_parameters::kS2_coinc_sigma_cut, 
+            beam_current, 
+            run_number, 
+            R_hits, 
+            L_hits
+          );
+        }, {"hac_bcm_average","fEvtHdr.fRun","R_S2_hits","L_S2_hits"}) 
+        
+        //make a cut on events with at least 1 coincidence event
+        .Filter(vec_is_nonempty<TapexEventHandler>, {"coinc_events"}); 
+      
+      rptr_nPass_1event = rna.Count(); 
+      break; 
+    }
+  
+    default : { 
+      Warning(__func__, "arm_mode is %s, but, at present, only coinc-mode is implemented ('both').\n", arm_mode_str.c_str()); 
+      break;
+    }
+  
+  }
+
 
   /*/first, generate tracks in the right arm 
   EventCounter nPass_1group_R, nPass_1pair_R, nPass_1raw_R, nPass_1real_R; 
@@ -204,19 +253,23 @@ int vdc_track_replay(
 
   TStopwatch timer; 
 
-  Long64_t n_pass_coinc = *rptr_nPass_coinc; 
+  Long64_t n_pass_coinc = *rptr_nPass_1event; 
+  Long64_t n_pass_1s2hit = *rptr_nPass_coinc; 
 
-  printf(
+
+  std::printf(
     "N. events with at least: --------------------------------------------\n"
-    "   1 S2 hit in each arm:    %10llu  (%5.1f %%)\n"
+    "   1 S2 hit in each arm:       %10llu  (%5.1f %%)\n"
+    "   1 S2 between RHRS & LHRS:   %10llu  (%5.1f %%)\n"
     "---------------------------------------------------------------------\n",
-    n_pass_coinc, 100.*((double)n_pass_coinc)/((double)total_events) 
+    n_pass_1s2hit, 100.*((double)n_pass_1s2hit)/((double)total_events), 
+    n_pass_coinc, 100.*((double)n_pass_coinc)/((double)total_events)
   ); 
 
   double elapsed  = timer.RealTime(); 
   double cpu_time = timer.CpuTime(); 
 
-  printf(
+  std::printf(
     "Real time: %.3f s  ( %.6f ms/event )\n"
     "Cpu time:  %.3f s  ( %.6f ms/event )\n",
     elapsed, 1000.*elapsed/((double)total_events),

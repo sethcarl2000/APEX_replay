@@ -61,7 +61,7 @@ void fit_gaus_to_hist(
     }
 
     center = fit_ptr->Parameter(1); 
-    sigma  = fit_ptr->Parameter(2); 
+    sigma  = std::fabs(fit_ptr->Parameter(2)); 
     
     return; 
 }
