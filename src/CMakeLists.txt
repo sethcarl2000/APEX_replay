@@ -37,7 +37,7 @@ string(REPLACE .cxx .h headers "${src}")
 
 # If you have any extra headers needed for building the ROOT dictionary,
 # add them here. Otherwise leave this line commented out.
-#list(APPEND headers ...)
+list(APPEND headers ArmMode.h)
 
 # If you have other headers NOT needed for the ROOT dictionary but needed for
 # the library, add them here as shown in the line commented out below.
