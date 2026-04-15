@@ -45,11 +45,11 @@ Block *.cer.asum_c	  # sum of corrected ADC values
 
 
 #             ~~~~~~~~~~~~~~~ Beam Position Monitors ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-Variable *.BPMA.x
-Variable *.BPMA.y
+Block *.BPMA.x
+Block *.BPMA.y
        
-Variable *.BPMB.x
-Variable *.BPMB.y
+Block *.BPMB.x
+Block *.BPMB.y
 
 	 
 # Block R.trg.* 
@@ -122,5 +122,5 @@ begin epics
   HacR_D1_NMR:SIG	
   HacR_D_LS450:FLD_DATA
 
- end epics
+end epics
 # =========================================================================
