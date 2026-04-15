@@ -15,8 +15,6 @@
 #include "TObject.h"
 #include "ROOT/RVec.hxx"
 
-using RVecD = ROOT::RVec<double>; 
-
 //Basically just a wrapper for TMatrixD
 //________________________________________________________________________________
 class RMatrixD : public TObject {
