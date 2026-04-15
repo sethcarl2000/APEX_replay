@@ -156,13 +156,13 @@ int vdc_track_replay(
     .Filter(vec_is_nonempty<TapexS2Hit>, {"R_S2_hits"}) 
     .Filter(vec_is_nonempty<TapexS2Hit>, {"L_S2_hits"}); 
   
-  EventCounter rptr_nPass_coinc = rna.Count(); 
+  EventCounter_RPtr rptr_nPass_coinc = rna.Count(); 
 
   //now, we will generate the coinc-time.
   //this histogram will be the 'subtraction' of all coinc-times  
   double dt_sigma, dt_center; 
 
-  EventCounter rptr_nPass_1event; 
+  EventCounter_RPtr rptr_nPass_1event; 
 
   if (both_arms_active()) {
 
@@ -199,7 +199,8 @@ int vdc_track_replay(
   switch (arm_mode) {
 
     //if both arms are active, then generate events based on coincidences between the left & right arms. 
-    case ArmMode::kBoth :  {
+    case ArmMode::kBoth :  { //_________________________________________________________________________ 
+
       rna = rna.Get()
         .Define("coinc_events", [dt_center, dt_sigma](
           double beam_current, 
@@ -221,8 +222,52 @@ int vdc_track_replay(
       
       rptr_nPass_1event = rna.Count(); 
       break; 
-    }
-  
+
+    } //_________________________________________________________________________
+
+    // create events for just the right an
+    case ArmMode::kRHRS : { //___________________________________________________
+
+      rna = rna.Get() 
+        .Define("coinc_events", []( 
+          double beam_current, 
+          unsigned int run_number, 
+          const RVec<TapexS2Hit>& hits)
+        {
+          RVec<TapexEventHandler> events; events.reserve(hits.size());  
+          for (const auto& hit : hits) {
+            events.push_back(TapexEventHandler(kRHRS, beam_current, run_number, &hit, nullptr));  
+          }
+          return events; 
+        }, {"hac_bcm_average","fEvtHdr.fRun","R_S2_hits"}); 
+      break; 
+    } //_________________________________________________________________________
+
+    
+    // create events for just the left arm
+    case ArmMode::kLHRS : { //___________________________________________________
+
+      rna.Define("coinc_events", []( 
+          double beam_current, 
+          unsigned int run_number, 
+          const RVec<TapexS2Hit>& hits) 
+        {
+          RVec<TapexEventHandler> events; events.reserve(hits.size());  
+          for (const auto& hit : hits) {
+            events.push_back(TapexEventHandler(kLHRS, beam_current, run_number, nullptr, &hit));  
+          }
+          return events; 
+        }, {"hac_bcm_average","fEvtHdr.fRun","R_S2_hits"});
+
+      //if this parameter is true, we will only keep events which have one (and only one) coincidence between both arms 
+      if (run_parameters::kKillMultiCoincEvents) {
+        rna = rna.Get().Filter([](const RVec<TapexEventHandler>& vec){ return vec.size() != 1; }, {"coinc_events"}); 
+      }
+      
+      break; 
+    } //_________________________________________________________________________
+
+    
     default : { 
       Warning(__func__, "arm_mode is %s, but, at present, only coinc-mode is implemented ('both').\n", arm_mode_str.c_str()); 
       break;
@@ -231,43 +276,77 @@ int vdc_track_replay(
   }
 
 
-  /*/first, generate tracks in the right arm 
-  EventCounter nPass_1group_R, nPass_1pair_R, nPass_1raw_R, nPass_1real_R; 
+  EventCounter_RPtr nPass_1group_R, nPass_1pair_R, nPass_1raw_R, nPass_1ref_R; 
+  EventCounter_RPtr nPass_1group_L, nPass_1pair_L, nPass_1raw_L, nPass_1ref_L; 
 
-  rna = generate_vdc_tracks(kRHRS, rna.Get(), 
-    nPass_1group_R, 
-    nPass_1pair_R, 
-    nPass_1raw_R, 
-    nPass_1real_R
-  ); 
+  //first, generate tracks in the right arm 
+  if (RHRS_active()) {
+    rna = generate_vdc_tracks(kRHRS, rna.Get(), 
+      nPass_1group_R, 
+      nPass_1pair_R, 
+      nPass_1raw_R, 
+      nPass_1ref_R
+    ); 
+  }
 
   //now, do the left-arm tracks
-  EventCounter nPass_1group_L, nPass_1pair_L, nPass_1raw_L, nPass_1real_L; 
-
-  rna = generate_vdc_tracks(kLHRS, rna.Get(), 
-    nPass_1group_L, 
-    nPass_1pair_L, 
-    nPass_1raw_L, 
-    nPass_1real_L
-  );*/ 
+  if (LHRS_active()) {
+    rna = generate_vdc_tracks(kLHRS, rna.Get(), 
+      nPass_1group_L, 
+      nPass_1pair_L, 
+      nPass_1raw_L, 
+      nPass_1ref_L
+    );
+  }
 
   TStopwatch timer; 
+  
+  EventCounter n_pass_1ref_L    = *nPass_1ref_L; 
+  
+  EventCounter n_pass_1s2hit    = *rptr_nPass_coinc; 
+  EventCounter n_pass_coinc     = *rptr_nPass_1event; 
+  
+  EventCounter n_pass_1group_R = *nPass_1group_R; 
+  EventCounter n_pass_1pair_R  = *nPass_1pair_R; 
+  EventCounter n_pass_1raw_R   = *nPass_1raw_R; 
+  EventCounter n_pass_1ref_R   = *nPass_1ref_R; 
+  
+  EventCounter n_pass_1group_L = *nPass_1group_L; 
+  EventCounter n_pass_1pair_L  = *nPass_1pair_L; 
+  EventCounter n_pass_1raw_L   = *nPass_1raw_L; 
 
-  Long64_t n_pass_coinc = *rptr_nPass_1event; 
-  Long64_t n_pass_1s2hit = *rptr_nPass_coinc; 
-
+  double elapsed  = timer.RealTime(); 
+  double cpu_time = timer.CpuTime(); 
 
   std::printf(
     "N. events with at least: --------------------------------------------\n"
     "   1 S2 hit in each arm:       %10llu  (%5.1f %%)\n"
-    "   1 S2 between RHRS & LHRS:   %10llu  (%5.1f %%)\n"
+    "   1 coinc with LHRS & RHRS:   %10llu  (%5.1f %%)\n"
+    " ~~ Right arm ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~\n"
+    "   1 hit group                 %10llu  (%5.1f %%)\n"
+    "   1 hit group pair            %10llu  (%5.1f %%)\n"
+    "   1 raw track                 %10llu  (%5.1f %%)\n"
+    "   1 refined track             %10llu  (%5.1f %%)\n"
+    " ~~ Left arm ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~\n"
+    "   1 hit group                 %10llu  (%5.1f %%)\n"
+    "   1 hit group pair            %10llu  (%5.1f %%)\n"
+    "   1 raw track                 %10llu  (%5.1f %%)\n"
+    "   1 refined track             %10llu  (%5.1f %%)\n"
     "---------------------------------------------------------------------\n",
-    n_pass_1s2hit, 100.*((double)n_pass_1s2hit)/((double)total_events), 
-    n_pass_coinc, 100.*((double)n_pass_coinc)/((double)total_events)
-  ); 
 
-  double elapsed  = timer.RealTime(); 
-  double cpu_time = timer.CpuTime(); 
+    n_pass_1s2hit,    100.*((double)n_pass_1s2hit)/((double)total_events), 
+    n_pass_coinc,     100.*((double)n_pass_coinc)/((double)total_events),
+
+    n_pass_1group_R,  100.*((double)n_pass_1group_R)/((double)total_events),
+    n_pass_1pair_R,   100.*((double)n_pass_1pair_R)/((double)total_events),
+    n_pass_1raw_R,    100.*((double)n_pass_1raw_R)/((double)total_events),
+    n_pass_1ref_R,    100.*((double)n_pass_1ref_R)/((double)total_events),
+
+    n_pass_1group_L,  100.*((double)n_pass_1group_L)/((double)total_events),
+    n_pass_1pair_L,   100.*((double)n_pass_1pair_L)/((double)total_events),
+    n_pass_1raw_L,    100.*((double)n_pass_1raw_L)/((double)total_events),
+    n_pass_1ref_L,    100.*((double)n_pass_1ref_L)/((double)total_events)
+  ); 
 
   std::printf(
     "Real time: %.3f s  ( %.6f ms/event )\n"
@@ -277,8 +356,6 @@ int vdc_track_replay(
   ); 
 
   return 0; 
-
-
 }
 
 
