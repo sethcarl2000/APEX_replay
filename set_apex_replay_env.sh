@@ -1,6 +1,6 @@
 #!/bin/bash
 
-source /home/sethhall/.login
+# source /home/sethhall/.login
 
 
 export PATH_APEX_REPLAY="/work/halla/apex/disk1/sethhall/apex_replay"
@@ -84,22 +84,22 @@ export PATH_APEX_SCRIPTS="${PATH_APEX_REPLAY}/scripts"
 export PATH_APEX_MACROS="${PATH_APEX_REPLAY}/macros" 
 
 # add our macros to the list of macros
-if [ ! -f "~/.rootrc" ]; then
-    echo "~/.rootrc file does not exit. making it:"
-    echo "Unix.*.Root.MacroPath: .:${PATH_APEX_MACROS}" > ~/.rootrc
-else
-
-    macros=$(cat "~/.rootrc")
-
-    if [[ "${macros}~" == "~" ]]; then
-	 echo "~/.rootrc file does not exit. making it:"
-	 "Unix.*.Root.MacroPath: .:${PATH_APEX_MACROS}" > ~/.rootrc
-    fi
-
-    if [[ "${macros}" != *${PATH_APEX_MACROS}* ]]; then
-	echo "${macros}:${PATH_APEX_MACROS}" > ~/.rootrc
-	echo "adding apex macro to list of macro paths" 
-    fi
-fi
+#if [ ! -f "~/.rootrc" ]; then
+#    echo "~/.rootrc file does not exit. making it:"
+#    echo "Unix.*.Root.MacroPath: .:${PATH_APEX_MACROS}" > ~/.rootrc
+#else
+#
+#   macros=$(cat "~/.rootrc")
+#
+#    if [[ "${macros}~" == "~" ]]; then
+#	 echo "~/.rootrc file does not exit. making it:"
+#	 "Unix.*.Root.MacroPath: .:${PATH_APEX_MACROS}" > ~/.rootrc
+#    fi
+#
+#    if [[ "${macros}" != *${PATH_APEX_MACROS}* ]]; then
+#	echo "${macros}:${PATH_APEX_MACROS}" > ~/.rootrc
+#	echo "adding apex macro to list of macro paths" 
+#    fi
+#fi
 
 

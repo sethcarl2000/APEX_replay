@@ -9,7 +9,9 @@
 
 # set up APEX env
 source set_apex_replay_env.sh
-cd ${APEX_REPLAY_ENV} 
+cd ${PATH_APEX_REPLAY} 
+echo -n "<$0> pwd: "; pwd
+echo "PATH_APEX_REPLAY: $PATH_APEX_REPLAY"
 
 ###################################################################################
 #
@@ -34,12 +36,12 @@ do
     echo "<${0}>: PROCESSING SUB-FILE $part ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~" 
     echo "<${0}>: input:  $path_input"
     echo "<${0}>: output: $path_output"
+    echo "<${0}>: .odef:  $path_odef"
     echo "<${0}>: ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~"
 
-    cmd_string="decode_run.C(\"$path_input\", \"$path_output\", \"$path_odef\")"
-    echo "command string: $cmd_string"
-    
-    echo ".x ${cmd_string}" | analyzer
+    cmd_string="macros/decode_run.C(\"$path_input\", \"$path_output\", \"$path_odef\")"
+    echo "command string: $cmd_string" 
+    echo ".x $cmd_string" | analyzer 
     
     echo "<${0}>: done with sub-file $part. ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~"
 done
