@@ -41,7 +41,7 @@ namespace ApexVDC
     constexpr double kW_LHRS[ApexVDC::kN_planes] = { 0, 0.026, 0.335344, 0.361444 };
 
     /// @brief name of the namespace as a const char array
-    constexpr char kNamespaceName[] = "ApexHRS";
+    constexpr char kNamespaceName[] = "ApexVDC";
 
 };
 
