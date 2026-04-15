@@ -79,7 +79,38 @@ namespace APEX {
   
   //return square of arg
   inline double square(double x) { return x*x; } 
-  
+
+    
+  constexpr int kZQuantPts = 25; 
+
+  constexpr double kZQuantSpread[kZQuantPts] = { 
+    -2.053749, 
+    -1.554774, 
+    -1.281552, 
+    -1.080319, 
+    -0.915365, 
+    -0.772193, 
+    -0.643345, 
+    -0.524401, 
+    -0.412463, 
+    -0.305481, 
+    -0.201893, 
+    -0.100434, 
+    0.000000, 
+    0.100434, 
+    0.201893, 
+    0.305481, 
+    0.412463, 
+    0.524401, 
+    0.643345, 
+    0.772193, 
+    0.915365, 
+    1.080319, 
+    1.281552, 
+    1.554774, 
+    2.053749  
+  }; 
+
   namespace Graphic {
     void VLine(TH1 *hist, double x, unsigned int color=1, unsigned int style=1); 
     void HLine(TH1 *hist, double y, unsigned int color=1, unsigned int style=1); 

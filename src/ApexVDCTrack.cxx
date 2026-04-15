@@ -80,7 +80,7 @@ void Track::UpdateTrackInfo() {
     fPair_Lo->SetSlope_uv( fSlope_u, fSlope_v ); 
   }
   
-  f_S2Int_xyz = ComputeIntercept_z( fEvent->GetS2Hit()->Z() ); 
+  f_S2Int_xyz = ComputeIntercept_z( fEvent->GetS2Hit(f_isRightArm)->Z() ); 
   
   //we need to find the 'speed' of the track in the u & v directions. 
   //the 'true' speed of the track thru the VDC is effectivley c, but 
@@ -108,7 +108,7 @@ void Track::UpdateTrackInfo() {
   fPhi   = std::atan( S_xyz.Y()/S_xyz.Z() ); 
 }
 //______________________________________________________________________________________________________________
-Track::Track( TapexEventHandler *event, 
+Track::Track( const TapexEventHandler *event, 
 		      ChamberPair *pLo, 
 		      ChamberPair *pHi ) { 
   
@@ -190,7 +190,7 @@ void Track::Set_S2int_angles( double s2x,
   
   if ( !fPair_Lo || !fPair_Hi ) { f_hasVDCdata=false; } else { f_hasVDCdata=true; }
     
-  f_S2Int_xyz = TVector3( s2x, s2y, fEvent->GetS2Hit()->Z() ); 
+  f_S2Int_xyz = TVector3( s2x, s2y, fEvent->GetS2Hit(f_isRightArm)->Z() ); 
   
   TVector3 S_xyz( TMath::Tan(theta), TMath::Tan(phi), 1. ); 
   
@@ -478,8 +478,8 @@ double Track::Get_T_model(int plane, double v, int derivative) const {
 double Track::xParam() const { 
   
   return  
-    ( f_S2Int_xyz.X() - fEvent->GetS2Hit()->X() ) 
-    / fEvent->GetS2Hit()->PaddleWidth();     
+    ( f_S2Int_xyz.X() - fEvent->GetS2Hit(f_isRightArm)->X() ) 
+    / fEvent->GetS2Hit(f_isRightArm)->PaddleWidth();     
 }
 //______________________________________________________________________________________________________________
 void Track::Nudge_params( double nudge[5] ) { 

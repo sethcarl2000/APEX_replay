@@ -7,7 +7,7 @@ namespace ApexVDC {
 Hit::Hit( int plane, 
 		  double wire, 
 		  double rawTime, 
-		  TapexEventHandler *event ) { 
+		  const TapexEventHandler *event ) { 
   
   fEvent = event; 
   
@@ -24,7 +24,7 @@ Hit::Hit( int plane,
 void   Hit::SetRawTime(const double rawTime)  { 
   
   fRawTime  = rawTime; 
-  fRealTime = ApexVDC::RealTime( f_isRightArm, fPlane, fWireNum, fRawTime ) - fEvent->GetS2Hit()->Time(); 
+  fRealTime = ApexVDC::RealTime( f_isRightArm, fPlane, fWireNum, fRawTime ) - fEvent->GetS2Hit(f_isRightArm)->Time(); 
 } 
 
 }; 

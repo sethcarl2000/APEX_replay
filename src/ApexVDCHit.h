@@ -15,7 +15,7 @@ class Hit {
   Hit( int plane=-999, 
 	   double wire=-1e30, 
 	   double rawTime=-1e30, 
-	   TapexEventHandler *event=0 );
+	   const TapexEventHandler *event=0 );
 
   //void FillHit(int plane, double wire, double rawTime); 
   double Time() const { return fRealTime; }
@@ -33,7 +33,7 @@ class Hit {
   
 
  private: 
-  TapexEventHandler *fEvent; 
+  const TapexEventHandler *fEvent; 
   int    fPlane;
   double fRawTime; 
   int    fWireNum; 

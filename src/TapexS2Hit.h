@@ -35,7 +35,9 @@ class TapexS2Hit {
   void Make_twinHit(TapexS2Hit *neighbor); 
 
   bool Is_twinHit() const { return f_isTwinHit; }
-    
+  
+  //number of S2 segments
+  static constexpr int N_paddles() { return 16; }
   
  private: 
   bool   f_isRightArm; 

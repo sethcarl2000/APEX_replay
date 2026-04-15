@@ -17,9 +17,10 @@ class Track {
  public: 
   // This is the track object, which handles self-refinement, 
   // as well as acting as a container for its constituent points. 
-  Track( TapexEventHandler *event=0, 
-	     ChamberPair *pLo=0, 
-	     ChamberPair *pHi=0 ); 
+  Track( 
+    const TapexEventHandler *event=nullptr, 
+    ChamberPair *pLo=0, 
+    ChamberPair *pHi=0 ); 
   
   ~Track() {
     
@@ -36,7 +37,7 @@ class Track {
   ChamberPair* GetPair_Lo() { return fPair_Lo; }
   
   void SetEvent( TapexEventHandler *evt ) { fEvent=evt; }
-  TapexEventHandler *GetEvent() { return fEvent; }
+  const TapexEventHandler *GetEvent() { return fEvent; }
   
   bool IsRightArm() const { return f_isRightArm; }
   
@@ -199,7 +200,7 @@ class Track {
   bool operator==(const ApexVDC::Track& rhs) { return (this)==(&rhs); }
   
  private: 
-  TapexEventHandler *fEvent;
+  const TapexEventHandler *fEvent;
   bool f_isRightArm; 
   
   //does this track have associated hits/hitgroups? if not make sure we don't try 

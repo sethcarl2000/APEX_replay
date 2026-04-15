@@ -24,6 +24,7 @@ class TapexEventHandler {
   bool ActiveArm() const { return f_activeArm; }
   
   TapexS2Hit* GetS2Hit() { return f_activeArm ? fS2Hit_Right : fS2Hit_Left; }
+  const TapexS2Hit* GetS2Hit(bool is_RHRS) const { return is_RHRS ? fS2Hit_Right : fS2Hit_Left; }
     
   //un-blurred drift function
   double Drift_X( double tau, double slope, int derivative=0 ) const; 
@@ -31,7 +32,7 @@ class TapexEventHandler {
     
   double GetBeamCurrent() const { return fBeamCurrent; }
   
-  double Get_tauSigma()   const; 
+  double Get_tauSigma() const; 
   
   bool Is_nullBeamCurrent() const { return f_isNullBeamCurrent; }
   
