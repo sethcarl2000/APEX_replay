@@ -9,7 +9,7 @@
 
 /////////////////////////////////////////////////////////////////////////////
 double grid_search( 
-    TapexEventHandler *evt, 
+    const TapexEventHandler& evt, 
     ApexVDC::HitGroup& group, 
     double m1, //slope 
     double m2, 
@@ -39,13 +39,13 @@ double grid_search(
         if ( std::fabs(x-x_avg) < x_span/2. ) { //this wire-pos is between x_Hi & _Lo
         
             tau_Lo 
-                = evt->Drift_T( 0., m_avg ) 
+                = evt.Drift_T( 0., m_avg ) 
                 - TAU_buffer; 
             
         } else {
         
             tau_Lo 
-                = evt->Drift_T( m_min*( x-(x<x_avg ? x_Lo : x_Hi) ), m_avg ) 
+                = evt.Drift_T( m_min*( x-(x<x_avg ? x_Lo : x_Hi) ), m_avg ) 
                 - TAU_buffer; 
             
             //cut hits that are too far away
@@ -53,7 +53,7 @@ double grid_search(
         }
         
         double tau_Hi 
-            = evt->Drift_T( m_max*( x-(x<x_avg ? x_Hi : x_Lo) ), m_avg ) 
+            = evt.Drift_T( m_max*( x-(x<x_avg ? x_Hi : x_Lo) ), m_avg ) 
             + TAU_buffer; 
             
         /*cout << TString::Format(" dv %2.1f mm, DT = %3.1f ns", 

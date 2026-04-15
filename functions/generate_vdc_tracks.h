@@ -7,54 +7,49 @@
 #include <EventCounter.h> 
 // ROOT headers
 #include <ROOT/RVec.hxx>
+#include <ROOT/RDataFrame.hxx>
+#include <ROOT/RResultPtr.hxx>
 // stdlib headers
 #include <vector>
 #include <string> 
 
 /// @brief Generates VDC tracks for RHRS / LHRS
-/// @param evt Apex event handler
+/// @param is_RHRS
 /// @param node_in input RDF node
 /// @param n_pass_1group EventCounter representing the number of events which reconstructed at least 1 group 
-ROOT::RDF::RNode generate_vdc_tracks(
-    TapexEventHandler* evt, 
-    ROOT::RDF::RNode node_in, 
-    EventCounter& n_pass_1group  
-)
+ROOT::RDF::RNode generate_vdc_tracks( 
+    const bool is_RHRS, 
+    ROOT::RDF::RNode inNode, 
+    EventCounter &nPass_1group, 
+    EventCounter &nPass_1pair, 
+    EventCounter &nPass_1rawTrack ) 
 {
-    using namespace std; 
-    using rvecd = ROOT::VecOps::RVec<double>; 
+    using namespace std;            
 
-    std::vector<ROOT::RDF::RNode> nodes{node_in}; 
-    
-    const bool is_RHRS = evt->ActiveArm(); 
+    //feed this script your node, with generated S2-hits, ready for tracking data. 
 
-    string arm = is_RHRS ? "R" : "L"; 
-    const vector<string> plane_name{"U1","V1","U2","V2"}; 
-    
-    vector<string> branch_rawtime, branch_wire; 
+    //it'll spit out refined tracks for the plane you tell it to. 
 
-    //group hits
+    string arm = is_RHRS ? "R" : "L" ; 
+
+    vector<string> plane_name = { "u1", "v1", "u2", "v2" }; 
+
+    vector<string> branch_rawtime; 
+    vector<string> branch_wire; 
+
     for (int p=0; p<4; p++) { 
         
-        string br_rawtime = arm+".vdc."+plane_name[p]+".rawtime"; 
+        string rawtime = arm+".vdc."+plane_name[p]+".rawtime"; 
         
-        string br_wire    = arm+".vdc."+plane_name[p]+".wire"; 
-
-        auto new_node = nodes.back()
-
-            .Define(Form("%s_%s_groups",arm.c_str(),plane_name[p].c_str()), [p, evt](const rvecd& rawtime, const rvecd& wire)
-            {
-                return group_vdc_hits(evt, p, rawtime, wire); 
-            }, {br_rawtime.c_str(), br_wire.c_str()}); 
-
-        nodes.push_back(new_node); 
+        string wire    = arm+".vdc."+plane_name[p]+".wire"; 
+        
+        branch_rawtime.push_back( rawtime ); 
+        branch_wire   .push_back( wire );   
     }
+
+
+        
     
-    auto output_node = nodes.back(); 
-
-    n_pass_1group = output_node.Count(); 
-
-    return output_node; 
 }
 
 

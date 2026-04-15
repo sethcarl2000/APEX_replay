@@ -20,7 +20,7 @@
 /// @param h_wire a collection of all VDC wire numbers
 /// @return a vector of all valid VDC hit groups  
 ROOT::RVec<ApexVDC::HitGroup> group_vdc_hits ( 
-                                            TapexEventHandler *evt, 
+                                            const TapexEventHandler& evt, 
                                             int   p, 
                                             const ROOT::RVec<double>& h_rawtime, 
                                             const ROOT::RVec<double>& h_wire
@@ -52,7 +52,7 @@ ROOT::RVec<ApexVDC::HitGroup> group_vdc_hits (
   // the [1] element is the T_TDC (corrected tdc time of that hit)
   for (int h=0; h<n_hits; h++) { 
     
-    ApexVDC::Hit hit( p, (int)std::round(h_wire[h]), h_rawtime[h], evt );  
+    ApexVDC::Hit hit( p, (int)std::round(h_wire[h]), h_rawtime[h], &evt );  
     
     //vdc timing cut, these times won't ever be useful for a coinc track 
     if (hit.Time() > run_parameters::kVDC_max_realTime || 
