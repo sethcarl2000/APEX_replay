@@ -6,12 +6,15 @@
 #include <ApexVDCHitGroup.h> 
 #include <TapexEventHandler.h> 
 #include "../run_parameters.h"
+#include "../include/units.h"
 // ROOT headers
 #include <ROOT/RVec.hxx>
 #include <ROOT/RDataFrame.hxx> 
 // stdlib headers
 #include <vector> 
 #include <cmath> 
+
+#define DEBUG_GROUP
 
 /// @brief Form 'ApexVDC::HitGroup's from groups of VDC hits
 /// @param evt Apex event handler
@@ -22,17 +25,18 @@
 ROOT::RVec<ApexVDC::HitGroup> group_vdc_hits ( 
                                             const TapexEventHandler& evt, 
                                             int   p, 
-                                            const ROOT::RVec<double>& h_rawtime, 
-                                            const ROOT::RVec<double>& h_wire
+                                            const ROOT::RVec<double>& h_wire,
+                                            const ROOT::RVec<double>& h_rawtime 
                                             ) 
 {
-#if DEBUG
-  cout << "DEBUG: Vdc valid real-time range: ["
-  << VDC_min_realTime << ", " << VDC_max_realTime << "]" << endl;
+#ifdef DEBUG_GROUP
+  using namespace units; 
+  std::cout << "DEBUG: Vdc valid real-time range: ["
+  << run_parameters::kVDC_min_realTime/ns << ", " << run_parameters::kVDC_max_realTime/ns << "]" << std::endl;
   int n_validHits(0);
-  cout << "Is right arm? " << (evt->ActiveArm() ? "true" : "false") << "\n";
-  cout << " plane " << p << endl;
-  cout << " S2 hit time: " << evt->GetS2Hit()->Time()*1e9 << endl; 
+  std::cout << "Is right arm? " << (evt.ActiveArm() ? "true" : "false") << "\n";
+  std::cout << " plane " << p << std::endl;
+  std::cout << " S2 hit time: " << evt.GetS2Hit(evt.ActiveArm())->Time()*1e9 << std::endl; 
 #endif
   
   //return no groups if there aren't enough hits to make any 
@@ -53,18 +57,31 @@ ROOT::RVec<ApexVDC::HitGroup> group_vdc_hits (
   for (int h=0; h<n_hits; h++) { 
     
     ApexVDC::Hit hit( p, (int)std::round(h_wire[h]), h_rawtime[h], &evt );  
+
+#ifdef DEBUG_GROUP 
+    printf(
+      "plane %i, hit: %i/%i\n"
+      "   wire:       %i\n"
+      "   time:       %.1f ns\n"
+      "   raw time:   %.f\n",
+      p, h, n_hits-1, 
+      hit.wNum(), 
+      hit.Time()/ns, 
+      hit.GetRawTime()
+    );
+#endif
     
     //vdc timing cut, these times won't ever be useful for a coinc track 
     if (hit.Time() > run_parameters::kVDC_max_realTime || 
         hit.Time() < run_parameters::kVDC_min_realTime ) {
-      #if DEBUG
-        cout << "killed! " << endl; 
-      #endif 
+#ifdef DEBUG_GROUP
+        std::cout << "killed! " << std::endl; 
+#endif 
       continue; 
     }
     
-#if DEBUG
-    cout << "kept!" << endl; 
+#ifdef DEBUG_GROUP
+    std::cout << "kept!" << std::endl; 
     n_validHits++; 
 #endif       
     //if wPrev =-1, then no wires have yet been added
@@ -97,11 +114,11 @@ ROOT::RVec<ApexVDC::HitGroup> group_vdc_hits (
 
   } 
   
-#if DEBUG 
-  cout << TString::Format( "group_hits() -  total hits:%3i, valid-hits:%3i, groups made:%2i",
+#ifdef DEBUG_GROUP 
+  std::cout << TString::Format( "group_hits() -  total hits:%3i, valid-hits:%3i, groups made:%2i",
           (int)h_wire.size(), 
           n_validHits, 
-          (int)groupVec.size() ) << endl; 
+          (int)group_vec.size() ) << std::endl; 
 #endif
   
   return group_vec;       
