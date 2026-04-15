@@ -4,6 +4,7 @@
 //APEX headers
 #include "run_parameters.h"
 #include "functions/grid_search.h"
+#include "functions/theta_phi_model.h"
 #include <TapexEventHandler.h>
 #include <ApexVDCTrack.h> 
 #include <ApexVDCChamberPair.h> 
@@ -21,27 +22,15 @@ ROOT::RVec<ApexVDC::Track> gen_rawtracks(
 {             
     using APEX::square; 
 
-    auto Phi_model   = [](const ApexVDC::Track& track) { 
-        
-        return 
-        -0.231*square(track.S2_y()) 
-        +0.2532*track.S2_y() 
-        +0.539e-3; 
-    };
-    auto Theta_model = [](const ApexVDC::Track& track) { 
-        
-        return 0.109648*track.S2_x(); 
-    };
 
     const bool is_RHRS = evt.ActiveArm(); 
     
-    const double CUT_ph_min = is_RHRS ? -0.012 : -0.018;
-    const double CUT_ph_max = is_RHRS ?  0.012 :  0.008;   
+    const int arm_int_index = is_RHRS ? 0 : 1;  
+    const double CUT_ph_min = run_parameters::CUT_ph_min[arm_int_index];
+    const double CUT_ph_max = run_parameters::CUT_ph_max[arm_int_index];
 
-    const double CUT_th_min = is_RHRS ? -0.018 :-0.020;
-    const double CUT_th_max = is_RHRS ?  0.018 : 0.018; 
-        
-    const double CUT_xParam = 2.00; 
+    const double CUT_th_min = run_parameters::CUT_th_min[arm_int_index];
+    const double CUT_th_max = run_parameters::CUT_th_max[arm_int_index];
     
     ROOT::RVec<ApexVDC::Track> tracks; 
     
