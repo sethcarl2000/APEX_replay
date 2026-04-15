@@ -58,7 +58,7 @@ double RealTime( const bool is_RHRS,
         ? R_abs[plane][wireNum]
         : L_abs[plane][wireNum]; 
         
-    return (kTDC_resolution * rawTime)  +  offset; 
+    return offset - (kTDC_resolution*rawTime); 
 }
 //_______________________________________________________________________________________________________________________
 double WirePos( const bool is_RHRS, 
