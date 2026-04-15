@@ -1,6 +1,8 @@
 #ifndef units_H
 #define units_H
 
+#include <CLHEP/> 
+
 namespace units {
 
     //length
@@ -15,6 +17,11 @@ namespace units {
     //time 
     constexpr double s   = 1.;
     constexpr double ns  = s/1e9; 
+
+    //angles 
+    constexpr double rad = 1.;
+    constexpr double mrad = rad/1000.; 
+    constexpr double deg  = 3.14159265359 / 180.; 
 };
 
 #endif 
