@@ -11,6 +11,7 @@
 #include "compute_track_error.h"
 #include "theta_phi_model.h"
 #include "../run_parameters.h"
+#include "../include/RDFNodeAccumulator.h"
 #include <EventCounter.h> 
 #include <TapexEventHandler.h> 
 #include <ApexVDCHitGroup.h> 
@@ -18,6 +19,7 @@
 #include <ROOT/RVec.hxx>
 #include <ROOT/RDataFrame.hxx>
 #include <ROOT/RResultPtr.hxx>
+#include <TString.h> 
 // stdlib headers
 #include <vector>
 #include <string> 
@@ -37,13 +39,13 @@ namespace {
 /// @param is_RHRS
 /// @param node_in input RDF node
 /// @param n_pass_1group EventCounter representing the number of events which reconstructed at least 1 group 
-ROOT::RDF::RNode generate_vdc_tracks( 
+void generate_vdc_tracks( 
     const bool is_RHRS, 
-    ROOT::RDF::RNode inNode, 
-    EventCounter &nPass_1group, 
-    EventCounter &nPass_1pair, 
-    EventCounter &nPass_1rawTrack,
-    EventCounter &nPass_1refinedTrack
+    RDFNodeAccumulator& rna, 
+    EventCounter_RPtr &nPass_1group, 
+    EventCounter_RPtr &nPass_1pair, 
+    EventCounter_RPtr &nPass_1rawTrack,
+    EventCounter_RPtr &nPass_1refinedTrack
 ) 
 {
     using namespace std;            
@@ -72,68 +74,81 @@ ROOT::RDF::RNode generate_vdc_tracks(
         branch_wire   .push_back( wire );   
     }
         
-    string branch_event = (string)TString("event_"+arm); 
+    const char branch_event_vec[] = "coinc_events"; 
+
+    //name of the branch which points to the (single) event manager we want to use for this event
+    string branch_event = arm + "_event_handler"; 
+
+    //pick the first event manager
+
+    //first, make sure there is at least 1 event for this event (this cut should have already been made, but its good to be safe).
+    rna.Filter(RVec_not_empty<TapexEventHandler>, {branch_event_vec}); 
+
+    rna.DefineIfMissing(branch_event, [is_RHRS](RVec<TapexEventHandler>& events)
+    {
+        auto& event = events.front();  
+        event.SetActiveArm(is_RHRS); 
+        return event; 
+    }, {branch_event_vec}); 
+    
     
     vector<string> branch_group; 
-    
-    //Now that we have eliminated non-coinc events, we can proceed with the 
-    // analysis. (Starting with the right arm)
-    inNode = inNode
-        .Define(branch_event, [is_RHRS](TapexEventHandler *event) 
-            { event->SetActiveArm(is_RHRS); return event; }, {"event"}); 
-    
+
     for (int p=0; p<4; p++) { 
+
+        //create a name for this group
+        branch_group.push_back( (string)arm+"_groups_"+plane_name[p] ); 
         
-        branch_group.push_back( (string)"groups_"+arm+"_"+plane_name[p] ); 
-        
-        inNode = inNode
-            .Define(branch_group[p].data(), [p](const TapexEventHandler& evt, const RVecD& wire, const RVecD& time)
+        //form the groups
+        rna.Define(branch_group[p], [p](const TapexEventHandler& evt, const RVecD& wire, const RVecD& time)
             { 
                 return group_vdc_hits(evt,p,wire,time); 
             },
-            {branch_event, branch_wire[p].data(), branch_rawtime[p].data()});
+            {branch_event, branch_wire[p], branch_rawtime[p]});
+        
+        //require that at least 1 group was successfully formed 
+        rna.Filter( RVec_not_empty<ApexVDC::HitGroup>, {branch_group[p]} );
     } 
 
-    //genrate groups
-    auto nEvents_1group = inNode  
-        .Filter( RVec_not_empty<ApexVDC::HitGroup>, {branch_group[0].data()} )
-        .Filter( RVec_not_empty<ApexVDC::HitGroup>, {branch_group[1].data()} )
-        .Filter( RVec_not_empty<ApexVDC::HitGroup>, {branch_group[2].data()} )
-        .Filter( RVec_not_empty<ApexVDC::HitGroup>, {branch_group[3].data()} ); 
+    //record the number of events that form at least 1 group 
+    nPass_1group = rna.Count(); 
     
+     
+    //create lo-chamber pairs
+    string br_pairs_lo = arm+"_pairs_LoChamber";
+    rna.Define(br_pairs_lo, [](
+        const TapexEventHandler& evt, 
+        RVec<ApexVDC::HitGroup>& vec_gU, 
+        RVec<ApexVDC::HitGroup>& vec_gV) { 
+            return gen_pairs(evt, vec_gU,vec_gV, true); 
+        }, { branch_event, branch_group[0], branch_group[1] });
+        
+    rna.Filter( RVec_not_empty<ApexVDC::ChamberPair>, {br_pairs_lo}); 
+        
+    //create hi-chamber pairs
+    string br_pairs_hi = arm+"_pairs_HiChamber";
+    rna.Define(arm+"_pairs_HiChamber", [](
+        const TapexEventHandler& evt, 
+        RVec<ApexVDC::HitGroup>& vec_gU, 
+        RVec<ApexVDC::HitGroup>& vec_gV) { 
+            return gen_pairs(evt, vec_gU,vec_gV, false);
+        }, {branch_event, branch_group[2], branch_group[3] });
+        
+    rna.Filter( RVec_not_empty<ApexVDC::ChamberPair>, {br_pairs_hi}); 
     
-    //generate pairs
-    auto nEvents_1pair = nEvents_1group
-        
-        //create lo-chamber pairs
-        .Define("pairs_"+arm+"_LoChamber", [](const TapexEventHandler& evt, 
-            RVec<ApexVDC::HitGroup>& vec_gU, 
-            RVec<ApexVDC::HitGroup>& vec_gV) 
-            { return gen_pairs(evt, vec_gU,vec_gV, true); }, 
-            { branch_event, branch_group[0].data(), branch_group[1].data() })
-        
-        .Filter( RVec_not_empty<ApexVDC::ChamberPair>, {"pairs_"+arm+"_LoChamber"}) 
-        
-        //create hi-chamber pairs
-        .Define("pairs_"+arm+"_HiChamber", [](const TapexEventHandler& evt, 
-            RVec<ApexVDC::HitGroup>& vec_gU, 
-            RVec<ApexVDC::HitGroup>& vec_gV) 
-            { return gen_pairs(evt, vec_gU,vec_gV, false); }, 
-            {branch_event, 
-            branch_group[2].data(), 
-            branch_group[3].data() })
-        
-        .Filter( RVec_not_empty<ApexVDC::ChamberPair>, {"pairs_"+arm+"_HiChamber"}); 
-        
+    nPass_1pair = rna.Count(); 
 
-    auto nEvents_1rawTrack = nEvents_1pair 
-        
-        //generate raw tracks
-        .Define("tracks_"+arm+"_raw", gen_rawtracks, 
-            {branch_event, "pairs_"+arm+"_LoChamber", "pairs_"+arm+"_HiChamber"}) 
-        
-        .Filter(RVec_not_empty<ApexVDC::Track>, {"tracks_"+arm+"_raw"}); 
     
+    //generate raw tracks
+    string br_tracks_raw = arm+"_tracks_raw";
+    rna.Define(br_tracks_raw, 
+        gen_rawtracks, 
+        {branch_event, arm+"_pairs_LoChamber", arm+"_pairs_HiChamber"}); 
+        
+    rna.Filter(RVec_not_empty<ApexVDC::Track>, {br_tracks_raw}); 
+    
+    nPass_1rawTrack = rna.Count(); 
+
     
     const double CUT_goodPoints_error = 40e-9; 
     
@@ -144,15 +159,11 @@ ROOT::RDF::RNode generate_vdc_tracks(
     const double CUT_th_min = run_parameters::CUT_th_min[arm_int_index];
     const double CUT_th_max = run_parameters::CUT_th_max[arm_int_index];
         
-    auto nEvents_1refinedTrack = nEvents_1rawTrack
-        
-        //refine track candidates
-        .Define("tracks_"+arm+"_refined", [
-                        CUT_th_min, CUT_th_max, 
-                        CUT_ph_min, CUT_ph_max]
-            ( ROOT::RVec<ApexVDC::Track>& tracks ) { 
-            
-            ROOT::RVec<ApexVDC::Track> refined_tracks; 
+    //refine track candidates
+    string br_refined = arm+"_tracks_refined"; 
+    rna.Define(br_refined, [CUT_th_min, CUT_th_max, CUT_ph_min, CUT_ph_max] ( ROOT::RVec<ApexVDC::Track>& tracks ) 
+        { 
+            RVec<ApexVDC::Track> refined_tracks; 
                 
             const double tau_sigma = tracks.at(0).GetEvent()->Get_tauSigma(); 
             
@@ -162,7 +173,7 @@ ROOT::RDF::RNode generate_vdc_tracks(
                 
                 refine_track(trk, 20, 25e-9); 
             
-        #if DEBUG
+#if DEBUG
                 bool is_nan=false; 
                 
                 for (int p=0; p<4; p++) 
@@ -178,9 +189,8 @@ ROOT::RDF::RNode generate_vdc_tracks(
                 cout << TString::Format("%0.3f ", trk->Intercept(p)); 
                 } cout << "}" << endl; 
                 cout << TString::Format( "Theta=%0.3f, Phi=%0.3f", 
-                            trk->Theta(), trk->Phi() ) << endl; 
-                
-        #endif 
+                            trk->Theta(), trk->Phi() ) << endl;                 
+#endif 
                 
                 double err_Theta = trk.Theta() - Theta_model(trk); 
                 double err_Phi   = trk.Phi()   - Phi_model(trk); 
@@ -220,17 +230,12 @@ ROOT::RDF::RNode generate_vdc_tracks(
                 refined_tracks.push_back( trk );
             }
             return tracks; 
-        }, {"tracks_"+arm+"_raw"})
+        }, {arm+"_tracks_raw"});
         
-        .Filter(RVec_not_empty<ApexVDC::Track>, {"tracks_"+arm+"_refined"}); 
+    rna.Filter(RVec_not_empty<ApexVDC::Track>, {br_refined}); 
     
-    
-    nPass_1group        = nEvents_1group   .Count(); 
-    nPass_1pair         = nEvents_1pair    .Count(); 
-    nPass_1rawTrack     = nEvents_1rawTrack.Count(); 
-    nPass_1refinedTrack = nEvents_1refinedTrack.Count(); 
-    
-    return nEvents_1refinedTrack; 
+    nPass_1refinedTrack = rna.Count(); 
+    return; 
 }
 
 
