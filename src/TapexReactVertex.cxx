@@ -73,22 +73,31 @@ TapexReactVertex::TapexReactVertex(bool isRHRS,
 
   
   if (isRHRS) { //RHRS 
-    fMatrix_rast = RMatrixD(2,2,{0.,         0.,
-				 -2.418e-8, -3.234e-7});
+    fMatrix_rast = RMatrixD(2,2,{
+       0.,         0.,
+      -2.418e-8, -3.234e-7
+    });
   } else      { //LHRS
-    fMatrix_rast = RMatrixD(2,2,{0.,         0.,
-				 -3.500e-8, -4.533e-7});
+    fMatrix_rast = RMatrixD(2,2,{
+       0.,         0.,
+      -3.500e-8, -4.533e-7
+    });
   }
   
-  fMatrix_BPMA = RMatrixD(2,2,{-1.044e0,  1.707e-1,
-			        2.449e-2, 1.132e0});
+  fMatrix_BPMA = RMatrixD(2,2,{
+    -1.044e0,  1.707e-1,
+     2.449e-2, 1.132e0
+  });
+  
   fR0_BPMA     = {1.185e-3, 4.223e-4};
 
-  fMatrix_BPMB = RMatrixD(2,2,{-2.833e-1, -3.360e-2,
-			        2.781e-3,  8.627e-1});
+  fMatrix_BPMB = RMatrixD(2,2,{
+    -2.833e-1, -3.360e-2,
+     2.781e-3,  8.627e-1
+  });
+  
   fR0_BPMB     = {1.314e-3, 1.713e-3}; 
 
-  
   fR_BPMA = {0,0};
   fR_BPMB = {0,0};
   
