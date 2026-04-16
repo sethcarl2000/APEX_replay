@@ -12,6 +12,8 @@ public:
   HitCluster(ApexVDC::HitGroup *group=nullptr, 
 	      const double intercept=0, 
 	      const double eta=0); 
+
+  virtual ~HitCluster() {}; 
   
   HitGroup* GetGroup(); 
     

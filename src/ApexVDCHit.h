@@ -16,6 +16,8 @@ class Hit {
 	   double wire=-1e30, 
 	   double rawTime=-1e30, 
 	   const TapexEventHandler *event=0 );
+    
+  virtual ~Hit() {}; 
 
   Hit& operator=(const Hit& rhs) = default; 
 

@@ -32,7 +32,7 @@ public:
   //copy constructor
   //RMatrixD(const RMatrixD &mat); 
   
-  ~RMatrixD() { fElems.clear(); } 
+  virtual ~RMatrixD() { } 
 
   ROOT::RVec<double> Solve(const ROOT::RVec<double> &B) const;
 

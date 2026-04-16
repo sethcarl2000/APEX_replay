@@ -20,14 +20,15 @@ class Track {
   Track( 
     const TapexEventHandler *event=nullptr, 
     ChamberPair *pLo=0, 
-    ChamberPair *pHi=0 ); 
+    ChamberPair *pHi=0,
+    int unique_id=-1
+  ); 
   
-  ~Track() {
-    
+  virtual ~Track() {
     //cout << "Track:: deleting track..."<<endl; 
     
-    if (fPair_Lo) fPair_Lo->Remove_track( this ); 
-    if (fPair_Hi) fPair_Hi->Remove_track( this ); 
+    //if (fPair_Lo) fPair_Lo->Remove_track(GetID()); 
+    //if (fPair_Hi) fPair_Hi->Remove_track(GetID()); 
   }; //noop
   
   void SetPair_Hi( ChamberPair *pHi );  
@@ -199,10 +200,18 @@ class Track {
   //use the uniqueness of each track's memory address to define a unique instance of a track
   bool operator==(const ApexVDC::Track& rhs) { return (this)==(&rhs); }
   
+  /// @return unique ID of this track 
+  int GetID() const { return fID; }
+
+  bool operator==(const Track& rhs) const { return (rhs.IsRightArm()==IsRightArm()) && (rhs.GetID()==GetID()); }
+
  private: 
   const TapexEventHandler *fEvent;
   bool f_isRightArm; 
-  
+    
+  //unique id assigned to this track. 
+  int fID; 
+
   //does this track have associated hits/hitgroups? if not make sure we don't try 
   // to access them. 
   bool f_hasVDCdata; 

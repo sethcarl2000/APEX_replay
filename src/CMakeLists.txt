@@ -10,6 +10,8 @@ project(ApexReplay LANGUAGES CXX)
 # The generated shared library will be named lib$(PACKAGE).so/dylib
 set(PACKAGE ApexHRS)
 
+add_compile_options("-g")
+
 # Sources.
 # List all your source files here. They will be put into a shared library
 # that can be loaded from a script.

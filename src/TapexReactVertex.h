@@ -31,6 +31,8 @@ public:
 	       TString target="",
 	       TString treeName="T");
 
+  virtual ~TapexReactVertex() {}; 
+
   TVector3 Compute_reactVertex(double rastX,
 			       double rastY) const; 
   

@@ -12,6 +12,8 @@ class HitGroup {
  public:   
   
   HitGroup(int plane=-1) : fPlane{plane} {}; 
+  
+  virtual ~HitGroup() {}; 
 
   void AddHit( const Hit& hit ) { fHits.push_back(hit); } 
   

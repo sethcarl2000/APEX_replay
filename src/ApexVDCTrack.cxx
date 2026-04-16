@@ -113,10 +113,17 @@ void Track::UpdateTrackInfo() {
 //______________________________________________________________________________________________________________
 Track::Track( const TapexEventHandler *event, 
 		      ChamberPair *pLo, 
-		      ChamberPair *pHi ) { 
+		      ChamberPair *pHi,
+          int unique_id ) : fID{unique_id} 
+{ 
   
+    if (!event) {
+      throw std::logic_error("<ApexVDC::Track::Track> event handler ptr is null"); 
+      return; 
+    }
+
     fEvent = event; 
-    
+            
     f_isRightArm = fEvent->ActiveArm(); 
     
     fW = f_isRightArm ? ApexVDC::kW_RHRS : ApexVDC::kW_LHRS; 
@@ -126,8 +133,8 @@ Track::Track( const TapexEventHandler *event,
     
     if (f_hasVDCdata) { 
         
-        fPair_Lo = pLo;   fPair_Lo->Add_track( this );
-        fPair_Hi = pHi;   fPair_Hi->Add_track( this ); 
+        fPair_Lo = pLo;   fPair_Lo->Add_track(GetID());
+        fPair_Hi = pHi;   fPair_Hi->Add_track(GetID()); 
         
         fGroup[0] = (ApexVDC::HitGroup*)fPair_Lo->GetGroup_U(); 
         fGroup[1] = (ApexVDC::HitGroup*)fPair_Lo->GetGroup_V();
@@ -235,9 +242,9 @@ void Track::SetPair_Hi( ChamberPair *pHi ) {
   
   //if the old pair exists, tell it that we're breaking up with it
   // (it's not you, it's me..) 
-  if (fPair_Hi) fPair_Hi->Remove_track( this );
+  if (fPair_Hi) fPair_Hi->Remove_track(GetID());
   
-  fPair_Hi = pHi; fPair_Hi->Add_track( this ); 
+  fPair_Hi = pHi; fPair_Hi->Add_track(GetID()); 
   
   fGroup[2] = fPair_Hi->GetGroup_U(); 
   fGroup[3] = fPair_Hi->GetGroup_V(); 
@@ -248,9 +255,9 @@ void Track::SetPair_Lo( ChamberPair *pLo ) {
   
   //if the old pair exists, tell it that we're breaking up with it
   // (it's not you, it's me..) 
-  if (fPair_Lo) fPair_Lo->Remove_track( this );
+  if (fPair_Lo) fPair_Lo->Remove_track(GetID());
   
-  fPair_Lo = pLo; fPair_Lo->Add_track( this ); 
+  fPair_Lo = pLo; fPair_Lo->Add_track(GetID()); 
   
   fGroup[0] = fPair_Lo->GetGroup_U(); 
   fGroup[1] = fPair_Lo->GetGroup_V();

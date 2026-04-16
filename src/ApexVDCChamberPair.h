@@ -25,6 +25,7 @@ class ChamberPair {
 		HitCluster *clust_v,
 		int unique_id=-1); 
 
+  virtual ~ChamberPair() {}; 
   
   double u() const { return fu; }
   double v() const { return fv; }
@@ -48,17 +49,16 @@ class ChamberPair {
   
   int Get_ID() const { return fUnique_ID; }
   
-  int N_tracks() const { return fTracks.size(); }
+  int N_tracks() const { return fTrackIDs.size(); }
   
-  void Add_track   ( Track *track ) { fTracks.push_back( track ); }
+  void Add_track   ( int id ) { fTrackIDs.push_back(id); }
+  void Remove_track( int id ); 
   
-  void Remove_track( Track *track ); 
-  
-  Track* GetTrack( unsigned int h ) { return fTracks.at(h); } 
+  int GetTrackID( unsigned int h ) { return fTrackIDs.at(h); } 
   
  private: 
   int fUnique_ID; 
-  std::vector<Track*> fTracks; 
+  std::vector<int> fTrackIDs; 
   //this will be used so that tracks can tell if they're using the same clusters
   
   bool f_isLoChamber; 

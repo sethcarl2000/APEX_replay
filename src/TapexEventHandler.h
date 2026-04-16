@@ -2,6 +2,7 @@
 #define TapexEventHandler_H 
 
 #include <TapexS2Hit.h>
+#include <ROOT/RVec.hxx>
 
 class TapexEventHandler { 
   
@@ -17,7 +18,7 @@ class TapexEventHandler {
 		 const TapexS2Hit *fHit_R=0, 
 		 const TapexS2Hit *fHit_L=0  ); 
   
-  ~TapexEventHandler() {}; 
+  virtual ~TapexEventHandler() {}; 
   
   void SetActiveArm(bool arm) { f_activeArm=arm; }
   
@@ -28,6 +29,8 @@ class TapexEventHandler {
   //un-blurred drift function
   double Drift_X( double tau, double slope, int derivative=0 ) const; 
   double Drift_T( double x,   double slope, int derivative=0 ) const;  
+
+  int GenUniqueTrackID(bool is_RHRS) { return is_RHRS ? fUniqueTrackCounter_RHRS++ : fUniqueTrackCounter_LHRS++; }; 
     
   double GetBeamCurrent() const { return fBeamCurrent; }
   
@@ -39,7 +42,10 @@ class TapexEventHandler {
   bool f_activeArm; 
   const TapexS2Hit *fS2Hit_Right; 
   const TapexS2Hit *fS2Hit_Left; 
-  
+
+  int fUniqueTrackCounter_RHRS{0};
+  int fUniqueTrackCounter_LHRS{0};
+
   //un-blurred drift function
   double Drift_T_raw( const double x, 
 		      const double *par, 
