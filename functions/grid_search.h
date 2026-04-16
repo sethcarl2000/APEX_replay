@@ -4,8 +4,12 @@
 #include <EventCounter.h>
 #include <ApexVDCHitGroup.h> 
 #include <TapexEventHandler.h> 
+#include <ApexUtils.h> 
 #include <math.h> 
 #include "../run_parameters.h"
+#include <stdio.h> 
+
+//#define DEBUG_GRID
 
 /////////////////////////////////////////////////////////////////////////////
 double grid_search( 
@@ -18,6 +22,12 @@ double grid_search(
     double TAU_sigma  =9e-9, 
     double TAU_buffer =20e-9 ) 
 {
+    using APEX::square;
+
+#ifdef DEBUG_GRID
+    printf("<%s> in body\n", __func__); 
+#endif 
+
     double eta(0.); 
     
     double m_min = std::min( m1, m2 ); 
@@ -29,9 +39,16 @@ double grid_search(
     
     double x_avg = (x_Lo + x_Hi)/2.; 
 
+    #ifdef DEBUG_GRID
+    printf("<%s> ready to loop over hits\n", __func__); 
+#endif 
+
     //loop over all hits
     for (int h=0; h<group.Nhits(); h++) { 
-        
+
+#ifdef DEBUG_GRID
+        printf("<%s> hit %i / %i\n", __func__, h, group.Nhits()-1); 
+#endif 
         double x = group.WirePos(h); 
         
         double tau_Lo; 
@@ -63,7 +80,7 @@ double grid_search(
         
         //tau is below lowest guess
         if (tau < tau_Lo) { 
-            eta += std::exp( -0.5*std::pow((tau-tau_Lo)/TAU_sigma, 2) ); 
+            eta += std::exp( -0.5*square((tau-tau_Lo)/TAU_sigma) ); 
             continue; 
         }
 
@@ -74,7 +91,7 @@ double grid_search(
         }
         
         //tau is above highest guess
-        eta += std::exp( -0.5*std::pow((tau-tau_Hi)/TAU_sigma, 2) ); 
+        eta += std::exp( -0.5*square((tau-tau_Hi)/TAU_sigma) ); 
 
     }//for (int h=0; h<group->Nhits(); 
 

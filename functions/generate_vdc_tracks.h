@@ -2,6 +2,20 @@
 #define generate_vdc_tracks_H
 
 // APEX headers
+#include "../run_parameters.h"
+#include "../include/RDFNodeAccumulator.h"
+#include <EventCounter.h> 
+#include <TapexEventHandler.h> 
+#include <ApexVDCHitGroup.h> 
+//
+//functions 
+#ifdef DEBUG_TRACK
+//if the 'DEBUG_TRACK' flag is set, then propagate the debug macro down to sub-routines
+#define DEBUG_GROUP
+#define DEBUG_GRID
+#define DEBUG_PAIR
+#endif
+//
 #include "group_vdc_hits.h"
 #include "grid_search.h"
 #include "gen_rawtracks.h"
@@ -10,20 +24,18 @@
 #include "compute_trackdata.h"
 #include "compute_track_error.h"
 #include "theta_phi_model.h"
-#include "../run_parameters.h"
-#include "../include/RDFNodeAccumulator.h"
-#include <EventCounter.h> 
-#include <TapexEventHandler.h> 
-#include <ApexVDCHitGroup.h> 
+//
 // ROOT headers
 #include <ROOT/RVec.hxx>
 #include <ROOT/RDataFrame.hxx>
 #include <ROOT/RResultPtr.hxx>
 #include <TString.h> 
+//
 // stdlib headers
 #include <vector>
 #include <string> 
 #include <algorithm> 
+
 
 namespace { 
     /// @return 'true' if RVec iss non-empty  
@@ -112,7 +124,6 @@ void generate_vdc_tracks(
 
     //record the number of events that form at least 1 group 
     nPass_1group = rna.Count(); 
-    
      
     //create lo-chamber pairs
     string br_pairs_lo = arm+"_pairs_LoChamber";
@@ -173,24 +184,6 @@ void generate_vdc_tracks(
                 
                 refine_track(trk, 20, 25e-9); 
             
-#if DEBUG
-                bool is_nan=false; 
-                
-                for (int p=0; p<4; p++) 
-                if ( trk->Intercept(0)!=trk->Intercept(0) ) is_nan=true; 
-                
-                if ( trk->T0()!=trk->T0() ) is_nan=true; 
-                
-                if (is_nan) { cout << "NAN intercept!!!!!!!!!!!" << endl; }
-                else        { cout << "intercept exists." << endl; }
-                
-                cout << " intercepts = { " ; 
-                for (int p=0; p<4; p++) { 
-                cout << TString::Format("%0.3f ", trk->Intercept(p)); 
-                } cout << "}" << endl; 
-                cout << TString::Format( "Theta=%0.3f, Phi=%0.3f", 
-                            trk->Theta(), trk->Phi() ) << endl;                 
-#endif 
                 
                 double err_Theta = trk.Theta() - Theta_model(trk); 
                 double err_Phi   = trk.Phi()   - Phi_model(trk); 
@@ -237,7 +230,5 @@ void generate_vdc_tracks(
     nPass_1refinedTrack = rna.Count(); 
     return; 
 }
-
-
 
 #endif

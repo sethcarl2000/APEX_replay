@@ -9,6 +9,9 @@
 #include "../run_parameters.h"
 #include <math.h> 
 #include <TVector3.h> 
+#include <stdio.h> 
+
+//#define DEBUG_PAIR
 
 ROOT::RVec<ApexVDC::ChamberPair> gen_pairs( 
     const TapexEventHandler& evt, 
@@ -16,7 +19,12 @@ ROOT::RVec<ApexVDC::ChamberPair> gen_pairs(
     ROOT::RVec<ApexVDC::HitGroup>& gVec_V, 
     bool is_LoChamber ) 
 { 
+#ifdef DEBUG_PAIR
+#endif
     
+#ifdef DEBUG_PAIR
+    std::printf("<%s>: in body\n", __func__); 
+#endif
     //use by tracks to identify pairs later
     int pair_unique_id(0); 
     
@@ -30,9 +38,17 @@ ROOT::RVec<ApexVDC::ChamberPair> gen_pairs(
 
     const double M_Theta = is_RHRS ? 0.1096 : 0.1096 ; 
     const double M_Phi   = is_RHRS ? 0.242  : 0.242  ; 
+
+#ifdef DEBUG_PAIR
+    std::printf("<%s>: fetching s2 hit info\n", __func__); 
+#endif
     
     const double Z_fPoint_Theta = evt.GetS2Hit(is_RHRS)->Z() - 1./M_Theta;     
     const double Z_fPoint_Phi   = evt.GetS2Hit(is_RHRS)->Z() - 1./M_Phi; 
+
+#ifdef DEBUG_PAIR
+    std::printf("<%s>: in body\n", __func__); 
+#endif
     
     //____________________________________________________________________________________________________________________    
     auto Guess_slopes = [uFix, wVDC, 
@@ -84,14 +100,10 @@ ROOT::RVec<ApexVDC::ChamberPair> gen_pairs(
         
         ROOT::RVec<ApexVDC::HitCluster> clust_all; 
         
-#if 0 //DEBUG      
-        cout << "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~" << endl; 
-#endif 
         
         for (int g=groups.size()-1; g>=0; g+=-1) { 
-            
             //iterate backwards thru groups
-            auto group = groups.at(g); 
+            auto& group = groups.at(g); 
             
             //find span of our groupings
             int span
@@ -195,6 +207,10 @@ ROOT::RVec<ApexVDC::ChamberPair> gen_pairs(
     
     ROOT::RVec<ApexVDC::HitCluster> clusters_v = Find_clusters( true, gVec_U ); 
     
+#ifdef DEBUG_PAIR
+    std::printf("<%s>: beginning to pair clusters\n", __func__); 
+#endif           
+
     
     //now, see if any of these clusters might be valid pairs
     for (int cv=0; cv<clusters_v.size(); cv++) {    
@@ -202,7 +218,10 @@ ROOT::RVec<ApexVDC::ChamberPair> gen_pairs(
         
         for (int cu=0; cu<clusters_u.size(); cu++) {  
             auto& clust_u = clusters_u.at(cu); 
-            
+
+#ifdef DEBUG_PAIR
+    std::printf("<%s>: cluster pair %i / %i\n", __func__, cv, cu); 
+#endif           
             double vu_diff = clust_v.Intercept() - clust_u.Intercept(); 
             
             if ( vu_diff + 2.*run_parameters::kGridSpacing < CUT_vu_diff_min ||
@@ -212,7 +231,10 @@ ROOT::RVec<ApexVDC::ChamberPair> gen_pairs(
             
             double m_u,m_v; 
             Guess_slopes( clust_u.Intercept(), clust_v.Intercept(), m_u, m_v );
-            
+
+#ifdef DEBUG_PAIR
+    std::printf("<%s>: starting grid search (u) group nhits: %p\n ", __func__, clust_u.GetGroup()); 
+#endif         
             double Eta_u = grid_search( 
                 evt, *clust_u.GetGroup(), 
                 m_u,m_u, 
@@ -223,7 +245,10 @@ ROOT::RVec<ApexVDC::ChamberPair> gen_pairs(
             ); //TAU_buffer 
             
             if (Eta_u < run_parameters::kCUT_minEta) continue; 
-            
+
+#ifdef DEBUG_PAIR
+    std::printf("<%s>: starting grid search (v)\n", __func__); 
+#endif         
             double Eta_v = grid_search( 
                 evt, *clust_v.GetGroup(), 
                 m_v,m_v, 
@@ -236,7 +261,9 @@ ROOT::RVec<ApexVDC::ChamberPair> gen_pairs(
             if (Eta_v < run_parameters::kCUT_minEta) continue; 
             
             pair_unique_id++; //this will be used by tracks later
-            
+#ifdef DEBUG_PAIR
+    std::printf("<%s>: keeping pair!\n", __func__); 
+#endif         
             pairs.push_back( ApexVDC::ChamberPair(is_LoChamber, &clust_u, &clust_v, pair_unique_id++) ); 
 
         } //for (int cu=0; cu<clusters_u.size(); cu++) 

@@ -14,7 +14,7 @@
 #include <vector> 
 #include <cmath> 
 
-#define DEBUG_GROUP
+//#define DEBUG_GROUP
 
 /// @brief Form 'ApexVDC::HitGroup's from groups of VDC hits
 /// @param evt Apex event handler
