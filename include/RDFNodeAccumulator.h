@@ -74,8 +74,13 @@ public:
 
     //called when we want to print the stored error message and abort. 
     void PrintMsgAndAbort() {
-        std::cerr << "<RDFNodeAccumulator>: Aborted execution. Error message: " << GetErrorMsg() << std::endl; 
-        std::abort(); 
+        if (fAbortOnError) {
+            std::cerr << "<RDFNodeAccumulator>: Aborted execution. Error message: " << GetErrorMsg() << std::endl; 
+            std::abort(); 
+        } else {
+            throw std::logic_error(GetErrorMsg()); 
+            return; 
+        }
     }
 
     //add a pre-existing branch to the output
@@ -133,7 +138,8 @@ template<typename F> void RDFNodeAccumulator::Define(const char* new_branch, F e
     //check if the status is ok. if not, then abort. 
     if (GetStatus() != kGood) {
         //fErrorMsg << "\n - <Define>: branch '" << new_branch << "' cannot be added, status is not 'kGood'";
-        if (fAbortOnError) { PrintMsgAndAbort(); } else { return; }
+        PrintMsgAndAbort();
+        return;
     }
 
     //check if this branch is already defined. if so, error! 
@@ -142,7 +148,8 @@ template<typename F> void RDFNodeAccumulator::Define(const char* new_branch, F e
         fErrorMsg << "\n - <Define>: branch '" << new_branch << "' is already defined."
                      "\n             use 'DefineIfMissing' to skip definition if already defined, or 'Overwrite' to overwrite preexisting definition.";
         fStatus = kError; 
-        if (fAbortOnError) { PrintMsgAndAbort(); } else { return; }
+        PrintMsgAndAbort();
+        return;
     }
 
     try {        
@@ -152,7 +159,8 @@ template<typename F> void RDFNodeAccumulator::Define(const char* new_branch, F e
         //Error("RDFNodeAccumulator::Define", "exception caught while trying to define new branch '%s'.\n -- what(): %s", new_branch, e.what());
         fErrorMsg << "\n - <Define>: exception caught defining branch '" << new_branch << "'. what(): " << e.what(); 
         fStatus = kError; 
-        if (fAbortOnError) { PrintMsgAndAbort(); } else { return; }
+        PrintMsgAndAbort();
+        return;
     }
 }
 
@@ -161,7 +169,8 @@ template<typename F> void RDFNodeAccumulator::Overwrite(const char* new_branch, 
         
     if (GetStatus() != kGood) {
         fErrorMsg << "\n - <Overwrite>: branch '" << new_branch << "' cannot be added, status is not ok.";
-        if (fAbortOnError) { PrintMsgAndAbort(); } else { return; }
+        PrintMsgAndAbort();
+        return;
     }
 
     try {
@@ -176,7 +185,8 @@ template<typename F> void RDFNodeAccumulator::Overwrite(const char* new_branch, 
         fErrorMsg << "\n - <Overwrite>: exception caught defining branch '" << new_branch << "'. "
                      "\n                what(): " << e.what(); 
         fStatus = kError; 
-        if (fAbortOnError) { PrintMsgAndAbort(); } else { return; }
+        PrintMsgAndAbort();
+        return;
     }
 }
 //__________________________________________________________________________________________________________________________________
@@ -232,8 +242,8 @@ void RDFNodeAccumulator::Snapshot(std::string tree_name, std::string path_outfil
     if (fOutputBranches.empty()) {
         fErrorMsg << "\n - <Snapshot>: no output branches! you may define them using 'DefineOutput' or 'AddBranchToOutput'.\n";
         fStatus = kError; 
-        if (fAbortOnError) { PrintMsgAndAbort(); }
-        return; 
+        PrintMsgAndAbort();
+        return;
     }
 
     //first, let's scan to be sure that we have all the branches we need. 
@@ -249,8 +259,8 @@ void RDFNodeAccumulator::Snapshot(std::string tree_name, std::string path_outfil
         for (auto& br : missing_branches) fErrorMsg << "               " << br << "\n";
         
         fStatus = kError; 
-        if (fAbortOnError) { PrintMsgAndAbort(); }
-        return; 
+        PrintMsgAndAbort();
+        return;
     }
 
     try {
@@ -262,8 +272,8 @@ void RDFNodeAccumulator::Snapshot(std::string tree_name, std::string path_outfil
         "              what(): "<< e.what() <<"\n";
         
         fStatus = kError; 
-        if (fAbortOnError) { PrintMsgAndAbort(); }
-        return; 
+        PrintMsgAndAbort();
+        return;
     }
 
 }

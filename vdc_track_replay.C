@@ -26,7 +26,7 @@
 #include <iostream> 
 #include <cmath> 
 #include <map> 
-
+#include <stdexcept> 
 
 namespace {
   constexpr bool kRHRS{true}, kLHRS{false};
@@ -335,8 +335,15 @@ int vdc_track_replay(
 
   TStopwatch timer; 
 
-  rna.Snapshot("track_data", path_outfile); 
+  //turn this OFF; have it throw an exception instead. 
+  rna.SetAbortOnError(false);
 
+  try {  
+    rna.Snapshot("track_data", path_outfile); 
+  } catch (const std::exception& e) {
+    Error(__func__, "Something went wrong trying to make a snapshot.\n what(): %s", e.what());
+    return -1; 
+  }
   double elapsed  = timer.RealTime(); 
   double cpu_time = timer.CpuTime(); 
 
