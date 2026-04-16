@@ -16,12 +16,11 @@
 #include <algorithm> 
 
 ROOT::RVec<ApexVDC::Track> gen_rawtracks( 
-    const TapexEventHandler& evt, 
+    TapexEventHandler& evt, 
     ROOT::RVec<ApexVDC::ChamberPair>& pairs_Lo, 
     ROOT::RVec<ApexVDC::ChamberPair>& pairs_Hi ) 
 {             
     using APEX::square; 
-
 
     const bool is_RHRS = evt.ActiveArm(); 
     
@@ -33,7 +32,27 @@ ROOT::RVec<ApexVDC::Track> gen_rawtracks(
     const double CUT_th_max = run_parameters::CUT_th_max[arm_int_index];
     
     ROOT::RVec<ApexVDC::Track> tracks; 
+
+    //returns ptr to track with given id 
+    //__________________________________________________________________________________________________________________
+    auto get_track_ptr = [&tracks](int id) {
+        auto it = std::find_if(tracks.begin(), tracks.end(), [id](const ApexVDC::Track& rhs){ return rhs.GetID()==id; });
+        if (it == tracks.end()) return (ApexVDC::Track*)nullptr; 
+        return (ApexVDC::Track*)it; 
+    };
+    //__________________________________________________________________________________________________________________
     
+    //deletes track with given id 
+    //__________________________________________________________________________________________________________________
+    auto delete_track = [&tracks](int id) {
+        auto it = std::remove_if(tracks.begin(), tracks.end(), [id](const ApexVDC::Track& rhs){ return rhs.GetID()==id; });
+        it->GetPair_Lo()->Remove_track(id);
+        it->GetPair_Hi()->Remove_track(id);
+        return; 
+    };
+    //__________________________________________________________________________________________________________________
+    
+
     for (int pH=0; pH<pairs_Hi.size(); pH++) { 
         for (int pL=0; pL<pairs_Lo.size(); pL++) { 
             
@@ -41,7 +60,7 @@ ROOT::RVec<ApexVDC::Track> gen_rawtracks(
             auto pHi = pairs_Hi.at(pH); 
             
             //track for this chamber pair
-            ApexVDC::Track track( &evt, &pLo, &pHi ); 
+            ApexVDC::Track track( &evt, &pLo, &pHi, evt.GenUniqueTrackID(is_RHRS) ); 
             
             double err_Theta = track.Theta() - Theta_model( track ); 
             double err_Phi   = track.Phi()   - Phi_model( track ); 
@@ -87,16 +106,16 @@ ROOT::RVec<ApexVDC::Track> gen_rawtracks(
     
     //cout << "Size before pruning = " << tracks.size() << endl; 
     
-    auto delete_shared_tracks = [&tracks](ApexVDC::ChamberPair *pair) { 
+    auto delete_shared_tracks = [&tracks, &get_track_ptr, &delete_track](ApexVDC::ChamberPair *pair) { 
         
         if (pair->N_tracks() <= 1) return; 
                 
-        ApexVDC::Track* best_track = pair->GetTrack(0);  
+        ApexVDC::Track* best_track = get_track_ptr(pair->GetTrackID(0));  
         
         //find the track with the highest eta
         for (int t=0; t<pair->N_tracks(); t++) { 
             
-            ApexVDC::Track* new_track = pair->GetTrack(t); 
+            ApexVDC::Track* new_track = get_track_ptr(pair->GetTrackID(t)); 
             
             if ( new_track->Get_Eta() > best_track->Get_Eta() ) 
             best_track = new_track; 
@@ -105,15 +124,13 @@ ROOT::RVec<ApexVDC::Track> gen_rawtracks(
         //now, delete all other tracks
         for (int t=0; t<pair->N_tracks();) { 
             
-            ApexVDC::Track* test_track = pair->GetTrack(t); 
+            ApexVDC::Track* test_track = get_track_ptr(pair->GetTrackID(t)); 
             
             if ( best_track == test_track ) { t++; continue; } 
             
             //remove this track from the overall track vector
-            std::remove_if( 
-                tracks.begin(), tracks.end(), 
-                [test_track](const ApexVDC::Track& rhs){ return &rhs == test_track; } 
-            ); 
+            delete_track(test_track->GetID());
+             
         }
     }; 
     

@@ -1,4 +1,5 @@
 // APEX headers
+//#define DEBUG_TRACK
 #include "include/RDFNodeAccumulator.h"
 #include "run_parameters.h"
 #include "functions/generate_vdc_tracks.h"
@@ -44,7 +45,7 @@ int vdc_track_replay(
   std::string path_outfile, 
   int run_number, 
   std::string arm_mode_str="both", //valid options are 'both', 'RHRS', "LHRS"
-  Long64_t max_entries=-1
+  ULong64_t max_entries=0
 )
 {
 
@@ -125,10 +126,10 @@ int vdc_track_replay(
   RDFNodeAccumulator rna(ROOT::RDataFrame("T", path_infile.data())); 
 
   //get the total number of events
-  const Long64_t total_events_in_file = *rna.Get().Count(); 
+  const EventCounter total_events_in_file = *rna.Get().Count(); 
 
   //max number of events to run 
-  const Long64_t total_events = (max_entries > 0) ? min<Long64_t>( max_entries, total_events_in_file ) : total_events_in_file; 
+  const EventCounter total_events = (max_entries > 0) ? min<Long64_t>( max_entries, total_events_in_file ) : total_events_in_file; 
 
   std::printf("Processing %lli events.\n", total_events); 
 
@@ -199,7 +200,7 @@ int vdc_track_replay(
   switch (arm_mode) {
 
     //if both arms are active, then generate events based on coincidences between the left & right arms. 
-    case ArmMode::kBoth :  { //_________________________________________________________________________ 
+    case ArmMode::kBoth : { //_________________________________________________________________________ 
 
       rna = rna.Get()
         .Define("coinc_events", [dt_center, dt_sigma](
@@ -225,7 +226,7 @@ int vdc_track_replay(
 
     } //_________________________________________________________________________
 
-    // create events for just the right an
+    // create events for just the right arm
     case ArmMode::kRHRS : { //___________________________________________________
 
       rna = rna.Get() 
@@ -269,7 +270,8 @@ int vdc_track_replay(
 
     
     default : { 
-      Warning(__func__, "arm_mode is %s, but, at present, only coinc-mode is implemented ('both').\n", arm_mode_str.c_str()); 
+      Error(__func__, "unsupported arm-mode %s, (it should not be possible to get here..)", arm_mode_str.c_str()); 
+      return -1; 
       break;
     }
   
@@ -281,7 +283,7 @@ int vdc_track_replay(
 
   //first, generate tracks in the right arm 
   if (RHRS_active()) {
-    rna = generate_vdc_tracks(kRHRS, rna.Get(), 
+    generate_vdc_tracks(kRHRS, rna, 
       nPass_1group_R, 
       nPass_1pair_R, 
       nPass_1raw_R, 
@@ -291,7 +293,7 @@ int vdc_track_replay(
 
   //now, do the left-arm tracks
   if (LHRS_active()) {
-    rna = generate_vdc_tracks(kLHRS, rna.Get(), 
+    generate_vdc_tracks(kLHRS, rna, 
       nPass_1group_L, 
       nPass_1pair_L, 
       nPass_1raw_L, 
@@ -299,8 +301,45 @@ int vdc_track_replay(
     );
   }
 
+  //let's define some output branches 
+  //_________________________________________________________________________________________________________________
+  auto define_output_from_track = [&rna](string trk_branch, string output, double (ApexVDC::Track::*method)() const) 
+  {
+    rna.DefineOutput(output, [method](const ROOT::RVec<ApexVDC::Track>& tracks)
+        { 
+          RVec<double> vals; vals.reserve(tracks.size()); 
+          for (const auto& trk : tracks) vals.push_back( (trk.*method)() ); 
+          return vals; 
+        }, {trk_branch}); 
+  };
+  //_________________________________________________________________________________________________________________
+
+  string track_branch, arm; 
+  if (RHRS_active()) {
+    track_branch = "R_tracks_refined"; 
+    arm = "R";
+    define_output_from_track(track_branch, arm+"_x_fp", &ApexVDC::Track::FP_x);
+    define_output_from_track(track_branch, arm+"_y_fp", &ApexVDC::Track::FP_y);
+    define_output_from_track(track_branch, arm+"_dxdz_fp", &ApexVDC::Track::dx_dz);
+    define_output_from_track(track_branch, arm+"_dydz_fp", &ApexVDC::Track::dy_dz);
+  }
+
+  if (LHRS_active()) {
+    track_branch = "L_tracks_refined"; 
+    arm = "L";
+    define_output_from_track(track_branch, arm+"_x_fp", &ApexVDC::Track::FP_x);
+    define_output_from_track(track_branch, arm+"_y_fp", &ApexVDC::Track::FP_y);
+    define_output_from_track(track_branch, arm+"_dxdz_fp", &ApexVDC::Track::dx_dz);
+    define_output_from_track(track_branch, arm+"_dydz_fp", &ApexVDC::Track::dy_dz);
+  }
+
   TStopwatch timer; 
-  
+
+  rna.Snapshot("track_data", path_outfile); 
+
+  double elapsed  = timer.RealTime(); 
+  double cpu_time = timer.CpuTime(); 
+
   EventCounter n_pass_1ref_L    = *nPass_1ref_L; 
   
   EventCounter n_pass_1s2hit    = *rptr_nPass_coinc; 
@@ -315,9 +354,7 @@ int vdc_track_replay(
   EventCounter n_pass_1pair_L  = *nPass_1pair_L; 
   EventCounter n_pass_1raw_L   = *nPass_1raw_L; 
 
-  double elapsed  = timer.RealTime(); 
-  double cpu_time = timer.CpuTime(); 
-
+  
   std::printf(
     "N. events with at least: --------------------------------------------\n"
     "   1 S2 hit in each arm:       %10llu  (%5.1f %%)\n"
@@ -355,7 +392,7 @@ int vdc_track_replay(
     cpu_time, 1000.*cpu_time/((double)total_events)
   ); 
 
+  std::cout << "exiting..." << std::endl;  
+
   return 0; 
 }
-
-
