@@ -36,6 +36,7 @@ namespace run_parameters {
     //for numerically-evaluated integrals with gaussians, this is the number of points sampled 
     constexpr int    kGausIntPoints = 20; 
 
+    //these are kinematic cuts to the transport coordinate angles of VDC tracks. ph = dy/dz(tra), th = dx/dz(tra). 
     constexpr double CUT_ph_min[] = { -0.012 , -0.018 };
     constexpr double CUT_ph_max[] = {  0.012 ,  0.008 };   
 
@@ -47,8 +48,15 @@ namespace run_parameters {
     //window to cut on S2 coincidence hits 
     constexpr double CUT_twinHit_timeErr =5e-9; 
     
+    // when there is a RHRS - LHRS S2 time conincidence, how many stddev's away from the center should we cut events? 
+    constexpr double kS2_coinc_sigma_cut = 6.; 
+
     // if true, then multitrheadding is enabled 
     constexpr bool kEnableMT{true}; 
+
+    // if 'true' then events with multiple coincidences will not be considered.
+    constexpr bool kKillMultiCoincEvents{true}; 
+
 
 };
 
