@@ -17,7 +17,7 @@ class HitGroup {
   
   void AddHit( double wire, double rawTime ); 
   
-  unsigned int Nhits() const { return fHits.size(); }
+  int Nhits() const { return fHits.size(); }
     
   double WirePos( unsigned int h ) const; 
   int    WireNum( unsigned int h ) const; 

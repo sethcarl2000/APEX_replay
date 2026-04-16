@@ -49,8 +49,8 @@ double HitGroup::Time( unsigned int h )    const
   
   return fHits[h].Time(); 
 }
-int    HitGroup::FirstWire() const { return WireNum(0); }
-double HitGroup::LoEdge()    const { return WirePos(Nhits()-1); }
-double HitGroup::HiEdge()    const { return WirePos(0); }
+int    HitGroup::FirstWire() const { return fHits.front().wNum(); }
+double HitGroup::LoEdge()    const { return fHits.back().wPos(); }
+double HitGroup::HiEdge()    const { return fHits.front().wPos(); }
 
 };
