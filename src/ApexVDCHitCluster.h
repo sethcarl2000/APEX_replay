@@ -13,8 +13,8 @@ public:
 	      const double intercept=0, 
 	      const double eta=0); 
   
-  HitGroup* GetGroup() { return fGroup; }
-  
+  HitGroup* GetGroup(); 
+    
   double Intercept() const { return fIntercept; }
   double Eta()       const { return fEta_score; }
   
