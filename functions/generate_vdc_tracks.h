@@ -14,6 +14,7 @@
 #define DEBUG_GROUP
 #define DEBUG_GRID
 #define DEBUG_PAIR
+#define DEBUG_RAW_TRACK
 #endif
 //
 #include "group_vdc_hits.h"
@@ -43,7 +44,10 @@ namespace {
 
     /// @brief delete an element from a collection  
     template<typename T> void remove_element(T& elem, ROOT::RVec<T>& collection) {
-        std::remove_if( collection.begin(), collection.end(), [&elem](const T& rhs) { return (&elem)==(&rhs); } );
+        collection.erase(
+            std::remove_if( collection.begin(), collection.end(), [&elem](const T& rhs) { return (&elem)==(&rhs); } ),
+            collection.end()
+        ); 
     }
 }
 
