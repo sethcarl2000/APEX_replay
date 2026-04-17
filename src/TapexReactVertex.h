@@ -14,6 +14,7 @@
 #include "TVector2.h"
 #include "RMatrixD.h"
 #include "TString.h" 
+#include <ROOT/RDataFrame.hxx>
 #include <vector> 
 #include <map> 
 #include <functional> 
@@ -28,9 +29,9 @@ public:
   enum EOpticsTarget { kNone=0, kV1,kV2,kV3, kH1,kH2,kH3,kH4 }; 
   
   TapexReactVertex(bool isRHRS,
-	       TString path_decode,
-	       TString target="",
-	       TString treeName="T");
+	       TString path_decode_epics,
+         ROOT::RDF::RNode df,
+	       TString target="");
 
   virtual ~TapexReactVertex() {}; 
 

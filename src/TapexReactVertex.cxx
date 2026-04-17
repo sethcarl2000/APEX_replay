@@ -27,6 +27,7 @@
 #include "ROOT/RVec.hxx"
 #include "TapexReactVertex.h" 
 #include <ROOT/RDataFrame.hxx>
+#include <ArmMode.h> 
 #include "TFile.h"
 #include "TVector2.h"
 #include "RMatrixD.h"
@@ -49,13 +50,20 @@ namespace {
   /// z-position of BPMB (m)
   const double kBPMB_z = -2.215 + 1.0537;
 
+
+  //when deciding where to make vertex cuts, reject BPM reports outside of this range
+  constexpr double kMax_y_BPM = +6.00e-3;
+  constexpr double kMin_y_BPM =  0.00e-3;
+
+  constexpr double kBPM_buffer = 1e-3; 
 }
 
 //_____________________________________________________________________________
-TapexReactVertex::TapexReactVertex(bool is_RHRS,
-			   TString path_decode,
-			   TString target,
-			   TString treeName)
+TapexReactVertex::TapexReactVertex(
+  bool is_RHRS,
+  TString path_decode_epics,
+  ROOT::RDF::RNode dT, 
+  TString target)
   : fis_RHRS{is_RHRS},
     fTargetName(target),
     f_isWireMode(false),
@@ -63,7 +71,7 @@ TapexReactVertex::TapexReactVertex(bool is_RHRS,
     fRaster_amplitude(TVector2(0,0))
 {
   //these constants are hard-coded for now... it's probably better to have them loaded in from a file...
-  
+  //the 'df' expects a node of type '
 
   //initialize the wire as null, unless its specified otherwise
   fWire = OpticsWire_t({.name="null",.isVertical=false,.x=0,.y=0,.z=0}); 
@@ -130,19 +138,19 @@ TapexReactVertex::TapexReactVertex(bool is_RHRS,
 
   //you can launch TapexReactVertex in 'no-decode' mode, in which you're just using it
   // basically to store optics wire-data.
-  if (path_decode=="") return;
+  if (path_decode_epics=="") return;
     
-  auto file = unique_ptr<TFile>(new TFile(path_decode.Data()));
+  auto file = unique_ptr<TFile>(new TFile(path_decode_epics.Data()));
   
   if (!file || file->IsZombie()) {
     Error("TapexReactVertex()", "Pointer to file \"%s\" invalid. Check path?",
-	  path_decode.Data());
+	  path_decode_epics.Data());
     return;
   }
   
   
   if (!file->IsOpen() || file->IsZombie()) {
-    Error("TapexReactVertex()", "File \"%s\" is zombie / is not open.", path_decode.Data());
+    Error("TapexReactVertex()", "File \"%s\" is zombie / is not open.", path_decode_epics.Data());
     return;
   }
     
@@ -150,14 +158,14 @@ TapexReactVertex::TapexReactVertex(bool is_RHRS,
   if (!file->GetListOfKeys()->Contains("E")) {
     Error("TapexReactVertex",
 	  "File \"%s\" does not contain Epics tree (E). React-vertex & raster set to 0,0",
-	  path_decode.Data()); 
+	  path_decode_epics.Data()); 
     return;    
   } 
   
-  ROOT::RDataFrame df("E", path_decode.Data()); 
+  ROOT::RDataFrame df_epics("E", path_decode_epics.Data()); 
 
   //only choose events with non-zero beam-current readings
-  auto dE = df.Filter([](double bcm){return bcm>1;}, {"hac_bcm_average"}); 
+  auto dE = df_epics.Filter([](double bcm){return bcm>1;}, {"hac_bcm_average"}); 
 
   const string bpma_x_epics{"IPM1H04A.XPOS"};
   const string bpma_y_epics{"IPM1H04A.YPOS"};
@@ -181,17 +189,13 @@ TapexReactVertex::TapexReactVertex(bool is_RHRS,
   fBeam_y0 = fR_BPMB[1] - fBeam_dydz*kBPMB_z;
   
   
-  
-
   //now, check to make sure that the right trees are present
   if (!file->GetListOfKeys()->Contains("T")) {
     Error("TapexReactVertex",
 	  "File \"%s\" does not contain CODA tree (T). Avg. Raster set to 0,0",
-	  path_decode.Data()); 
+	  path_decode_epics.Data()); 
     return;    
   } 
-  
-  ROOT::RDataFrame dT("T", path_decode.Data()); 
   
   const string arm = is_RHRS ? "R" : "L";
   const string raster_name = arm+"rb.Raster2";
@@ -212,7 +216,7 @@ TapexReactVertex::TapexReactVertex(bool is_RHRS,
   const double y_hcs_max = fMatrix_rast.get(1,1)*(min_current_y - fMeanCurrent_y) + fBeam_y0; 
 
   //distance between min and max y_hcs for this run
-  const double y_hcs_amplitude = y_hcs_max - y_hcs_min;
+  const double y_hcs_amplitude = std::fabs( y_hcs_max - y_hcs_min );
 
   auto dt_raster_param = dT
 
@@ -220,11 +224,13 @@ TapexReactVertex::TapexReactVertex(bool is_RHRS,
     {
       return (max_current_y-y_rawcur)/(max_current_y-min_current_y);
     }, {raster_name+".rawcur.y"}) 
-  
+    
     .Define("y_BPM", [](double a_y, double b_y)
     {
       return (a_y + b_y)/2; 
-    }, {name_bpma+".y", name_bpmb+".y"}); 
+    }, {name_bpma+".y", name_bpmb+".y"})
+    
+    .Filter([](double y_BPM){ return (y_BPM > kMin_y_BPM) && (y_BPM < kMax_y_BPM);}, {"y_BPM"}); 
 
 
   //bpm-y value of events with highest raster (lowest y-hcs)
@@ -238,6 +244,7 @@ TapexReactVertex::TapexReactVertex(bool is_RHRS,
       .Filter([](double rast_param){ return rast_param > 0.99; }, {"raster_parameter"})
       .Mean("y_BPM"); 
   
+  printf("<%s> min/max y_bpm (for phase offset)  %5.2f mm / %5.2f mm\n", __func__, min_rast_y_bpm*1e3, max_rast_y_bpm*1e3); 
 
   //we need to reverse-engineer some informaiton to 'fix' the y-raster. 
   //  this constant here (0.070302882883/2) is the measured ratio: (raster-timing-delay / 1-rast.-period).
@@ -256,12 +263,12 @@ TapexReactVertex::TapexReactVertex(bool is_RHRS,
   //____________________________________________________________________________________________
   fRasterPhaseCorrection = 
   [ y_hcs_phase_correction, 
-    y_hcs_max, 
-    y_hcs_min, 
+    min_current_y,
+    max_current_y, 
     min_rast_y_bpm, 
-    max_rast_y_bpm](double y_rast, double y_BPM)
+    max_rast_y_bpm](double current_y, double y_BPM)
   {
-    double raster_param = (y_rast - y_hcs_min) / (y_hcs_max - y_hcs_min); 
+    double raster_param = (max_current_y - current_y) / (max_current_y - min_current_y); 
 
     double phase_line_value = min_rast_y_bpm + (max_rast_y_bpm - min_rast_y_bpm) * raster_param; 
 
@@ -327,7 +334,7 @@ TVector3 TapexReactVertex::Compute_reactVertex(double current_x, double current_
   }
   double x_hcs, y_hcs; 
   
-  //this accounts for the fact that the y-raseter was not calibrated correctly for these runs. (m) 
+  //this accounts for the fact that the y-raster was not calibrated correctly for these runs. (m) 
   const double y_correction = fis_RHRS ? -2.0559325e-3 : +1.72835e-3;
 
   //compute y_hcs using bpms, raster
@@ -339,7 +346,7 @@ TVector3 TapexReactVertex::Compute_reactVertex(double current_x, double current_
   y_hcs = raster_offset[1] + fBeam_y0; 
   
   //now, add corrections for y_hcs
-  y_hcs += fRasterPhaseCorrection(y_hcs, y_BPM) + y_correction; 
+  y_hcs += fRasterPhaseCorrection(current_y, y_BPM) + y_correction; 
 
   return TVector3( x_hcs, y_hcs, 0. );
   /* 
