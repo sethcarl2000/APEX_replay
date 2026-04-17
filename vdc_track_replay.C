@@ -109,33 +109,6 @@ int vdc_track_replay(
   // using raster information, and known v-wire positions. 
   TapexReactVertex *R_react_vertex, *L_react_vertex;
   
-  //try to construct the RHRS react vertex handler
-  if (RHRS_active()) {
-    printf("<%s> generating RHRS react vertex handler...\n",__func__); std::cout << std::flush; 
-    
-    try {
-      R_react_vertex = new TapexReactVertex( kRHRS, path_infile );
-    } catch (const std::exception& e) {
-      Error(__func__, "Something went wrong trying to construct the RHRS react-vertex handler.\n what(): %s", e.what()); 
-      return -1; 
-    }
-
-    printf("<%s> done.\n",__func__); std::cout << std::flush; 
-  } 
-  
-  //try to reconstruct the LHRS react vertex handler 
-  if (LHRS_active()) {
-    printf("<%s> generating LHRS react vertex handler...\n",__func__); std::cout << std::flush; 
-    
-    try {
-      L_react_vertex = new TapexReactVertex( kLHRS, path_infile );
-    } catch (const std::exception& e) {
-      Error(__func__, "Something went wrong trying to construct the LHRS react-vertex handler.\n what(): %s", e.what()); 
-      return -1; 
-    }
-    
-    printf("<%s> done.\n",__func__); std::cout << std::flush; 
-  } 
 
   const bool single_threadding = max_entries > 0 || (!run_parameters::kEnableMT);
 
@@ -152,6 +125,34 @@ int vdc_track_replay(
   }
   
   RDFNodeAccumulator rna(ROOT::RDataFrame("T", path_infile.data())); 
+
+  //try to construct the RHRS react vertex handler
+  if (RHRS_active()) {
+    printf("<%s> generating RHRS react vertex handler...\n",__func__); std::cout << std::flush; 
+    
+    try {
+      R_react_vertex = new TapexReactVertex( kRHRS, path_infile, rna.Get() );
+    } catch (const std::exception& e) {
+      Error(__func__, "Something went wrong trying to construct the RHRS react-vertex handler.\n what(): %s", e.what()); 
+      return -1; 
+    }
+
+    printf("<%s> done.\n",__func__); std::cout << std::flush; 
+  } 
+  
+  //try to reconstruct the LHRS react vertex handler 
+  if (LHRS_active()) {
+    printf("<%s> generating LHRS react vertex handler...\n",__func__); std::cout << std::flush; 
+    
+    try {
+      L_react_vertex = new TapexReactVertex( kLHRS, path_infile, rna.Get() );
+    } catch (const std::exception& e) {
+      Error(__func__, "Something went wrong trying to construct the LHRS react-vertex handler.\n what(): %s", e.what()); 
+      return -1; 
+    }
+    
+    printf("<%s> done.\n",__func__); std::cout << std::flush; 
+  } 
 
   //get the total number of events
   const EventCounter total_events_in_file = *rna.Get().Count(); 
@@ -171,6 +172,7 @@ int vdc_track_replay(
       {
           return generate_S2_hits(kRHRS, R_pmt, L_pmt); 
       }, {"R.s2.rt", "R.s2.lt"});
+    rna.Filter(vec_is_nonempty<TapexS2Hit>, {"R_S2_hits"});
   }
   
   if (LHRS_active()) {
@@ -178,12 +180,9 @@ int vdc_track_replay(
       {
           return generate_S2_hits(kLHRS, R_pmt, L_pmt); 
       }, {"L.s2.rt", "L.s2.lt"}); 
+    rna.Filter(vec_is_nonempty<TapexS2Hit>, {"L_S2_hits"}); 
   }
   //add logic here to process both S2 hits
-
-  rna = rna.Get()
-    .Filter(vec_is_nonempty<TapexS2Hit>, {"R_S2_hits"}) 
-    .Filter(vec_is_nonempty<TapexS2Hit>, {"L_S2_hits"}); 
   
   EventCounter_RPtr rptr_nPass_coinc = rna.Count(); 
 
@@ -249,7 +248,6 @@ int vdc_track_replay(
         //make a cut on events with at least 1 coincidence event
         .Filter(vec_is_nonempty<TapexEventHandler>, {"coinc_events"}); 
       
-      rptr_nPass_1event = rna.Count(); 
       break; 
 
     } //_________________________________________________________________________
@@ -269,6 +267,7 @@ int vdc_track_replay(
           }
           return events; 
         }, {"hac_bcm_average","fEvtHdr.fRun","R_S2_hits"}); 
+
       break; 
     } //_________________________________________________________________________
 
@@ -286,17 +285,15 @@ int vdc_track_replay(
             events.push_back(TapexEventHandler(kLHRS, beam_current, run_number, nullptr, &hit));  
           }
           return events; 
-        }, {"hac_bcm_average","fEvtHdr.fRun","R_S2_hits"});
+        }, {"hac_bcm_average","fEvtHdr.fRun","L_S2_hits"});
 
-      //if this parameter is true, we will only keep events which have one (and only one) coincidence between both arms 
+      /*/if this parameter is true, we will only keep events which have one (and only one) coincidence between both arms 
       if (run_parameters::kKillMultiCoincEvents) {
         rna = rna.Get().Filter([](const RVec<TapexEventHandler>& vec){ return vec.size() != 1; }, {"coinc_events"}); 
-      }
-      
+      }*/ 
       break; 
     } //_________________________________________________________________________
 
-    
     default : { 
       Error(__func__, "unsupported arm-mode %s, (it should not be possible to get here..)", arm_mode_str.c_str()); 
       return -1; 
@@ -304,7 +301,7 @@ int vdc_track_replay(
     }
   
   }
-
+  rptr_nPass_1event = rna.Count(); 
 
   EventCounter_RPtr nPass_1group_R, nPass_1pair_R, nPass_1raw_R, nPass_1ref_R; 
   EventCounter_RPtr nPass_1group_L, nPass_1pair_L, nPass_1raw_L, nPass_1ref_L; 
@@ -354,7 +351,8 @@ int vdc_track_replay(
     define_output_from_track(track_branch, arm+"_y_fp", &ApexVDC::Track::FP_y);
     define_output_from_track(track_branch, arm+"_dxdz_fp", &ApexVDC::Track::dx_dz);
     define_output_from_track(track_branch, arm+"_dydz_fp", &ApexVDC::Track::dy_dz);
-    rna.AddBranchToOutput("R_position_vtx"); 
+    rna.AddBranchToOutput("R_position_vtx");
+    rna.DefineOutput("R_y_BPM", [](double bpma_y, double bpmb_y){ return (bpma_y + bpmb_y)/2; }, {"Rrb.BPMA.y","Rrb.BPMB.y"});  
   }
 
   if (LHRS_active()) {
@@ -365,8 +363,16 @@ int vdc_track_replay(
     define_output_from_track(track_branch, arm+"_dxdz_fp", &ApexVDC::Track::dx_dz);
     define_output_from_track(track_branch, arm+"_dydz_fp", &ApexVDC::Track::dy_dz);
     rna.AddBranchToOutput("L_position_vtx");
+    rna.DefineOutput("L_y_BPM", [](double bpma_y, double bpmb_y){ return (bpma_y + bpmb_y)/2; }, {"Lrb.BPMA.y","Lrb.BPMB.y"});  
+  } 
+
+  if (both_arms_active()) {
+    rna.DefineOutput("y_BPM", [](double R_y, double L_y){ return (R_y + L_y)/2.; }, {"R_y_BPM","L_y_BPM"}); 
   }
 
+  
+  //rna.AddBranchToOutput("y_BPM"); 
+  
   TStopwatch timer; 
 
   //turn this OFF; have it throw an exception instead. 
@@ -380,51 +386,58 @@ int vdc_track_replay(
   }
   double elapsed  = timer.RealTime(); 
   double cpu_time = timer.CpuTime(); 
+  
+  EventCounter n_pass_1s2hit   = *rptr_nPass_coinc; 
+  EventCounter n_pass_coinc    = *rptr_nPass_1event; 
 
-  EventCounter n_pass_1ref_L    = *nPass_1ref_L; 
+  EventCounter n_pass_1group_R, n_pass_1pair_R, n_pass_1raw_R, n_pass_1ref_R; 
+  EventCounter n_pass_1group_L, n_pass_1pair_L, n_pass_1raw_L, n_pass_1ref_L; 
   
-  EventCounter n_pass_1s2hit    = *rptr_nPass_coinc; 
-  EventCounter n_pass_coinc     = *rptr_nPass_1event; 
-  
-  EventCounter n_pass_1group_R = *nPass_1group_R; 
-  EventCounter n_pass_1pair_R  = *nPass_1pair_R; 
-  EventCounter n_pass_1raw_R   = *nPass_1raw_R; 
-  EventCounter n_pass_1ref_R   = *nPass_1ref_R; 
-  
-  EventCounter n_pass_1group_L = *nPass_1group_L; 
-  EventCounter n_pass_1pair_L  = *nPass_1pair_L; 
-  EventCounter n_pass_1raw_L   = *nPass_1raw_L; 
+  if (RHRS_active()) {
+    n_pass_1group_R = *nPass_1group_R; 
+    n_pass_1pair_R  = *nPass_1pair_R; 
+    n_pass_1raw_R   = *nPass_1raw_R; 
+    n_pass_1ref_R   = *nPass_1ref_R; 
+  } 
+  if (LHRS_active()) {
+    n_pass_1group_L = *nPass_1group_L; 
+    n_pass_1pair_L  = *nPass_1pair_L; 
+    n_pass_1raw_L   = *nPass_1raw_L;
+    n_pass_1ref_L   = *nPass_1ref_L; 
+  }
 
-  
   std::printf(
     "N. events with at least: --------------------------------------------\n"
     "   1 S2 hit in each arm:       %10llu  (%5.1f %%)\n"
-    "   1 coinc with LHRS & RHRS:   %10llu  (%5.1f %%)\n"
+    "   1 coinc with LHRS & RHRS:   %10llu  (%5.1f %%)\n",
+    n_pass_1s2hit,    100.*((double)n_pass_1s2hit)/((double)total_events), 
+    n_pass_coinc,     100.*((double)n_pass_coinc)/((double)total_events)
+  ); 
+  if (RHRS_active()) std::printf(
     " ~~ Right arm ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~\n"
     "   1 hit group                 %10llu  (%5.1f %%)\n"
     "   1 hit group pair            %10llu  (%5.1f %%)\n"
     "   1 raw track                 %10llu  (%5.1f %%)\n"
-    "   1 refined track             %10llu  (%5.1f %%)\n"
+    "   1 refined track             %10llu  (%5.1f %%)\n",
+    n_pass_1group_R,  100.*((double)n_pass_1group_R)/((double)total_events),
+    n_pass_1pair_R,   100.*((double)n_pass_1pair_R)/((double)total_events),
+    n_pass_1raw_R,    100.*((double)n_pass_1raw_R)/((double)total_events),
+    n_pass_1ref_R,    100.*((double)n_pass_1ref_R)/((double)total_events)
+  ); 
+  if (LHRS_active()) std::printf(
     " ~~ Left arm ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~\n"
     "   1 hit group                 %10llu  (%5.1f %%)\n"
     "   1 hit group pair            %10llu  (%5.1f %%)\n"
     "   1 raw track                 %10llu  (%5.1f %%)\n"
-    "   1 refined track             %10llu  (%5.1f %%)\n"
-    "---------------------------------------------------------------------\n",
-
-    n_pass_1s2hit,    100.*((double)n_pass_1s2hit)/((double)total_events), 
-    n_pass_coinc,     100.*((double)n_pass_coinc)/((double)total_events),
-
-    n_pass_1group_R,  100.*((double)n_pass_1group_R)/((double)total_events),
-    n_pass_1pair_R,   100.*((double)n_pass_1pair_R)/((double)total_events),
-    n_pass_1raw_R,    100.*((double)n_pass_1raw_R)/((double)total_events),
-    n_pass_1ref_R,    100.*((double)n_pass_1ref_R)/((double)total_events),
-
+    "   1 refined track             %10llu  (%5.1f %%)\n",
     n_pass_1group_L,  100.*((double)n_pass_1group_L)/((double)total_events),
     n_pass_1pair_L,   100.*((double)n_pass_1pair_L)/((double)total_events),
     n_pass_1raw_L,    100.*((double)n_pass_1raw_L)/((double)total_events),
     n_pass_1ref_L,    100.*((double)n_pass_1ref_L)/((double)total_events)
   ); 
+  std::printf(
+    "---------------------------------------------------------------------\n"
+  );
 
   std::printf(
     "Real time: %.3f s  ( %.6f ms/event )\n"

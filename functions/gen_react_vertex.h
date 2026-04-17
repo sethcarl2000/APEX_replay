@@ -21,7 +21,10 @@ void gen_react_vertex(RDFNodeAccumulator& rna, TapexReactVertex* vtx)
         {
             return vtx->Compute_reactVertex( current_x, current_y, (bpma_y+bpmb_y)/2 );
 
-        }, {raster_name+".rawcur.x", raster_name+".rawcur.y", rb_name+".BPMA.x", rb_name+".BPMB.y"});
+        }, {raster_name+".rawcur.x", raster_name+".rawcur.y", rb_name+".BPMA.y", rb_name+".BPMB.y"});
+
+    
+    rna.Overwrite("y_BPM", [](double bpma_y, double bpmb_y){ return (bpma_y + bpmb_y)/2.; }, {rb_name+".BPMA.y", rb_name+".BPMB.y"});
 }
 
 #endif
