@@ -16,6 +16,7 @@
 #include "TString.h" 
 #include <vector> 
 #include <map> 
+#include <functional> 
 
 //_________________________________________________________________________________
 class TapexReactVertex { 
@@ -33,8 +34,12 @@ public:
 
   virtual ~TapexReactVertex() {}; 
 
-  TVector3 Compute_reactVertex(double rastX,
-			       double rastY) const; 
+  /// @brief computes react vertex x & y 
+  /// @param current_x raw current from Raster2 (x): [R/L]rb.Raster2.rawcur.x 
+  /// @param current_y raw current from Raster2 (y): [R/L]rb.Raster2.rawcur.y 
+  /// @param y_BPM average of the 2 BPM readouts for this event
+  /// @return a 3-vector whose x & y components are the best-estimate for x_hcs and y_hcs (m)
+  TVector3 Compute_reactVertex(double current_x, double current_y, double y_BPM) const; 
   
   TVector2 Get_beamCenter() const; 
 
@@ -49,6 +54,8 @@ public:
   //not sure if i'll ever need these methods, but they might be useful 
   bool IsWireMode() const { return f_isWireMode; }
   OpticsWire_t Get_wire() const; 
+
+  bool IsRHRS() const { return fis_RHRS; }
   
 private:
 
@@ -70,7 +77,31 @@ private:
     
   TVector2 fBeamCenter;  //center of beam at target (z_HCS = 0) 
   TVector2 fBeam_dXdz;
+
+  //slope of the beam in the x-direction (HCS)
+  double fBeam_dxdz;
   
+  //slope of the beam in the x-direction (HCS)
+  double fBeam_dydz;
+
+  //the beam's x_hcs position at the z_hcs = 0 plane (m)
+  double fBeam_x0; 
+  
+  //the beam's x_hcs position at the z_hcs = 0 plane (m)
+  double fBeam_y0; 
+
+  //this function performs the raster phase correction.
+  // signature: (y_rast, y_BPM) -> y_hcs_phase_correction (m)
+  std::function<double(double,double)> fRasterPhaseCorrection; 
+
+  //the computed phase correction to be applied to y_hcs (m)
+  double fYhcs_phase_correction;
+
+  //mean values of raw raster
+  double fMeanCurrent_x, fMeanCurrent_y; 
+
+  bool fis_RHRS; 
+
   RMatrixD fMatrix_rast; //channel (dc) to meter (dX) conversion
   
   RMatrixD fMatrix_BPMA; //correction matrix for BPM readouts
@@ -79,10 +110,7 @@ private:
   RMatrixD fMatrix_BPMB; //correction matrix for BPM readouts
   ROOT::RVec<double> fR0_BPMB, fR_BPMB; 
 
-  //z-positions of BPMs (relative to apex scattering chamber)
-  const double fA_z = -7.354 + 1.0537;
-  const double fB_z = -2.215 + 1.0537;
-
+  
   TVector2 fRast_avg; 
 
   //the x-y span of the raster, throughout the run (in HCS)

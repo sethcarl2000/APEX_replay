@@ -4,36 +4,14 @@
 #pragma link off all classes;
 #pragma link off all functions;
 
-#pragma link C++ class THRS+; 
-#pragma link C++ class THRS::VDC+;
-#pragma link C++ class TapexS2Hit+; 
-#pragma link C++ class TapexVDCHit+;
-#pragma link C++ class ApexVDC::HitGroup+; 
-#pragma link C++ class THitCluster+; 
-#pragma link C++ class TChamberPair+; 
-#pragma link C++ class TapexEventHandler+; 
-#pragma link C++ class TvdcTrack+; 
-#pragma link C++ class TNPoly+;
-#pragma link C++ class TXMap+; 
-#pragma link C++ class TOpticsModel+;
-#pragma link C++ class TXfp+; 
-#pragma link C++ class TXtg+; 
-#pragma link C++ class TRPoly+; 
-#pragma link C++ class TFPoly+; 
-#pragma link C++ class TOpticsRays+; 
+// apex analysis classes 
 #pragma link C++ class RMatrixD+; 
 #pragma link C++ class TapexReactVertex+; 
 #pragma link C++ class THaApexShower+; 
-/*#pragma link C++ class UserDetector+;
-#pragma link C++ class UserScintillator+;
-#pragma link C++ class UserApparatus+;
-#pragma link C++ class UserModule+;
-#pragma link C++ class UserEvtHandler+;
-#pragma link C++ class SkeletonModule+;*/ 
-
-// apex analysis classes 
 #pragma link C++ class TapexS2Hit+; 
 #pragma link C++ class TapexEventHandler+; 
+// classes in the ApexVDC namespace 
+#pragma link C++ class ApexVDC::HitGroup+; 
 #pragma link C++ class ApexVDC::Hit+; 
 #pragma link C++ class ApexVDC::HitGroup+; 
 #pragma link C++ class ApexVDC::HitCluster+; 

@@ -31,18 +31,33 @@
 #include "TVector2.h"
 #include "RMatrixD.h"
 #include <memory> 
+#include <string> 
+#include <math.h> 
+#include <stdexcept> 
 
 using namespace std;
 //using namespace APEX; 
 
 using RVecD = ROOT::RVec<double>; 
 
+namespace {
+  /// z-positions of BPMs (relative to apex scattering chamber)
+  
+  /// z-position of BPMA (m)
+  const double kBPMA_z = -7.354 + 1.0537;
+
+  /// z-position of BPMB (m)
+  const double kBPMB_z = -2.215 + 1.0537;
+
+}
+
 //_____________________________________________________________________________
-TapexReactVertex::TapexReactVertex(bool isRHRS,
+TapexReactVertex::TapexReactVertex(bool is_RHRS,
 			   TString path_decode,
 			   TString target,
 			   TString treeName)
-  : fTargetName(target),
+  : fis_RHRS{is_RHRS},
+    fTargetName(target),
     f_isWireMode(false),
     f_hasData(false), 
     fRaster_amplitude(TVector2(0,0))
@@ -71,8 +86,8 @@ TapexReactVertex::TapexReactVertex(bool isRHRS,
     }
   }
 
-  
-  if (isRHRS) { //RHRS 
+  //raster matrices 
+  if (is_RHRS) { //RHRS 
     fMatrix_rast = RMatrixD(2,2,{
        0.,         0.,
       -2.418e-8, -3.234e-7
@@ -84,18 +99,22 @@ TapexReactVertex::TapexReactVertex(bool isRHRS,
     });
   }
   
+  //bpm matrix A
   fMatrix_BPMA = RMatrixD(2,2,{
     -1.044e0,  1.707e-1,
      2.449e-2, 1.132e0
   });
   
+  //bpm offset A 
   fR0_BPMA     = {1.185e-3, 4.223e-4};
 
+  //bpm matrix B 
   fMatrix_BPMB = RMatrixD(2,2,{
     -2.833e-1, -3.360e-2,
      2.781e-3,  8.627e-1
   });
   
+  //bpm offset B 
   fR0_BPMB     = {1.314e-3, 1.713e-3}; 
 
   fR_BPMA = {0,0};
@@ -140,26 +159,29 @@ TapexReactVertex::TapexReactVertex(bool isRHRS,
   //only choose events with non-zero beam-current readings
   auto dE = df.Filter([](double bcm){return bcm>1;}, {"hac_bcm_average"}); 
 
+  const string bpma_x_epics{"IPM1H04A.XPOS"};
+  const string bpma_y_epics{"IPM1H04A.YPOS"};
+
+  const string bpmb_x_epics{"IPM1H04B.XPOS"};
+  const string bpmb_y_epics{"IPM1H04B.YPOS"};
+
   //get the average epics BPM-reading for all events
-  RVecD fR_BPMA_raw = {
-    dE.Histo1D({"","",200,-1,-1},"IPM1H04A.XPOS")->GetMean()/1e3,
-    dE.Histo1D({"","",200,-1,-1},"IPM1H04A.YPOS")->GetMean()/1e3
-  };
-  RVecD fR_BPMB_raw = {
-    dE.Histo1D({"","",200,-1,-1},"IPM1H04B.XPOS")->GetMean()/1e3,
-    dE.Histo1D({"","",200,-1,-1},"IPM1H04B.YPOS")->GetMean()/1e3
-  };
+  RVecD fR_BPMA_raw = { *dE.Mean(bpma_x_epics)/1e3, *dE.Mean(bpma_y_epics)/1e3 };
+  RVecD fR_BPMB_raw = { *dE.Mean(bpmb_x_epics)/1e3, *dE.Mean(bpmb_y_epics)/1e3 };
 
   fR_BPMA = fMatrix_BPMA*fR_BPMA_raw + fR0_BPMA;
   fR_BPMB = fMatrix_BPMB*fR_BPMB_raw + fR0_BPMB;
 
   //compute the slope of the beam
-  fBeam_dXdz  = TVector2( (fR_BPMB[0]-fR_BPMA[0])/(fB_z-fA_z),
-			  (fR_BPMB[1]-fR_BPMA[1])/(fB_z-fA_z) ); 
+  fBeam_dxdz = (fR_BPMB[0]-fR_BPMA[0])/(kBPMB_z-kBPMA_z); 
+  fBeam_dydz = (fR_BPMB[1]-fR_BPMA[1])/(kBPMB_z-kBPMA_z); 
 
-  //compute the beam-position at z=0 (in HCS)
-  fBeamCenter = TVector2( fR_BPMB[0] - fBeam_dXdz.X()*fB_z,
-			  fR_BPMB[1] - fBeam_dXdz.Y()*fB_z );
+  //compute the beam position at z_hcs = 0; 
+  fBeam_x0 = fR_BPMB[0] - fBeam_dxdz*kBPMB_z;
+  fBeam_y0 = fR_BPMB[1] - fBeam_dydz*kBPMB_z;
+  
+  
+  
 
   //now, check to make sure that the right trees are present
   if (!file->GetListOfKeys()->Contains("T")) {
@@ -168,15 +190,95 @@ TapexReactVertex::TapexReactVertex(bool isRHRS,
 	  path_decode.Data()); 
     return;    
   } 
+  
+  ROOT::RDataFrame dT("T", path_decode.Data()); 
+  
+  const string arm = is_RHRS ? "R" : "L";
+  const string raster_name = arm+"rb.Raster2";
+  const string name_bpma = arm+"rb.BPMA"; 
+  const string name_bpmb = arm+"rb.BPMB"; 
+  
+
+  const double max_current_x = *dT.Max(raster_name+".rawcur.x");
+  const double min_current_x = *dT.Min(raster_name+".rawcur.x");
+  
+  const double max_current_y = *dT.Max(raster_name+".rawcur.y");
+  const double min_current_y = *dT.Min(raster_name+".rawcur.y");
+
+  fMeanCurrent_x = ( max_current_x + min_current_x )/2.;
+  fMeanCurrent_y = ( max_current_y + min_current_y )/2.;
+
+  const double y_hcs_min = fMatrix_rast.get(1,1)*(max_current_y - fMeanCurrent_y) + fBeam_y0; 
+  const double y_hcs_max = fMatrix_rast.get(1,1)*(min_current_y - fMeanCurrent_y) + fBeam_y0; 
+
+  //distance between min and max y_hcs for this run
+  const double y_hcs_amplitude = y_hcs_max - y_hcs_min;
+
+  auto dt_raster_param = dT
+
+    .Define("raster_parameter", [max_current_y, min_current_y](double y_rawcur)
+    {
+      return (max_current_y-y_rawcur)/(max_current_y-min_current_y);
+    }, {raster_name+".rawcur.y"}) 
+  
+    .Define("y_BPM", [](double a_y, double b_y)
+    {
+      return (a_y + b_y)/2; 
+    }, {name_bpma+".y", name_bpmb+".y"}); 
 
 
+  //bpm-y value of events with highest raster (lowest y-hcs)
+  const double min_rast_y_bpm = *dt_raster_param 
+      //the events with the smallest raster; what is their average y-bpm value? 
+      .Filter([](double rast_param){ return rast_param < 0.01; }, {"raster_parameter"})
+      .Mean("y_BPM"); 
+
+  const double max_rast_y_bpm = *dt_raster_param
+      //the events with the smallest raster; what is their average y-bpm value? 
+      .Filter([](double rast_param){ return rast_param > 0.99; }, {"raster_parameter"})
+      .Mean("y_BPM"); 
+  
+
+  //we need to reverse-engineer some informaiton to 'fix' the y-raster. 
+  //  this constant here (0.070302882883/2) is the measured ratio: (raster-timing-delay / 1-rast.-period).
+  //  computed by looking at the graphs of h-wire runs, we can look at the 'peaks' when we plot y-rast vs. y-BPM  
+  //                  /\<=|
+  //      ___________/  \__________________________ <= bpm
+  //                      |=>/\
+  //      __________________/  \___________________ => bpm 
+  //
+  //                   |------|  <= 2*raster-timing-delay
+  //
+  //      |----------------------------------------| <= total raster amplitude
+  //  
+  const double y_hcs_phase_correction = y_hcs_amplitude * (is_RHRS ? 0.0684620982311 : 0.070302882883) / 2.; 
+  
+  //____________________________________________________________________________________________
+  fRasterPhaseCorrection = 
+  [ y_hcs_phase_correction, 
+    y_hcs_max, 
+    y_hcs_min, 
+    min_rast_y_bpm, 
+    max_rast_y_bpm](double y_rast, double y_BPM)
+  {
+    double raster_param = (y_rast - y_hcs_min) / (y_hcs_max - y_hcs_min); 
+
+    double phase_line_value = min_rast_y_bpm + (max_rast_y_bpm - min_rast_y_bpm) * raster_param; 
+
+    if (y_BPM > phase_line_value) {
+      return -y_hcs_phase_correction;
+    } else {
+      return +y_hcs_phase_correction;
+    }
+  }; 
+  //____________________________________________________________________________________________
+  
+  /*
   //now, we can compute the average raster position, which we will need later to
   // compute the beam-position on a per-event basis. 
   bool is_mt_enabled = ROOT::IsImplicitMTEnabled(); 
-  if (is_mt_enabled) ROOT::DisableImplicitMT(); 
+//  if (is_mt_enabled) ROOT::DisableImplicitMT(); 
 
-  ROOT::RDataFrame dT("T", path_decode.Data()); 
-    
   auto findAvgRast = [&dT](TString rastName)
   {
     double rastMin(1e30), rastMax(-1e30);
@@ -195,8 +297,8 @@ TapexReactVertex::TapexReactVertex(bool isRHRS,
     return rastSpan; 
   };
   //Now, find the average-raster values
-  std::array<double,2> xRast = findAvgRast( TString(isRHRS?"R":"L")+"rb.Raster2.rawcur.x" );
-  std::array<double,2> yRast = findAvgRast( TString(isRHRS?"R":"L")+"rb.Raster2.rawcur.y" );
+  std::array<double,2> xRast = findAvgRast( TString(is_RHRS?"R":"L")+"rb.Raster2.rawcur.x" );
+  std::array<double,2> yRast = findAvgRast( TString(is_RHRS?"R":"L")+"rb.Raster2.rawcur.y" );
   
   fRast_avg = TVector2( 0.5*(xRast[0]+xRast[1]),
 			0.5*(yRast[0]+yRast[1]) );
@@ -204,25 +306,43 @@ TapexReactVertex::TapexReactVertex(bool isRHRS,
   fRaster_amplitude = TVector2( xRast[1]-xRast[0],
 				yRast[1]-yRast[0] ); 
 			
-    
+    */ 
   Info("TapexReactVertex", "Done with initial react-point calculations");
 
   //reset this to its previous value
-  if (is_mt_enabled) ROOT::EnableImplicitMT(); 
+  //if (is_mt_enabled) ROOT::EnableImplicitMT(); 
   
   f_hasData = true; 
 }
 //_____________________________________________________________________________
-TVector3 TapexReactVertex::Compute_reactVertex(double rastX, double rastY) const
+TVector3 TapexReactVertex::Compute_reactVertex(double current_x, double current_y, double y_BPM) const
 {
   //NOTE: this is given in hall-coordinates (HCS), in meters, from the APEX
   // scattering-chamber center. 
   if (!f_hasData) {
-    Error("Compute_reactVertex",
-	  "TapexReactVertex not created with valid run-data, cannot compute react-vertex.");
+    throw std::logic_error("<TapexReactVertex::Compute_reactVertex> "
+	    "not created with valid run-data, cannot compute react-vertex."
+    );
     return TVector3(0,0,0);
   }
+  double x_hcs, y_hcs; 
   
+  //this accounts for the fact that the y-raseter was not calibrated correctly for these runs. (m) 
+  const double y_correction = fis_RHRS ? -2.0559325e-3 : +1.72835e-3;
+
+  //compute y_hcs using bpms, raster
+  RVecD currents{ current_x - fMeanCurrent_x, current_y - fMeanCurrent_y };
+
+  RVecD raster_offset = fMatrix_rast*currents; 
+
+  x_hcs = raster_offset[0] + fBeam_x0; 
+  y_hcs = raster_offset[1] + fBeam_y0; 
+  
+  //now, add corrections for y_hcs
+  y_hcs += fRasterPhaseCorrection(y_hcs, y_BPM) + y_correction; 
+
+  return TVector3( x_hcs, y_hcs, 0. );
+  /* 
   //compute the beam's offset from the run-average position
   RVecD rast = {
     rastX - fRast_avg.X(),
@@ -250,8 +370,7 @@ TVector3 TapexReactVertex::Compute_reactVertex(double rastX, double rastY) const
       react_point.SetZ( fWire.z );
     }
   }    
-   
-  return react_point; 
+   */ 
 }
 //_____________________________________________________________________________
 TVector2 TapexReactVertex::Get_beamCenter() const

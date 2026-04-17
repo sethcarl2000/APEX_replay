@@ -6,6 +6,7 @@
 #include "functions/generate_S2_hits.h"
 #include "functions/fit_gaus_to_hist.h"
 #include "functions/gen_coinc_events.h"
+#include "functions/gen_react_vertex.h"
 #include <TapexReactVertex.h> 
 #include <TapexS2Hit.h> 
 #include <EventCounter.h> 
@@ -106,8 +107,35 @@ int vdc_track_replay(
   //initialize the react vertex
   //create the 'TReactVertex' object, which computes the reaction vertex,
   // using raster information, and known v-wire positions. 
-  TapexReactVertex react_vertex( kLHRS, path_infile );
+  TapexReactVertex *R_react_vertex, *L_react_vertex;
+  
+  //try to construct the RHRS react vertex handler
+  if (RHRS_active()) {
+    printf("<%s> generating RHRS react vertex handler...\n",__func__); std::cout << std::flush; 
+    
+    try {
+      R_react_vertex = new TapexReactVertex( kRHRS, path_infile );
+    } catch (const std::exception& e) {
+      Error(__func__, "Something went wrong trying to construct the RHRS react-vertex handler.\n what(): %s", e.what()); 
+      return -1; 
+    }
 
+    printf("<%s> done.\n",__func__); std::cout << std::flush; 
+  } 
+  
+  //try to reconstruct the LHRS react vertex handler 
+  if (LHRS_active()) {
+    printf("<%s> generating LHRS react vertex handler...\n",__func__); std::cout << std::flush; 
+    
+    try {
+      L_react_vertex = new TapexReactVertex( kLHRS, path_infile );
+    } catch (const std::exception& e) {
+      Error(__func__, "Something went wrong trying to construct the LHRS react-vertex handler.\n what(): %s", e.what()); 
+      return -1; 
+    }
+    
+    printf("<%s> done.\n",__func__); std::cout << std::flush; 
+  } 
 
   const bool single_threadding = max_entries > 0 || (!run_parameters::kEnableMT);
 
@@ -301,6 +329,10 @@ int vdc_track_replay(
     );
   }
 
+  //let's do some react-vertex calculations
+  if (RHRS_active()) { gen_react_vertex(rna, R_react_vertex); }
+  if (LHRS_active()) { gen_react_vertex(rna, L_react_vertex); }
+
   //let's define some output branches 
   //_________________________________________________________________________________________________________________
   auto define_output_from_track = [&rna](string trk_branch, string output, double (ApexVDC::Track::*method)() const) 
@@ -322,6 +354,7 @@ int vdc_track_replay(
     define_output_from_track(track_branch, arm+"_y_fp", &ApexVDC::Track::FP_y);
     define_output_from_track(track_branch, arm+"_dxdz_fp", &ApexVDC::Track::dx_dz);
     define_output_from_track(track_branch, arm+"_dydz_fp", &ApexVDC::Track::dy_dz);
+    rna.AddBranchToOutput("R_position_vtx"); 
   }
 
   if (LHRS_active()) {
@@ -331,6 +364,7 @@ int vdc_track_replay(
     define_output_from_track(track_branch, arm+"_y_fp", &ApexVDC::Track::FP_y);
     define_output_from_track(track_branch, arm+"_dxdz_fp", &ApexVDC::Track::dx_dz);
     define_output_from_track(track_branch, arm+"_dydz_fp", &ApexVDC::Track::dy_dz);
+    rna.AddBranchToOutput("L_position_vtx");
   }
 
   TStopwatch timer; 
