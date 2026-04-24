@@ -9,7 +9,8 @@
 
 # set up APEX env
 source set_apex_replay_env.sh
-cd ${APEX_REPLAY_ENV} 
+cd ${PATH_APEX_REPLAY} 
+echo "<${0}>: pwd: '$(pwd)'" 
 
 ###################################################################################
 #
