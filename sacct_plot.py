@@ -38,7 +38,7 @@ import matplotlib.ticker as mticker
 # Fields whose values are HH:MM:SS (or D-HH:MM:SS) — convert to seconds.
 TIME_FIELDS = {
     "Elapsed", "CPUTime", "CPUTimeRAW", "AveCPU", "MinCPU", "SystemCPU",
-    "UserCPU", "Timelimit", "Reserved", "ReqCPUFreqMax", "ReqCPUFreqMin",
+    "UserCPU", "TotalCPU", "Timelimit", "Reserved", "ReqCPUFreqMax", "ReqCPUFreqMin",
 }
 
 # Fields whose values carry a memory suffix (K / M / G / T) — convert to MiB.
