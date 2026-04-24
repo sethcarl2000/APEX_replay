@@ -15,8 +15,6 @@
 /// this macro is meant to compile the 'vdc_track_replay' macro, and process the
 /// seires of runs which are input. 
 
-//forward-declare this fcn, so the symbol is defined 
-int vdc_track_replay(std::string, std::string, int, std::string, ULong64_t); 
 
 int replay_run_series(
   const int run_number,
