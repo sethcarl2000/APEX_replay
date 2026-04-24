@@ -349,8 +349,8 @@ int vdc_track_replay(
     arm = "R";
     define_output_from_track(track_branch, arm+"_x_fp", &ApexVDC::Track::FP_x);
     define_output_from_track(track_branch, arm+"_y_fp", &ApexVDC::Track::FP_y);
-    define_output_from_track(track_branch, arm+"_dxdz_fp", &ApexVDC::Track::dx_dz);
-    define_output_from_track(track_branch, arm+"_dydz_fp", &ApexVDC::Track::dy_dz);
+    define_output_from_track(track_branch, arm+"_dxdz_fp", &ApexVDC::Track::FP_dx_dz);
+    define_output_from_track(track_branch, arm+"_dydz_fp", &ApexVDC::Track::FP_dy_dz);
     rna.AddBranchToOutput("R_position_vtx");
     rna.DefineOutput("R_y_BPM", [](double bpma_y, double bpmb_y){ return (bpma_y + bpmb_y)/2; }, {"Rrb.BPMA.y","Rrb.BPMB.y"});  
   }
@@ -360,14 +360,36 @@ int vdc_track_replay(
     arm = "L";
     define_output_from_track(track_branch, arm+"_x_fp", &ApexVDC::Track::FP_x);
     define_output_from_track(track_branch, arm+"_y_fp", &ApexVDC::Track::FP_y);
-    define_output_from_track(track_branch, arm+"_dxdz_fp", &ApexVDC::Track::dx_dz);
-    define_output_from_track(track_branch, arm+"_dydz_fp", &ApexVDC::Track::dy_dz);
+    define_output_from_track(track_branch, arm+"_dxdz_fp", &ApexVDC::Track::FP_dx_dz);
+    define_output_from_track(track_branch, arm+"_dydz_fp", &ApexVDC::Track::FP_dy_dz);
     rna.AddBranchToOutput("L_position_vtx");
     rna.DefineOutput("L_y_BPM", [](double bpma_y, double bpmb_y){ return (bpma_y + bpmb_y)/2; }, {"Lrb.BPMA.y","Lrb.BPMB.y"});  
   } 
 
   if (both_arms_active()) {
     rna.DefineOutput("y_BPM", [](double R_y, double L_y){ return (R_y + L_y)/2.; }, {"R_y_BPM","L_y_BPM"}); 
+
+    //defined as (S2_r - S2_l)/sigma **for the hit associated with this specific track**
+    
+    rna.DefineOutput("R_track_dt", [dt_sigma, dt_center](RVec<ApexVDC::Track>& tracks)
+    {
+      RVec<double> dt; dt.reserve(tracks.size());
+      for (auto& trk : tracks) {
+	dt.push_back( (trk.GetEvent()->Get_Dt()-dt_center)/dt_sigma ); 
+      }
+      return dt; 
+    }, {"R_tracks_refined"});
+
+    
+    rna.DefineOutput("L_track_dt", [dt_sigma, dt_center](RVec<ApexVDC::Track>& tracks)
+    {
+      RVec<double> dt; dt.reserve(tracks.size());
+      for (auto& trk : tracks) {
+	dt.push_back( (trk.GetEvent()->Get_Dt()-dt_center)/dt_sigma ); 
+      }
+      return dt; 
+    }, {"L_tracks_refined"});
+      
   }
 
   

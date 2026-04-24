@@ -37,6 +37,10 @@ class TapexEventHandler {
   double Get_tauSigma() const; 
   
   bool Is_nullBeamCurrent() const { return f_isNullBeamCurrent; }
+
+
+  // the difference S2_r_t - S2_l_t for this particular event (s) 
+  double Get_Dt() const;
   
  private: 
   bool f_activeArm; 

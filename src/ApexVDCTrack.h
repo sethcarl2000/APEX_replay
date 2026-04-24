@@ -91,10 +91,11 @@ class Track {
   
   void UpdateTrackInfo();
     
-  //overall track parameters
-  double FP_x()  const; 
-  double FP_y()  const; 
-  
+  //overall track parameters (in focal-plane coordinates)
+  double FP_x()     const; 
+  double FP_y()     const; 
+  double FP_dx_dz() const;
+  double FP_dy_dz() const; 
 
   //optics data ~~~~~~~~~~~~~~~~~~~~~~~~~~ (Computation handled by THRS class)
   //track target coordinates ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~

@@ -132,6 +132,11 @@ TapexEventHandler::TapexEventHandler( bool arm,
 double f_SIGMA_INTERPOLATE[2] = { 5e-9, 5e-9 }; 
 double f_SIGMA_FIXED = 5e-9; 
 
+double TapexEventHandler::Get_Dt() const
+{
+  return GetS2Hit(true)->Time() - GetS2Hit(false)->Time(); 
+}
+
 double TapexEventHandler::Get_tauSigma() const { 
   
   if (fRunNumber < FIRST_FIXED_RUN && ActiveArm()==false ) { 
