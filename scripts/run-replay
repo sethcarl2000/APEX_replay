@@ -20,6 +20,11 @@ cd ${PATH_APEX_REPLAY}
 run=$1
 stem_input=$2
 stem_output=$3
+mode=$4
+
+if [[ "${mode}~" = "~" ]]; then
+    mode="both"
+fi
 
 n_inputs=$(ls -1 ${stem_input}.$run.* 2>/dev/null | wc -l)
 
@@ -34,11 +39,12 @@ do
     path_output="${stem_output}.${run}.part-${part}.root"
     
     echo "<${0}>: PROCESSING FILE $part ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~" 
-    echo "<${0}>: input:  $path_input"
-    echo "<${0}>: output: $path_output"
+    echo "<${0}>: input:    $path_input"
+    echo "<${0}>: output:   $path_output"
+    echo "<${0}>: arm mode: $mode"
     echo "<${0}>: ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~"
 
-    cmd_string="vdc_track_replay.C(\"$path_input\", \"$path_output\", ${run}, \"both\", 0)"
+    cmd_string="vdc_track_replay.C(\"$path_input\", \"$path_output\", ${run}, \"${mode}\", 0)"
     echo "command string: $cmd_string"
     
     echo ".x ${cmd_string}" | analyzer
