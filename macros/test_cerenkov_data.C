@@ -80,10 +80,14 @@ int test_cerenkov_data(const char* path_infile)
   hist_bad->Draw();
   legend->AddEntry(hist_bad,  "null");  
 
+  printf("total 'pad' paddles: %.3e\n", hist_bad->Integral()); 
+  
   hist_good->SetLineWidth(2); 
   hist_good->SetLineColor(kBlack);
   hist_good->Draw("SAME");
   legend->AddEntry(hist_good, "valid");  
+
+  printf("total 'good' paddles: %.3e\n", hist_good->Integral()); 
   
   legend->SetHeader("Paddle TDC time");
   legend->Draw(); 
