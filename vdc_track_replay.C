@@ -1,3 +1,6 @@
+#ifndef vdc_track_replay_C
+#define vdc_track_replay_C
+
 // APEX headers
 //#define DEBUG_TRACK
 #include "include/RDFNodeAccumulator.h"
@@ -472,3 +475,5 @@ int vdc_track_replay(
 
   return 0; 
 }
+
+#endif
