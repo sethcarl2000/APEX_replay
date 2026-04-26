@@ -82,4 +82,9 @@ cmd_string="replay_run_series.C(${run}, \"${stem_replay_output}\", {${paths_repl
 
 time analyzer -b -q "${cmd_string}" 
 
-    
+echo "<${0}> hadd results together..."
+hadd -j $(nrpoc) ${stem_replay_output}.${run}.root ${stem_replay_output}.${run}.part-*
+
+rm ${stem_replay_output}.${run}.part-*
+echo "<${0}> done." 
+
