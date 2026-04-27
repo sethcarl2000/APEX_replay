@@ -9,6 +9,7 @@
 #include <iostream> 
 #include <ROOT/RDataFrame.hxx>
 #include <ROOT/RResultPtr.hxx>
+#include <ROOT/RSnapshotOptions.hxx> 
 
 //A small helper class which is meant to avoid some of the awkward syntax assocaited with RDataFrame creation. 
 class RDFNodeAccumulator {
@@ -87,9 +88,9 @@ public:
     void AddBranchToOutput(std::string branch) { fOutputBranches.push_back(branch); }
 
     //define a branch specifically for the output. 
-    template<typename F> void DefineOutput(std::string new_branch, F expression, const std::vector<std::string>& inputs);
-    
-    void Snapshot(std::string tree_name, std::string path_outfile); 
+  template<typename F> void DefineOutput(std::string new_branch, F expression, const std::vector<std::string>& inputs);
+  
+  void Snapshot(std::string tree_name, std::string path_outfile, ROOT::RDF::RSnapshotOptions* opts=nullptr); 
 
     //set whether an abort should be called when an error is encountered. 
     void SetAbortOnError(bool _val) { fAbortOnError=_val; }
@@ -237,7 +238,7 @@ template<typename F> void RDFNodeAccumulator::DefineOutput(std::string new_branc
     Define(new_branch, expression, inputs);  
 }
 //__________________________________________________________________________________________________________________________________
-void RDFNodeAccumulator::Snapshot(std::string tree_name, std::string path_outfile)
+void RDFNodeAccumulator::Snapshot(std::string tree_name, std::string path_outfile, ROOT::RDF::RSnapshotOptions* opts)
 {
     if (fOutputBranches.empty()) {
         fErrorMsg << "\n - <Snapshot>: no output branches! you may define them using 'DefineOutput' or 'AddBranchToOutput'.\n";
@@ -264,7 +265,12 @@ void RDFNodeAccumulator::Snapshot(std::string tree_name, std::string path_outfil
     }
 
     try {
-        fNode.Snapshot(tree_name, path_outfile, fOutputBranches); 
+      
+      if (opts == nullptr) {
+	fNode.Snapshot(tree_name, path_outfile, fOutputBranches);
+      } else {
+	fNode.Snapshot(tree_name, path_outfile, fOutputBranches, *opts);
+      }
     } catch (const std::exception& e) {
         fErrorMsg << 
         "\n"
