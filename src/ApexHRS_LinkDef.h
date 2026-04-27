@@ -10,6 +10,7 @@
 #pragma link C++ class THaApexShower+; 
 #pragma link C++ class TapexS2Hit+; 
 #pragma link C++ class TapexEventHandler+; 
+#pragma link C++ class UniqueIDGenerator+; 
 // classes in the ApexVDC namespace 
 #pragma link C++ class ApexVDC::HitGroup+; 
 #pragma link C++ class ApexVDC::Hit+; 
@@ -17,5 +18,6 @@
 #pragma link C++ class ApexVDC::HitCluster+; 
 #pragma link C++ class ApexVDC::ChamberPair+; 
 #pragma link C++ class ApexVDC::Track+; 
+
 
 #endif

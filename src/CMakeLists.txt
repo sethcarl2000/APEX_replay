@@ -31,6 +31,7 @@ set(src
   RMatrixD.cxx
   TapexReactVertex.cxx
   THaApexShower.cxx
+  UniqueIDGenerator.h
 )
 
 # Headers.
