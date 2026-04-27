@@ -10,21 +10,26 @@
 #include "functions/fit_gaus_to_hist.h"
 #include "functions/gen_coinc_events.h"
 #include "functions/gen_react_vertex.h"
+#include "functions/gen_pid_data.h"
 #include <TapexReactVertex.h> 
 #include <TapexS2Hit.h> 
 #include <EventCounter.h> 
-#include <ArmMode.h> 
+#include <ArmMode.h>
+#include <UniqueIDGenerator.h>
 #include "include/units.h" 
 // ROOT headers
 #include <ROOT/RDataFrame.hxx>
 #include <ROOT/RVec.hxx>
+#include <ROOT/RSnapshotOptions.hxx>
 #include <TFile.h> 
 #include <TH1D.h> 
 #include <TString.h>
 #include <TError.h>  
 #include <TStopwatch.h> 
+#include <TDatime.h> 
 // stdlib headers
 #include <vector> 
+#include <sstream> 
 #include <string> 
 #include <stdio.h> 
 #include <iostream> 
@@ -35,6 +40,11 @@
 namespace {
   constexpr bool kRHRS{true}, kLHRS{false};
 
+  //wrap a parameter in a callable object, so you can feed it to an rdataframe
+  template<typename T> std::function<T(void)> wrap_value(const T& value) {
+    return (std::function<T(void)>)[&value]() { return value; };  
+  };
+  
   template<typename T> bool vec_is_nonempty(const ROOT::RVec<T>& v){ return !v.empty(); }
 
   const std::map<std::string, ArmMode::Bit> kArmModeOpt {
@@ -43,16 +53,23 @@ namespace {
     {"both", ArmMode::kBoth} 
   }; 
 }
-//____________________________________________________________________________________________________________________________
+//_________________________________________________________________________________________
+/// @brief manages the conversion of 'raw' (decoded) data, and outputs VDC tracks
+/// @param path_infile path to decoded data file
+/// @param path_outfile path to output .root file
+/// @param run_number the run number
+/// @param segment_number the segment of this run. see 'scripts/run-full-replay'
+/// @param arm_mode 'both' = replay both arms in coinc. mode. 'RHRS'/'LHRS' replay the R or L arm only
+/// @param max_entries 0 = process all events, use multithreadding. n (>0) = process 'n' events, run in single-threadding mode 
 int vdc_track_replay(
   std::string path_infile, 
   std::string path_outfile, 
-  int run_number, 
+  const int run_number,
+  const int segment_number, 
   std::string arm_mode_str="both", //valid options are 'both', 'RHRS', "LHRS"
   ULong64_t max_entries=0
 )
 {
-
   using namespace std; 
   using namespace ROOT::VecOps; 
   using RVecD = ROOT::RVec<double>; 
@@ -75,7 +92,12 @@ int vdc_track_replay(
   //get which arm we're dealing with 
   auto arm_it = kArmModeOpt.find(arm_mode_str); 
   if (arm_it == kArmModeOpt.end()) {
-    Error(__func__, "Arm mode option passed is invalid: %s", arm_mode_str.c_str());
+    ostringstream oss;
+    for (const auto& [key, val] : kArmModeOpt) oss << "'" << key << "' "; 
+    Error(__func__, "Arm mode option passed is invalid: '%s'. options are: %s",
+	  arm_mode_str.c_str(),
+	  oss.str().c_str()
+	  );
     return -1; 
   }
   //
@@ -306,27 +328,42 @@ int vdc_track_replay(
   }
   rptr_nPass_1event = rna.Count(); 
 
+  //add a unique event id to each event that passes our S2-hit cuts
+  UniqueIDGenerator unique_id_generator;
+
+  rna.DefineOutput("event_id",   [&unique_id_generator](){
+    return unique_id_generator.GetID();
+  }, {}); 
+  
+  
+  
   EventCounter_RPtr nPass_1group_R, nPass_1pair_R, nPass_1raw_R, nPass_1ref_R; 
   EventCounter_RPtr nPass_1group_L, nPass_1pair_L, nPass_1raw_L, nPass_1ref_L; 
 
   //first, generate tracks in the right arm 
   if (RHRS_active()) {
+    //generate tracks
     generate_vdc_tracks(kRHRS, rna, 
       nPass_1group_R, 
       nPass_1pair_R, 
       nPass_1raw_R, 
       nPass_1ref_R
     ); 
+    //generate pid data
+    gen_pid_data(kRHRS, rna); 
   }
 
   //now, do the left-arm tracks
   if (LHRS_active()) {
+    //geenrate tracks
     generate_vdc_tracks(kLHRS, rna, 
       nPass_1group_L, 
       nPass_1pair_L, 
       nPass_1raw_L, 
       nPass_1ref_L
     );
+    //generate pid data
+    gen_pid_data(kLHRS, rna); 
   }
 
   //let's do some react-vertex calculations
@@ -395,6 +432,15 @@ int vdc_track_replay(
       
   }
 
+  //define some misc. information 
+  rna.DefineOutput("run_number", wrap_value(run_number), {}); 
+
+  rna.DefineOutput("segment_number", wrap_value(segment_number), {}); 
+  
+  rna.DefineOutput("beam_current", [](double beam_current){
+    return beam_current;
+  }, {"hac_bcm_average"}); 
+  
   
   //rna.AddBranchToOutput("y_BPM"); 
   
@@ -465,13 +511,61 @@ int vdc_track_replay(
   );
 
   std::printf(
-    "Real time: %.3f s  ( %.6f ms/event )\n"
-    "Cpu time:  %.3f s  ( %.6f ms/event )\n",
+    "Real time: %.3f s  ( %.6f ms/raw event )\n"
+    "Cpu time:  %.3f s  ( %.6f ms/raw event )\n",
     elapsed, 1000.*elapsed/((double)total_events),
     cpu_time, 1000.*cpu_time/((double)total_events)
   ); 
 
-  std::cout << "exiting..." << std::endl;  
+  //now, let's add some meta-data
+  ROOT::RDataFrame meta_df(1); // <- create one 'event' (one entry in the tree for each file).  
+  RDFNodeAccumulator rna_meta(meta_df);
+
+  rna_meta.DefineOutput("run_number",        wrap_value(run_number), {});
+  rna_meta.DefineOutput("segment_number",    wrap_value(segment_number), {});
+  rna_meta.DefineOutput("S2R_S2L_dt_center", wrap_value(dt_center), {});
+  rna_meta.DefineOutput("S2R_S2L_dt_sigma",  wrap_value(dt_sigma), {});
+
+  rna_meta.DefineOutput("n_events_total", wrap_value(total_events), {}); 
+  rna_meta.DefineOutput("n_events_s2hit", wrap_value(n_pass_1s2hit), {});   
+  rna_meta.DefineOutput("n_events_coinc", wrap_value(n_pass_coinc), {}); 
+
+  if (RHRS_active()) {
+    rna_meta.DefineOutput("n_events_1group_R", wrap_value(n_pass_1group_R), {}); 
+    rna_meta.DefineOutput("n_events_1pair_R",  wrap_value(n_pass_1pair_R), {}); 
+    rna_meta.DefineOutput("n_events_1raw_R",   wrap_value(n_pass_1raw_R), {}); 
+    rna_meta.DefineOutput("n_events_1ref_R",   wrap_value(n_pass_1ref_R), {}); 
+  }
+  if (LHRS_active()) {
+    rna_meta.DefineOutput("n_events_1group_L", wrap_value(n_pass_1group_L), {}); 
+    rna_meta.DefineOutput("n_events_1pair_L",  wrap_value(n_pass_1pair_L), {}); 
+    rna_meta.DefineOutput("n_events_1raw_L",   wrap_value(n_pass_1raw_L), {}); 
+    rna_meta.DefineOutput("n_events_1ref_L",   wrap_value(n_pass_1ref_L), {}); 
+  }
+
+  //record the date, and the amount of cpu time used 
+  TDatime dtime;
+  std::string date{ dtime.AsSQLString() }; 
+  rna_meta.DefineOutput("run_process_date", wrap_value(date), {});
+  rna_meta.DefineOutput("total_cpu_seconds", wrap_value(cpu_time), {});
+
+  std::cout << "saving meta-data tree to file... \n" << std::flush;
+
+  try {
+
+    //use this option to make sure the file is not wiped & overwritten, but only added to. 
+    ROOT::RDF::RSnapshotOptions opts;
+    opts.fMode = "UPDATE";
+    
+    rna_meta.Snapshot("meta_data", path_outfile, &opts); 
+
+  } catch (const std::exception& e) {
+    Error(__func__, "Something went wrong trying to make the meta-data snapshot.\n what(): %s", e.what());
+    return -1; 
+  }
+  
+  std::cout << "exiting..." << std::endl;
+  
 
   return 0; 
 }
