@@ -222,7 +222,7 @@ void generate_vdc_tracks(
                 
                 //compute track error
                 Compute_trackError( trk ); 
-
+		
                 //add this track to the list of refined tracks
                 refined_tracks.push_back( trk );
             }
@@ -230,6 +230,15 @@ void generate_vdc_tracks(
         }, {arm+"_tracks_raw"});
         
     rna.Filter(RVec_not_empty<ApexVDC::Track>, {br_refined}); 
+
+    rna.DefineOutput(arm+"_tracks_S2time", [is_RHRS]( ROOT::RVec<ApexVDC::Track>& tracks )
+    {
+      ROOT::RVec<double> time; time.reserve( tracks.size() ); 
+      for (auto& trk : tracks) {
+	time.push_back( trk.GetEvent()->GetS2Hit(is_RHRS)->Time() );
+      }
+      return time; 
+    }, {arm+"_tracks_refined"}); 
     
     nPass_1refinedTrack = rna.Count(); 
     return; 
