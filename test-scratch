@@ -1,0 +1,31 @@
+#!/bin/bash
+
+#SBATCH --nodes 1
+#SBATCH --account halla
+#SBATCH --ntasks 1
+#SBATCH --partition priority
+#SBATCH --time 2
+#SBATCH --cpus-per-task 1
+#SBATCH --mem 256M
+#SBATCH --job-name test_scratch_disk
+#SBATCH --output=/work/halla/apex/disk1/sethhall/apex_replay/%x.%j.out
+#SBATCH --error=/work/halla/apex/disk1/sethhall/apex_replay/%x.%j.err
+#SBATCH --gres=disk:256M
+
+echo "execution of 'ls -w 0 /scratch/slurm': '$(ls -w 0 /scratch/slurm)'"
+
+SCRATCH_DIR="/scratch/slurm/${SLURM_ARRAY_JOB_ID}_${SLURM_ARRAY_TASK_ID}"
+echo "SCRATCH_DIR: '$SCRATCH_DIR'"
+cd $SCRATCH_DIR
+
+echo "pwd: '$(pwd)'"
+echo "trying to make file '$(pwd)/test-file.txt'"
+
+echo "test data blah blah" > test-file.txt
+
+echo "ls of current dir: "
+ls
+
+echo "contents of test-file.txt: '$(cat test-file.txt)'"
+
+exit 0 
