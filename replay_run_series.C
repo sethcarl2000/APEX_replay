@@ -29,13 +29,13 @@ int replay_run_series(
     paths_input.size()
   );
 
-  int i_part=0; 
+  int i_section=0; 
   for (const auto& path_input : paths_input) {
     
     string path_output = Form("%s.%i.part-%i.root",
 			      stem_output.data(),
 			      run_number,
-			      i_part++ 
+			      i_section 
 			      );
 
     printf(
@@ -43,14 +43,18 @@ int replay_run_series(
       "                     Processing sub-part %i/%zi\n"
       "                     Input file '%s' ...\n"
       "                     Output file '%s' ...\n",
-      i_part, paths_input.size(), 
+      i_section, paths_input.size(), 
       path_input.data(),
       path_output.data() 
     );
     
-    vdc_track_replay(path_input, path_output, run_number, mode, 0);
+    vdc_track_replay(path_input, path_output, run_number, i_section, mode, 0);
+
+    ++i_section; 
   }
 
+ 
+  
   printf(
     "<replay_run_series>: done. ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~\n"
   ); 
