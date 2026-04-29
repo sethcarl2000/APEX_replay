@@ -1,0 +1,20 @@
+#!/bin/bash
+
+#this script returns the size of all raw files for a certain run in cache 
+
+run=${1}
+
+# how many decimal places to include 
+scale=5
+
+# check if there are any responsive raw files
+raw_KB=$(du -s "${PATH_APEX_CACHE}/apex_$run."* 2>/dev/null | awk '{sum += $1} END{ print sum}')
+
+# no raw data found. return 0 MB
+if [[ "${raw_KB}~" == "~" ]]; then
+
+    echo "0"
+    exit 
+else 
+    echo "scale=${scale}; ${raw_KB}/1024" | bc
+fi
