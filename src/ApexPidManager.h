@@ -3,9 +3,9 @@
 
 #include <memory> 
 #include <TObject.h> 
+#include <ApexPidDetector.h> 
 
 /// @brief class which manages pointers to ApexPidDetector classes (helper classes used to process PID data)
-class ApexPidDetector; 
 
 class ApexPidManager {
 public: 

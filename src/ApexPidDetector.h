@@ -5,7 +5,8 @@
 #include <vector> 
 #include <ROOT/RVec.hxx>
 #include <ApexVDCTrack.h>
-#include <ApexPidManager.h> 
+//#include <ApexPidManager.h> 
+class ApexPidManager; 
 
 class ApexPidDetector {
 public:   
@@ -62,6 +63,12 @@ public:
     /// @param track the track to project 
     /// @return the cell the track intercepts with 
     const Cell* GetNearestCell(const ApexVDC::Track& track) const; 
+
+    inline double GetZ() const { return fZ; }
+
+    void GetCellXY(int row, int col, double& x, double& y) const; 
+
+    const Cell* GetNearestCell(double x, double y, double dxdz, double dydz) const; 
 
     ClassDef(ApexPidDetector,1); 
 }; 

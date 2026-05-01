@@ -23,18 +23,19 @@ double ApexPidDetector::GetVal(int row, int col, const ROOT::RVec<double>& data)
 {
     const Cell* cell = GetCell(row, col);
     //check if this cell was found
-    if (!cell) {
-        std::ostringstream oss; 
-        oss << "in <ApexPidDetector::"<<__func__<<"> Tried to access cell [row="<<row<<", col="<<col<<"]"; 
-        throw std::logic_error(oss.str());  
-        return APEX::kNaN_double; 
-    }
     if ((int)data.size() != fN_rows*fN_cols) {
         std::ostringstream oss; 
         oss << "in <ApexPidDetector::"<<__func__<<"> size of data input ("<<data.size()<<") does not match number of cells ("<<fN_cols*fN_rows<<")"; 
         throw std::logic_error(oss.str());  
         return APEX::kNaN_double; 
     }
+    if (cell) { return data[cell->id]; } else { return 0.; }
+    /*if (!cell) {
+        std::ostringstream oss; 
+        oss << "in <ApexPidDetector::"<<__func__<<"> Tried to access cell [row="<<row<<", col="<<col<<"]"; 
+        throw std::logic_error(oss.str());  
+        return APEX::kNaN_double; 
+    }*/
     //we should be safe to access this array, then. 
     return data[cell->id]; 
 }
@@ -42,8 +43,17 @@ double ApexPidDetector::GetVal(int row, int col, const ROOT::RVec<double>& data)
 const ApexPidDetector::Cell* ApexPidDetector::GetNearestCell(const ApexVDC::Track& track) const
 {
     //project the track onto the z-plane
-    double x = track.FP_x() + (track.FP_dx_dz()*fZ); 
-    double y = track.FP_y() + (track.FP_dy_dz()*fZ);
+    return GetNearestCell(track.FP_x(), track.FP_y(), track.FP_dx_dz(), track.FP_dy_dz());
+}
+//_____________________________________________________________________________________________________________________
+const ApexPidDetector::Cell* ApexPidDetector::GetNearestCell(double x0, double y0, double dxdz, double dydz) const
+{
+    //change from focal-plane to transport coordiantes
+    dxdz = dxdz + x0/6.; 
+    
+    //project the track onto the z-plane.
+    double x = x0 + (dxdz*fZ); 
+    double y = y0 + (dydz*fZ);
 
     //get the closest cell 
     int col = (int)std::round( (fCell_x0 - x)/fCell_width_x ); 
@@ -67,6 +77,11 @@ std::vector<ApexPidDetector::Cell> ApexPidDetector::GenerateCells(int n_rows, in
     return fCells; 
 }
 //_____________________________________________________________________________________________________________________
+void ApexPidDetector::GetCellXY(int row, int col, double& x, double& y) const
+{
+    x = fCell_x0 - ((double)col)*fCell_width_x; 
+    y = fCell_y0 - ((double)row)*fCell_width_y; 
+}
 //_____________________________________________________________________________________________________________________
 //_____________________________________________________________________________________________________________________
 
