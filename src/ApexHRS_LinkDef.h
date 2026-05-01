@@ -11,6 +11,8 @@
 #pragma link C++ class TapexS2Hit+; 
 #pragma link C++ class TapexEventHandler+; 
 #pragma link C++ class UniqueIDGenerator+; 
+#pragma link C++ class ApexPidDetector+; 
+#pragma link C++ class ApexPidManager+; 
 // classes in the ApexVDC namespace 
 #pragma link C++ class ApexVDC::HitGroup+; 
 #pragma link C++ class ApexVDC::Hit+; 

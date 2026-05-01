@@ -31,7 +31,8 @@ set(src
   RMatrixD.cxx
   TapexReactVertex.cxx
   THaApexShower.cxx
-  UniqueIDGenerator.h
+  ApexPidDetector.cxx
+  ApexPidManager.cxx
 )
 
 # Headers.
@@ -40,7 +41,10 @@ string(REPLACE .cxx .h headers "${src}")
 
 # If you have any extra headers needed for building the ROOT dictionary,
 # add them here. Otherwise leave this line commented out.
-list(APPEND headers ArmMode.h)
+list(APPEND headers 
+  ArmMode.h 
+  UniqueIDGenerator.h
+)
 
 # If you have other headers NOT needed for the ROOT dictionary but needed for
 # the library, add them here as shown in the line commented out below.
