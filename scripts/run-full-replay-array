@@ -11,6 +11,7 @@
 #SBATCH --output=/volatile/halla/apex/full_replay/slurm/out/%x.%a.%A.out
 #SBATCH --error=/volatile/halla/apex/full_replay/slurm/err/%x.%a.%A.err
 
+
 # set up APEX env
 source set_apex_replay_env.sh
 cd ${PATH_APEX_REPLAY}
@@ -18,84 +19,103 @@ echo "<${0}>: pwd: '$(pwd)'"
 
 PATH_SCRATCH="/scratch/slurm/${SLURM_JOB_ID}"
 
-###################################################################################
-#
-# Ordered parameters:
-#
-if [[ "${SLURM_ARRAY_TASK_ID}~" != "~" ]]
-then    
-    run=${SLURM_ARRAY_TASK_ID}
-    stem_decode_output="${PATH_SCRATCH}/decode"
-    stem_replay_output=$1
-    path_odef=$2
-    mode=$3
-    echo "<${0}> we are in a slurm array. run id is: ${run}" 
-else
-    run=${1}
-    stem_decode_output="${PATH_SCRATCH}/decode"
-    stem_replay_output=$2
-    path_odef=$3
-    mode=$4
-    echo "<${0}> we are NOT in a slurm array. run id is: ${run}" 
+#first task is to parse the data which is relevant to this slurm array
+array_id=${SLURM_ARRAY_TASK_ID}
+
+slurm_array_file=${1}
+stem_replay_output=${2}
+
+#if there is no slurm_array_task_id
+if [[ -z "${array_id}" ]]
+then
+    echo "no slurm array task id. taking argument 3; array_id='${3}'" >&2
+    array_id=${3}
 fi
 
-    
-if [[ "${path_odef}~" == "~" ]]; then
-    path_odef="outDefs/full_replay.odef"
+#check if the slurm array file exists
+if ! [[ -f "${slurm_array_file}" ]]
+then
+    echo "<${0}>: slurm array file does not exist (arg 1): '${slurm_array_file}'" >&2
+    exit 1
 fi
 
-if [[ "${mode}~" == "~" ]]; then
-    mode="both"
+run=""
+while read -r line;
+do
+    # now, split the line into an array
+    IFS='|' read -ra line_array <<< "${line}"
+    if [[ "${line_array[0]}" == "${array_id}" ]];
+    then	
+	run="${line_array[1]}"
+	rawfile_number="${line_array[2]}" 
+	path_decode_input="${line_array[3]}"
+	break;
+    fi     
+done < <(cat "${slurm_array_file}") 
+
+#check to see if the run / path was found
+if [[ -z "${run}" ]]
+then
+    echo "<${0}> array parameters for this task not found."  >&2 
+    echo "<${0}>   array parameter file: '${slurm_array_file}'" >&2
+    echo "<${0}>   array id: '${array_id}'" >&2
+    exit 1
 fi
 
-n_rawfiles=$(ls -1 ${PATH_APEX_CACHE}/apex_$run.* 2>/dev/null | wc -l)
+echo "<${0}> for array id '${array_id}':"
+echo "---run: '${run}'"
+echo "---raw data file num: $rawfile_number" 
+echo "---raw data path: '${path_decode_input}'"
 
-echo "<${0}>: $n_rawfiles files to decode"
+raw_KB=$(du -s "${path_decode_input}" | awk 'END{ print $1}')
+raw_GB=$(bc <<< "scale=3; ${raw_KB}/(1024*1024)")
+echo "---raw file size: $raw_GB GB" 
 
-part_d=-1 
+# the place our 'decode' files will be put (they will be deleted on slurm job exit!) 
+stem_decode_output="${PATH_SCRATCH}/decode"
 
-paths_replay_input=""
+# path to our .odef file 
+path_odef="outDefs/full_replay.odef"
 
-for path_decode_input in $(ls -1 ${PATH_APEX_CACHE}/apex_$run.*)
-do 
-    part_d=$(($part_d + 1))
-    
-    path_decode_output="${stem_decode_output}.${run}.part-${part_d}.root"
-    
-    echo "<${0}>: PROCESSING decode $part ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~" 
-    echo "<${0}>: input:  $path_decode_input"
-    echo "<${0}>: output: $path_decode_output"
-    echo "<${0}>: ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~"
+# 'both' means that both arms will be replayed in coincidence mode 
+mode="both"
 
-    cmd_string="macros/decode_run.C(\"$path_decode_input\", \"$path_decode_output\", \"$path_odef\")"
-    echo "command string: $cmd_string"
-    
-    time analyzer -b -q "${cmd_string}"
-    
-    echo "<${0}>: done with sub-file $part_d. ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~"
-done
 
+path_decode_output="${stem_decode_output}.root"
+
+echo "<${0}>: PROCESSING decode ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~" 
+echo "<${0}>: input:  $path_decode_input"
+echo "<${0}>: output: $path_decode_output"
+echo "<${0}>: ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~"
+
+cmd_string="macros/decode_run.C(\"$path_decode_input\", \"$path_decode_output\", \"$path_odef\")"
+echo "command string: $cmd_string"
+
+time analyzer -b -q "${cmd_string}"
+
+echo "<${0}>: done with decoding. ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~"
 
 # assemble a comma-separated, quoted list of all input path(s)
 paths_replay_input=""
 while read -r line
 do 
     #see if this is the first path. if so, then don't add a trailing comma
-    if [[ "~${paths_replay_input}" == "~" ]]
+    if [[ -z "${paths_replay_input}" ]]
     then
 	paths_replay_input="\"${line}\""
-    else
+    else			
 	paths_replay_input="\"${line}\", ${paths_replay_input}"
     fi
-done < <(ls -w 0 ${stem_decode_output}.${run}.*)
+done < <(ls -1 ${stem_decode_output}.*)
 
 #now, use our script to compile our replay code once, and then run all inputs.
-cmd_string="replay_run_series.C(${run}, \"${stem_replay_output}\", {${paths_replay_input}}, \"both\")"
+cmd_string="replay_run_series.C(${run}, ${rawfile_number}, \"${stem_replay_output}\", {${paths_replay_input}}, \"both\")"
 
+echo "command string: ${cmd_string}" 
 time analyzer -b -q "${cmd_string}" 
 
 #echo "<${0}> hadd results together..."
 #hadd -k -j $(nrpoc) ${stem_replay_output}.${run}.root ${stem_replay_output}.${run}.part#-* && rm ${stem_replay_output}.${run}.part-*
 
-echo "<${0}> done." 
+echo "<${0}> done. ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~" 
 
