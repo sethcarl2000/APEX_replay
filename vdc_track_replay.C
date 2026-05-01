@@ -58,6 +58,7 @@ namespace {
 /// @param path_infile path to decoded data file
 /// @param path_outfile path to output .root file
 /// @param run_number the run number
+/// @param rawfile_number the number of the rawfile to run 
 /// @param segment_number the segment of this run. see 'scripts/run-full-replay'
 /// @param arm_mode 'both' = replay both arms in coinc. mode. 'RHRS'/'LHRS' replay the R or L arm only
 /// @param max_entries 0 = process all events, use multithreadding. n (>0) = process 'n' events, run in single-threadding mode 
@@ -65,6 +66,7 @@ int vdc_track_replay(
   std::string path_infile, 
   std::string path_outfile, 
   const int run_number,
+  const int rawfile_number, 
   const int segment_number, 
   std::string arm_mode_str="both", //valid options are 'both', 'RHRS', "LHRS"
   ULong64_t max_entries=0
@@ -434,7 +436,7 @@ int vdc_track_replay(
 
   //define some misc. information 
   rna.DefineOutput("run_number", wrap_value(run_number), {}); 
-
+  rna.DefineOutput("rawfile_number", wrap_value(rawfile_number), {}); 
   rna.DefineOutput("segment_number", wrap_value(segment_number), {}); 
   
   rna.DefineOutput("beam_current", [](double beam_current){
@@ -522,6 +524,7 @@ int vdc_track_replay(
   RDFNodeAccumulator rna_meta(meta_df);
 
   rna_meta.DefineOutput("run_number",        wrap_value(run_number), {});
+  rna_meta.DefineOutput("rawfile_number",    wrap_value(rawfile_number), {});
   rna_meta.DefineOutput("segment_number",    wrap_value(segment_number), {});
   rna_meta.DefineOutput("S2R_S2L_dt_center", wrap_value(dt_center), {});
   rna_meta.DefineOutput("S2R_S2L_dt_sigma",  wrap_value(dt_sigma), {});
