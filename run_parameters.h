@@ -57,7 +57,8 @@ namespace run_parameters {
     // if 'true' then events with multiple coincidences will not be considered.
     constexpr bool kKillMultiCoincEvents{true}; 
 
-
+    // minimum momentum to consider replaying a run (in MeV/c)
+    constexpr double min_momentum = 800.; 
 };
 
 #endif
