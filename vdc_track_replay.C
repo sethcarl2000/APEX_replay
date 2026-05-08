@@ -11,6 +11,7 @@
 #include "functions/gen_coinc_events.h"
 #include "functions/gen_react_vertex.h"
 #include "functions/gen_pid_data.h"
+#include "functions/logdata.h"
 #include <TapexReactVertex.h> 
 #include <TapexS2Hit.h> 
 #include <EventCounter.h> 
@@ -36,6 +37,9 @@
 #include <cmath> 
 #include <map> 
 #include <stdexcept> 
+#include <fstream>
+#include <stdlib.h> 
+#include <sstream> 
 
 namespace {
   constexpr bool kRHRS{true}, kLHRS{false};
@@ -90,6 +94,16 @@ int vdc_track_replay(
     (max_entries > 0 ? Form("%lli",max_entries) : "no event cap") 
   ); 
   
+  //make it so that, whenever we exit, this function is called (it will log all our data)
+  std::atexit( logdata::WriteInfo );
+
+  //register some data with the log file 
+  logdata::Append(path_infile, '|');
+  logdata::Append(path_outfile, '|');
+  logdata::Append(run_number, '|');
+  logdata::Append(rawfile_number, '|');
+  logdata::Append(segment_number, '|');
+
 
   //get which arm we're dealing with 
   auto arm_it = kArmModeOpt.find(arm_mode_str); 
@@ -100,6 +114,8 @@ int vdc_track_replay(
 	  arm_mode_str.c_str(),
 	  oss.str().c_str()
 	  );
+    logdata::Append("invalid-arm-mode"); 
+    logdata::BadExit(); 
     return -1; 
   }
   //
@@ -118,6 +134,8 @@ int vdc_track_replay(
   //check if epics tree 'E' is empty
   if ((ULong64_t)*d_E.Count() < 1) {
     Error(__func__,"Epics tree 'E' of path \"%s\" is empty!",path_infile.data());
+    logdata::Append("no-epics-data"); 
+    logdata::BadExit(); 
     return -1; 
   }
 
@@ -130,6 +148,21 @@ int vdc_track_replay(
   Info(__func__, 
     "Momentum reported by RHRS/LHRS: %.1f / %.1f (MeV)", momentum_RHRS, momentum_LHRS
   ); 
+
+  bool min_momentum_met=true; 
+  if (RHRS_active() && (momentum_RHRS < run_parameters::min_momentum)) {
+    logdata::Append("RHRS-momentum-too-low"); 
+    min_momentum_met=false; 
+  } 
+  if (LHRS_active() && (momentum_LHRS < run_parameters::min_momentum)) {
+    logdata::Append("LHRS-momentum-too-low"); 
+    min_momentum_met=false; 
+  } 
+  if (!min_momentum_met) {
+    Error(__func__, "One or both arms failed to meet minimum spectrometer momentum threshold (%.1f MeV/c).", run_parameters::min_momentum); 
+    logdata::BadExit(); 
+    return -1; 
+  }
 
   //initialize the react vertex
   //create the 'TReactVertex' object, which computes the reaction vertex,
@@ -160,7 +193,10 @@ int vdc_track_replay(
     try {
       R_react_vertex = new TapexReactVertex( kRHRS, path_infile, rna.Get() );
     } catch (const std::exception& e) {
+
       Error(__func__, "Something went wrong trying to construct the RHRS react-vertex handler.\n what(): %s", e.what()); 
+      logdata::Append("bad-react-vtx-R"); 
+      logdata::BadExit();   
       return -1; 
     }
 
@@ -174,7 +210,10 @@ int vdc_track_replay(
     try {
       L_react_vertex = new TapexReactVertex( kLHRS, path_infile, rna.Get() );
     } catch (const std::exception& e) {
+
       Error(__func__, "Something went wrong trying to construct the LHRS react-vertex handler.\n what(): %s", e.what()); 
+      logdata::Append("bad-react-vtx-L");   
+      logdata::BadExit();   
       return -1; 
     }
     
@@ -239,7 +278,16 @@ int vdc_track_replay(
       
       .Histo1D<RVecD>({"h_dt", "coinc_times;s;", 200, -75*ns, +75*ns }, "dt");
 
-    fit_gaus_to_hist( (TH1D*)hist_dt->Clone("test_h"), 20*ns, dt_center, dt_sigma);
+    try {
+      fit_gaus_to_hist( (TH1D*)hist_dt->Clone("test_h"), 20*ns, dt_center, dt_sigma);
+    } catch (const std::exception& e) {
+      
+      //if the fit fails, we will just make it so that there is no coinc-cut. 
+      Warning(__func__, "Fitting gaussian to coincidence peak failed; A TR-TL time-coincidence cut will not be applied for this run.\nn. events in hist: %.2e\n what(): %s", hist_dt->Integral(), e.what()); 
+      logdata::Append("coinc-fit-failed");   
+      dt_center = 1e20;
+      dt_sigma  = 1e30;  
+    }
 
     std::printf(
       " central coinc-time (S2_r - S2_l): %.2f ns\n"
@@ -323,6 +371,8 @@ int vdc_track_replay(
 
     default : { 
       Error(__func__, "unsupported arm-mode %s, (it should not be possible to get here..)", arm_mode_str.c_str()); 
+      logdata::Append("invalid-arm-mode");
+      logdata::BadExit(); 
       return -1; 
       break;
     }
@@ -455,11 +505,15 @@ int vdc_track_replay(
     rna.Snapshot("track_data", path_outfile); 
   } catch (const std::exception& e) {
     Error(__func__, "Something went wrong trying to make a snapshot.\n what(): %s", e.what());
+    logdata::Append("snapshot-threw-exception");
+    logdata::BadExit(); 
     return -1; 
   }
   double elapsed  = timer.RealTime(); 
   double cpu_time = timer.CpuTime(); 
   
+  logdata::Append("main-tree-success"); 
+
   EventCounter n_pass_1s2hit   = *rptr_nPass_coinc; 
   EventCounter n_pass_coinc    = *rptr_nPass_1event; 
 
@@ -564,12 +618,14 @@ int vdc_track_replay(
 
   } catch (const std::exception& e) {
     Error(__func__, "Something went wrong trying to make the meta-data snapshot.\n what(): %s", e.what());
+    logdata::Append("meta-data-tree-fail"); 
+    logdata::BadExit(); 
     return -1; 
   }
-  
+  logdata::Append("meta-data-tree-success");   
+  logdata::GoodExit(); 
+    
   std::cout << "exiting..." << std::endl;
-  
-
   return 0; 
 }
 
