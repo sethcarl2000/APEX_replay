@@ -13,3 +13,7 @@ data/*
 
 # analyzer build files
 analyzer/build 
+
+
+# misc directory
+misc
