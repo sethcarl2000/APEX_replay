@@ -95,7 +95,7 @@ do
     
 done
 
-cmd=" --partition=production --array=${slurm_array_ids} --time=240 --job-name=apex_replay_${run0}_${run1} scripts/run-full-replay-array ${slurm_array_file} ${PATH_APEX_VOLATILE}/production/replay"
+cmd=" --partition=production --array=${slurm_array_ids} --time=50 --job-name=apex_replay_${run0}_${run1} scripts/run-full-replay-array ${slurm_array_file} ${PATH_APEX_VOLATILE}/production/replay"
 
 sbatch $cmd
 
