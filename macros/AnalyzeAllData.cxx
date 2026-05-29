@@ -67,7 +67,7 @@ const std::vector<std::string> AnalyzeAllData::fPathList = std::vector<std::stri
 
 
 //______________________________________________________________________________________________________
-void AnalyzeAllData::Fill_TH2D(TH2D* hist, std::string branch_x, std::string branch_y, const std::function<ROOT::RDF::RNode(ROOT::RDF::RNode)> *fcn, std::string target_tree)
+void AnalyzeAllData::Fill_TH2D(TH2D* hist, std::string branch_x, std::string branch_y, const RDataframeUpdateFcn *fcn, std::string target_tree)
 {
   
   

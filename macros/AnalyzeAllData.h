@@ -9,6 +9,8 @@
 #include <string> 
 #include <functional> 
 
+using RDataframeUpdateFcn = std::function<ROOT::RDF::RNode(ROOT::RDF::RNode)>; 
+
 class AnalyzeAllData {
  private: 
 
@@ -34,7 +36,7 @@ class AnalyzeAllData {
   /// @param branch_y branch to fill on y-axis of histogram
   /// @param fcn function that defines x and y branches. if none is provided, then no new branches are added to the df (they must already be present!)
   /// @param target_tree TTree to examine. can be either 'track_data' or 'meta_data'. 
-  void Fill_TH2D(TH2D* hist, std::string branch_x, std::string branch_y, const std::function<ROOT::RDF::RNode(ROOT::RDF::RNode)> *fcn=nullptr, std::string target_tree="track_data"); 
+  void Fill_TH2D(TH2D* hist, std::string branch_x, std::string branch_y, const RDataframeUpdateFcn *fcn=nullptr, std::string target_tree="track_data"); 
   
 }; 
 
