@@ -4,6 +4,7 @@
 //root headers
 #include <TH2D.h>
 #include <ROOT/RDataFrame.hxx> 
+#include <ROOT/RDF/HistoModels.hxx>
 //stdlib headers
 #include <vector>
 #include <string> 
@@ -31,12 +32,12 @@ class AnalyzeAllData {
   AnalyzeAllData(int n_threads=1) : fNThreads{n_threads} {}; 
   
   /// @brief given a TH2 ptr, and a function that takes an RDF as input and reutnrs a lazy TH2 result ptr, the histogram will be filled. 
-  /// @param hist TH2 histogram to fill
+  /// @param h_params list of parameters to initialize the TH2 with. 
   /// @param branch_x branch to fill on x-axis of histogram
   /// @param branch_y branch to fill on y-axis of histogram
   /// @param fcn function that defines x and y branches. if none is provided, then no new branches are added to the df (they must already be present!)
   /// @param target_tree TTree to examine. can be either 'track_data' or 'meta_data'. 
-  void Fill_TH2D(TH2D* hist, std::string branch_x, std::string branch_y, const RDataframeUpdateFcn *fcn=nullptr, std::string target_tree="track_data"); 
+  TH2D* Make_TH2D(const ROOT::RDF::TH2DModel& h_params, std::string branch_x, std::string branch_y, const RDataframeUpdateFcn *fcn=nullptr, std::string target_tree="track_data"); 
   
 }; 
 

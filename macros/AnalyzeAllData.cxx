@@ -67,15 +67,17 @@ const std::vector<std::string> AnalyzeAllData::fPathList = std::vector<std::stri
 
 
 //______________________________________________________________________________________________________
-void AnalyzeAllData::Fill_TH2D(TH2D* hist, std::string branch_x, std::string branch_y, const RDataframeUpdateFcn *fcn, std::string target_tree)
+TH2D* AnalyzeAllData::Make_TH2D(const ROOT::RDF::TH2DModel& hmod, std::string branch_x, std::string branch_y, const RDataframeUpdateFcn *fcn, std::string target_tree)
 {
+
+  //make the histogram
+  auto hist = new TH2D(
+		       hmod.fName, hmod.fTitle,
+		       hmod.fNbinsX, hmod.fXLow, hmod.fXUp,
+		       hmod.fNbinsY, hmod.fYLow, hmod.fYUp
+		       );
   
-  
-  if (!hist) {
-    Error(__func__, "hist ptr passed is null!");
-    return;
-  }
-  
+  hist->SetDirectory(0); 
   
   if (fNThreads != 1) {
     std::cout << "In <"<<kClassName<<"::"<<__func__<<">: using " << fNThreads << " threads to process files.\n";  
@@ -87,8 +89,7 @@ void AnalyzeAllData::Fill_TH2D(TH2D* hist, std::string branch_x, std::string bra
   
   
   std::printf("in<%s::%s>: starting loop over all %zi files...\n", kClassName,__func__, fPathList.size()); 
-  for (size_t i=0; i<fPathList.size(); i++) {
-     
+  for (size_t i=0; i<fPathList.size(); i++) {    
     
     const auto& path = fPathList[i];
 
@@ -110,20 +111,23 @@ void AnalyzeAllData::Fill_TH2D(TH2D* hist, std::string branch_x, std::string bra
       //there are no new branches to add 
       if (fcn == nullptr) {
       
-	sub_hist = (TH2D*)df.Histo2D<double>({Form("h_%zi",i), "",
+	sub_hist = (TH2D*)df.Histo2D({Form("h_%zi",i), "",
 	    xax->GetNbins(), xax->GetXmin(), xax->GetXmax(), 
 	    yax->GetNbins(), yax->GetXmin(), yax->GetXmax()
 	  }, branch_x, branch_y)->Clone(Form("h_clone_%zi",i));
 
+	sub_hist->SetDirectory(0); 
+	
       } else {
       
 	//add new branches
 	auto df_out = (*fcn)(df); 
-	sub_hist = (TH2D*)df_out.Histo2D<double>({Form("h_%zi",i), "",
+	sub_hist = (TH2D*)df_out.Histo2D({Form("h_%zi",i), "",
 	    xax->GetNbins(), xax->GetXmin(), xax->GetXmax(), 
 	    yax->GetNbins(), yax->GetXmin(), yax->GetXmax()
 	  }, branch_x, branch_y)->Clone(Form("h_clone_%zi",i));
-  
+
+	sub_hist->SetDirectory(0); 
       }
 
     } catch (const std::exception& e) {
@@ -142,17 +146,17 @@ void AnalyzeAllData::Fill_TH2D(TH2D* hist, std::string branch_x, std::string bra
     //sub_hist->SetDirectory(0);
 
     //stack histograms
-
     std::printf("sub-hist has %.0f entries. adding to main result...", sub_hist->Integral());
     std::cout << std::flush; 
 
     StackHistograms(hist, sub_hist); 
 
-    //delete sub_hist; 
+    delete sub_hist;
     
     std::cout << "done." << std::endl; 
   }
-  
+
+  return hist; 
 }
 //_______________________________________________________________________________________________________
 void AnalyzeAllData::StackHistograms(TH2D* target, TH2D* source)
