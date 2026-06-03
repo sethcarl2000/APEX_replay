@@ -2,6 +2,7 @@
 #define AnalyzeAllData_cxx
 
 #include "AnalyzeAllData.h"
+#include "replay_paths.h" 
 
 #include <ROOT/RResultPtr.hxx> 
 #include <TString.h>
@@ -11,68 +12,20 @@
 #include <stdexcept>
 #include <cstdio>
 #include <iostream> 
+#include <algorithm> 
 
-  
-//list of all APEX full-replay paths
-const std::vector<std::string> AnalyzeAllData::fPathList = std::vector<std::string>{
-  "/volatile/halla/apex/full_replay/production/replay-3800-3824.root",
-  "/volatile/halla/apex/full_replay/production/replay-3825-3849.root",
-  "/volatile/halla/apex/full_replay/production/replay-3850-3874.root",
-  "/volatile/halla/apex/full_replay/production/replay-3875-3899.root",
-  "/volatile/halla/apex/full_replay/production/replay-3900-3924.root",
-  "/volatile/halla/apex/full_replay/production/replay-3925-3949.root",
-  "/volatile/halla/apex/full_replay/production/replay-3950-3974.root",
-  "/volatile/halla/apex/full_replay/production/replay-3975-3999.root",
-  "/volatile/halla/apex/full_replay/production/replay-4000-4024.root",
-  "/volatile/halla/apex/full_replay/production/replay-4025-4049.root",
-  "/volatile/halla/apex/full_replay/production/replay-4050-4074.root",
-  "/volatile/halla/apex/full_replay/production/replay-4075-4099.root",
-  "/volatile/halla/apex/full_replay/production/replay-4100-4124.root",
-  "/volatile/halla/apex/full_replay/production/replay-4125-4149.root",
-  "/volatile/halla/apex/full_replay/production/replay-4150-4174.root",
-  "/volatile/halla/apex/full_replay/production/replay-4175-4199.root",
-  "/volatile/halla/apex/full_replay/production/replay-4200-4224.root",
-  "/volatile/halla/apex/full_replay/production/replay-4225-4249.root",
-  "/volatile/halla/apex/full_replay/production/replay-4250-4274.root",
-  "/volatile/halla/apex/full_replay/production/replay-4275-4299.root",
-  "/volatile/halla/apex/full_replay/production/replay-4300-4324.root",
-  "/volatile/halla/apex/full_replay/production/replay-4325-4349.root",
-  "/volatile/halla/apex/full_replay/production/replay-4350-4374.root",
-  "/volatile/halla/apex/full_replay/production/replay-4375-4399.root",
-  "/volatile/halla/apex/full_replay/production/replay-4400-4424.root",
-  "/volatile/halla/apex/full_replay/production/replay-4425-4449.root",
-  "/volatile/halla/apex/full_replay/production/replay-4450-4474.root",
-  "/volatile/halla/apex/full_replay/production/replay-4475-4499.root",
-  "/volatile/halla/apex/full_replay/production/replay-4500-4524.root",
-  "/volatile/halla/apex/full_replay/production/replay-4525-4549.root",
-  "/volatile/halla/apex/full_replay/production/replay-4550-4574.root",
-  "/volatile/halla/apex/full_replay/production/replay-4575-4599.root",
-  "/volatile/halla/apex/full_replay/production/replay-4600-4624.root",
-  "/volatile/halla/apex/full_replay/production/replay-4625-4649.root",
-  "/volatile/halla/apex/full_replay/production/replay-4650-4674.root",
-  "/volatile/halla/apex/full_replay/production/replay-4675-4699.root",
-  "/volatile/halla/apex/full_replay/production/replay-4700-4724.root",
-  "/volatile/halla/apex/full_replay/production/replay-4725-4749.root",
-  "/volatile/halla/apex/full_replay/production/replay-4750-4774.root",
-  "/volatile/halla/apex/full_replay/production/replay-4775-4799.root",
-  "/volatile/halla/apex/full_replay/production/replay-4800-4824.root",
-  "/volatile/halla/apex/full_replay/production/replay-4825-4849.root",
-  "/volatile/halla/apex/full_replay/production/replay-4850-4874.root",
-  "/volatile/halla/apex/full_replay/production/replay-4875-4899.root",
-  "/volatile/halla/apex/full_replay/production/replay-4900-4924.root",
-  "/volatile/halla/apex/full_replay/production/replay-4925-4949.root",
-  "/volatile/halla/apex/full_replay/production/replay-4950-4974.root",
-  "/volatile/halla/apex/full_replay/production/replay-4975-4999.root"
-};
-
+const std::vector<std::string> AnalyzeAllData::fPathList = replay_paths::list; 
 
 //______________________________________________________________________________________________________
 TH2D* AnalyzeAllData::Make_TH2D(const ROOT::RDF::TH2DModel& hmod, std::string branch_x, std::string branch_y, const RDataframeUpdateFcn *fcn, std::string target_tree)
 {
 
+  //make metadata branches
+  
+  
   //make the histogram
   auto hist = new TH2D(
-		       hmod.fName, hmod.fTitle,
+		       hmod.fName,   hmod.fTitle,
 		       hmod.fNbinsX, hmod.fXLow, hmod.fXUp,
 		       hmod.fNbinsY, hmod.fYLow, hmod.fYUp
 		       );
@@ -187,14 +140,92 @@ void AnalyzeAllData::StackHistograms(TH2D* target, TH2D* source)
   }
   
 }
-//_______________________________________________________________________________________________________
-//_______________________________________________________________________________________________________
-//_______________________________________________________________________________________________________
-//_______________________________________________________________________________________________________
-//_______________________________________________________________________________________________________
-//_______________________________________________________________________________________________________
-//_______________________________________________________________________________________________________
 
+//__________________________________________________________________________________________
+MetadataFetcher AnalyzeAllData::MakeMetadataFetcher(std::string branch) const 
+{
+
+  MetadataFetcher fetcher(branch, replay_paths::min_run, replay_paths::max_run); 
+  
+  std::printf("in<%s::%s>: starting loop over all %zi files...\n",
+	      kClassName,__func__, fPathList.size()); 
+  
+  //we need to do this in single-threading mode
+  if (ROOT::IsImplicitMTEnabled()) ROOT::DisableImplicitMT(); 
+  
+  int ind=0; 
+  for (size_t i=0; i<fPathList.size(); i++) {    
+
+    const auto& path = fPathList[i]; 
+    
+    std::printf(" ~~ processing file: %2zi/%zi '%s'...\n"
+		" ~~ ", i+1,fPathList.size(), path.c_str());  
+    std::cout << std::flush; 
+
+    try {
+            
+      ROOT::RDataFrame df_meta("meta_data", path);
+      
+      auto md_subresult = *df_meta
+	
+	.Define("md", [&fetcher,&ind](int run, int segment, int rawfile,
+				      double dt, double sigma)
+	{
+	  if (fetcher.fRunIndex[run - fetcher.fMinRun] < 0) {
+	    fetcher.fRunIndex[run - fetcher.fMinRun] = ind;
+	  }
+	  
+	  ++ind;
+	  
+	  return metadata_branch_t{ run, segment, rawfile, dt, sigma };
+
+	}, {"run_number", "segment_number", "rawfile_number",
+		 "S2R_S2L_dt_center", "S2R_S2L_dt_sigma"})
+	
+	.Take<metadata_branch_t>("md"); 
+
+
+      if (md_subresult.empty()) {
+	
+	std::printf("no meta-data to add; file skipped.\n");
+	continue; 
+      }
+      
+      //copy this result into the overall vector
+      fetcher.fData.insert(std::end(fetcher.fData),
+			   std::begin(md_subresult),
+			   std::end(md_subresult)
+			   );
+      
+      std::printf("%zi results to add...", md_subresult.size());
+      std::cout << std::flush;
+      
+      std::printf("done. overall size: %zi\n", fetcher.fData.size());
+      
+    
+    } catch (const std::exception& e) {
+      
+      std::printf("error encountered; file skipped.\n"
+		  " ~~ what(): %s\n", e.what());  
+      continue; 
+    }
+  }
+  
+  return fetcher; 
+} 
+//__________________________________________________________________________________________
+//__________________________________________________________________________________________
+//__________________________________________________________________________________________
+//__________________________________________________________________________________________
+//__________________________________________________________________________________________
+//__________________________________________________________________________________________
+//__________________________________________________________________________________________
+//__________________________________________________________________________________________
+//__________________________________________________________________________________________
+//__________________________________________________________________________________________
+//__________________________________________________________________________________________
+//__________________________________________________________________________________________
+//__________________________________________________________________________________________
 
 
 #endif
