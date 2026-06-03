@@ -4,7 +4,11 @@
 #include <vector> 
 #include <string>
 
-namespace replay_paths {
+namespace replay_paths
+{
+  constexpr size_t min_run = 3800;
+  constexpr size_t max_run = 5000; 
+  
   //list of all replay files (most recent replay)
   const std::vector<std::string> list{
     "/volatile/halla/apex/full_replay/production/replay-3800-3824.root",
@@ -56,6 +60,7 @@ namespace replay_paths {
     "/volatile/halla/apex/full_replay/production/replay-4950-4974.root",
     "/volatile/halla/apex/full_replay/production/replay-4975-4999.root"
   };
+  
 }; 
 
 #endif
