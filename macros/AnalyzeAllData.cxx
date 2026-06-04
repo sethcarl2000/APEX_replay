@@ -19,6 +19,44 @@
 const std::vector<std::string> AnalyzeAllData::fPathList = replay_paths::list; 
 
 //__________________________________________________________________________________________
+AnalyzeAllData::AnalyzeAllData(int n_threads, int verbose)
+  : fNThreads{n_threads},
+    fVerbose{verbose}
+{
+  //silence errors, unless they are fatal. 
+  auto& err_handler = QuietErrorHandler::Instance();
+  err_handler.SetMinPrintLevel(kBreak); 
+}
+//__________________________________________________________________________________________
+ROOT::RDF::RNode AnalyzeAllData::Add_metadata_to_node(ROOT::RDF::RNode node) const
+{
+  if (!fAddMetadata) return node;  
+
+  if (!fMetadata) {
+    throw std::logic_error("in <AnalyzeAllData::Add_metadata_to_node>:"
+			   " fMetadata ptr is null!"); 
+    return node; 
+  }
+  
+  return node
+    
+    .Define("metadata", [this](int run, int segment, int rawfile)
+    {
+      return fMetadata->Get(run,segment,rawfile); 
+    }, {"run_number","segment_number","rawfile_number"})
+
+    //if this value is nan, then there is no metadata for this event
+    .Filter([](const metadata_branch_t& md)
+    {
+      return md.dt_sigma == md.dt_sigma;
+    }, {"metadata"})
+    
+    .Define("S2R_S2L_dt_sigma", [](const metadata_branch_t& md){ return md.dt_sigma; },
+	    {"metadata"})
+	    
+    .Define("S2R_S2L_dt_center", [](const metadata_branch_t& md){ return md.dt_center; },
+	    {"metadata"});    
+}
 //__________________________________________________________________________________________
 void AnalyzeAllData::AddMetadata()
 {
@@ -28,20 +66,18 @@ void AnalyzeAllData::AddMetadata()
 }
 //__________________________________________________________________________________________
 TH2D* AnalyzeAllData::Make_TH2D(const ROOT::RDF::TH2DModel& hmod, std::string branch_x, std::string branch_y, const RDataframeUpdateFcn *fcn, std::string target_tree)
-{
-
-  //make metadata branches
-  
-  
+{  
   //make the histogram
-  auto hist = new TH2D(
-		       hmod.fName,   hmod.fTitle,
+  auto hist = new TH2D(hmod.fName,   hmod.fTitle,
 		       hmod.fNbinsX, hmod.fXLow, hmod.fXUp,
 		       hmod.fNbinsY, hmod.fYLow, hmod.fYUp
 		       );
   
   hist->SetDirectory(0); 
-  
+
+  auto xax = hist->GetXaxis(); 
+  auto yax = hist->GetYaxis(); 
+
   if (fNThreads != 1) {
     if (fVerbose>=1) 
       std::cout << "In <"<<kClassName<<"::"<<__func__<<">: using " << fNThreads << " threads to process files.\n";  
@@ -66,39 +102,32 @@ TH2D* AnalyzeAllData::Make_TH2D(const ROOT::RDF::TH2DModel& hmod, std::string br
       std::cout << std::flush; 
     }
 
-    ROOT::RDF::RResultPtr<TH2D> hist_rptr; 
-    
-    //don't define any new branches
-    auto xax = hist->GetXaxis(); 
-    auto yax = hist->GetYaxis(); 
-
     TH2D* sub_hist = nullptr; 
 
     try {      
 
       ROOT::RDataFrame df(target_tree, path);
 
+      ROOT::RDF::RNode out_node = Add_metadata_to_node(df); 
+      
       //there are no new branches to add 
       if (fcn == nullptr) {
       
-	sub_hist = (TH2D*)df.Histo2D({Form("h_%zi",i), "",
+	sub_hist = (TH2D*)out_node.Histo2D({Form("h_%zi",i), "",
 	    xax->GetNbins(), xax->GetXmin(), xax->GetXmax(), 
 	    yax->GetNbins(), yax->GetXmin(), yax->GetXmax()
 	  }, branch_x, branch_y)->Clone(Form("h_clone_%zi",i));
 
-	sub_hist->SetDirectory(0); 
-	
       } else {
-      
+	
 	//add new branches
-	auto df_out = (*fcn)(df); 
-	sub_hist = (TH2D*)df_out.Histo2D({Form("h_%zi",i), "",
+	out_node = (*fcn)(out_node); 
+	sub_hist = (TH2D*)out_node.Histo2D({Form("h_%zi",i), "",
 	    xax->GetNbins(), xax->GetXmin(), xax->GetXmax(), 
 	    yax->GetNbins(), yax->GetXmin(), yax->GetXmax()
 	  }, branch_x, branch_y)->Clone(Form("h_clone_%zi",i));
-
-	sub_hist->SetDirectory(0); 
       }
+      sub_hist->SetDirectory(0); 
 
     } catch (const std::exception& e) {
 
@@ -136,16 +165,17 @@ TH2D* AnalyzeAllData::Make_TH2D(const ROOT::RDF::TH2DModel& hmod, std::string br
 TH1D* AnalyzeAllData::Make_TH1D(const ROOT::RDF::TH1DModel& hmod, std::string branch_x, const RDataframeUpdateFcn *fcn, std::string target_tree)
 {
 
-  //make metadata branches
-  
+  //make metadata branches  
   
   //make the histogram
-  auto hist = new TH1D(
-		       hmod.fName,   hmod.fTitle,
+  auto hist = new TH1D(hmod.fName,   hmod.fTitle,
 		       hmod.fNbinsX, hmod.fXLow, hmod.fXUp
 		       );
   
   hist->SetDirectory(0); 
+  
+  //don't define any new branches
+  auto xax = hist->GetXaxis(); 
   
   if (fNThreads != 1) {
     if (fVerbose>=1) std::cout << "In <"<<kClassName<<"::"<<__func__<<">: using " << fNThreads << " threads to process files.\n";  
@@ -167,34 +197,31 @@ TH1D* AnalyzeAllData::Make_TH1D(const ROOT::RDF::TH1DModel& hmod, std::string br
       std::cout << std::flush; 
     }
     
-    //don't define any new branches
-    auto xax = hist->GetXaxis(); 
-    auto yax = hist->GetYaxis(); 
-
     TH1D* sub_hist = nullptr; 
 
     try {
+
       ROOT::RDataFrame df(target_tree, path);
       
+      ROOT::RDF::RNode out_node = Add_metadata_to_node(df); 
+
       //there are no new branches to add 
       if (fcn == nullptr) {
 	
-	sub_hist = (TH1D*)df.Histo1D({Form("h_%zi",i), "",
+	sub_hist = (TH1D*)out_node.Histo1D({Form("h_%zi",i), "",
 	    xax->GetNbins(), xax->GetXmin(), xax->GetXmax()
 	  }, branch_x)->Clone(Form("h_clone_%zi",i));
-
-	sub_hist->SetDirectory(0); 
 	
       } else {
-      
+	
 	//add new branches
-	auto df_out = (*fcn)(df); 
-	sub_hist = (TH1D*)df_out.Histo1D({Form("h_%zi",i), "",
+	out_node = (*fcn)(out_node); 
+	sub_hist = (TH1D*)out_node.Histo1D({Form("h_%zi",i), "",
 	    xax->GetNbins(), xax->GetXmin(), xax->GetXmax()
 	  }, branch_x)->Clone(Form("h_clone_%zi",i));
 
-	sub_hist->SetDirectory(0); 
       }
+      sub_hist->SetDirectory(0); 
 
     } catch (const std::exception& e) {
 

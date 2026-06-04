@@ -37,16 +37,13 @@ class AnalyzeAllData {
   
   static constexpr char kClassName[] = "AnalyzeAllData"; 
 
+  ROOT::RDF::RNode Add_metadata_to_node(ROOT::RDF::RNode node) const; 
+  
  public: 
 
   /// @brief construct AnalyzeAllData class.
   /// @param n_threads number of threads to use. '0' means use all available threads. 
-  AnalyzeAllData(int n_threads=1, int verbose=1) : fNThreads{n_threads}, fVerbose{verbose} {
-
-    //silence errors, unless they are fatal. 
-    auto& err_handler = QuietErrorHandler::Instance();
-    err_handler.SetMinPrintLevel(kBreak); 
-  }; 
+  AnalyzeAllData(int n_threads=1, int verbose=1);
   
   std::unique_ptr<MetadataFetcher> MakeMetadataFetcher(std::string branch) const; 
   
