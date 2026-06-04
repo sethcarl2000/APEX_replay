@@ -3,12 +3,15 @@
 
 //APEX headers
 #include "MetadataFetcher.h"
+#include "QuietErrorHandler.h"
 //root headers
 #include <TH2D.h>
+#include <TH1D.h> 
 #include <ROOT/RDataFrame.hxx> 
 #include <ROOT/RDF/HistoModels.hxx>
 //stdlib headers
 #include <vector>
+#include <memory> 
 #include <map> 
 #include <string> 
 #include <functional> 
@@ -27,6 +30,10 @@ class AnalyzeAllData {
   
   //add contents of 'source' into 'target' 
   void StackHistograms(TH2D* target, TH2D* source); 
+  void StackHistograms(TH1D* target, TH1D* source); 
+
+  bool fAddMetadata{false}; 
+  std::unique_ptr<MetadataFetcher> fMetadata{nullptr}; 
   
   static constexpr char kClassName[] = "AnalyzeAllData"; 
 
@@ -34,19 +41,36 @@ class AnalyzeAllData {
 
   /// @brief construct AnalyzeAllData class.
   /// @param n_threads number of threads to use. '0' means use all available threads. 
-  AnalyzeAllData(int n_threads=1) : fNThreads{n_threads} {}; 
+  AnalyzeAllData(int n_threads=1, int verbose=1) : fNThreads{n_threads}, fVerbose{verbose} {
+
+    //silence errors, unless they are fatal. 
+    auto& err_handler = QuietErrorHandler::Instance();
+    err_handler.SetMinPrintLevel(kBreak); 
+  }; 
   
-  MetadataFetcher MakeMetadataFetcher(std::string branch) const; 
+  std::unique_ptr<MetadataFetcher> MakeMetadataFetcher(std::string branch) const; 
   
   void SetVerbosity(int v) { fVerbose=v; }
+
+  //call this before using meta-data branches
+  void AddMetadata(); 
   
-  /// @brief given a TH2 ptr, and a function that takes an RDF as input and reutnrs a lazy TH2 result ptr, the histogram will be filled. 
-  /// @param h_params list of parameters to initialize the TH2 with. 
+  /// @brief given a TH1D constructor, and a function that adds/redefines RDF branches, the histogram will be filled.
+  /// @param h_params list of parameters to initialize the TH2D with. 
   /// @param branch_x branch to fill on x-axis of histogram
   /// @param branch_y branch to fill on y-axis of histogram
   /// @param fcn function that defines x and y branches. if none is provided, then no new branches are added to the df (they must already be present!)
   /// @param target_tree TTree to examine. can be either 'track_data' or 'meta_data'. 
   TH2D* Make_TH2D(const ROOT::RDF::TH2DModel& h_params, std::string branch_x, std::string branch_y, const RDataframeUpdateFcn *fcn=nullptr, std::string target_tree="track_data"); 
+
+  
+  /// @brief given a TH1D constructor, and a function that adds/redefines RDF branches, a filled TH1D will be returned 
+  /// @param h_params list of parameters to initialize the TH1D with. 
+  /// @param branch_x branch to fill on x-axis of histogram
+  /// @param branch_y branch to fill on y-axis of histogram
+  /// @param fcn function that defines x and y branches. if none is provided, then no new branches are added to the df (they must already be present!)
+  /// @param target_tree TTree to examine. can be either 'track_data' or 'meta_data'. 
+  TH1D* Make_TH1D(const ROOT::RDF::TH1DModel& h_params, std::string branch_x, const RDataframeUpdateFcn *fcn=nullptr, std::string target_tree="track_data"); 
   
 }; 
 
