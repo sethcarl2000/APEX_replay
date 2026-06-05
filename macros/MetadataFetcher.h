@@ -70,23 +70,12 @@ metadata_branch_t MetadataFetcher::Get(int run, int segment, int rawfile) const
 
   //find our starting place to search
   int ind = fRunIndex[run-fMinRun];
-
-  std::printf("<MetadataFetcher::Get>: looking for data:\n"
-	      "  run=%i, segment=%i, rawfile=%i\n",
-	      run, segment, rawfile
-	      ); 
-  
-  std::printf("run %i has index: %i\n", run, ind); 
   
   //no meta-data for this run
   if (ind < 0) { return target_data; }
 
   auto data = fData[ind]; 
   while (ind < (int)fData.size() && data.run == run) {
-    
-    std::printf("data: run=%i, segment=%i, rawfile=%i, match? %s\n",
-		data.run, data.segment, data.rawfile,
-		(data==target_data ? "yes" : "no")); 
     
     //search all the meta-data for this run until we find our match 
     if (data == target_data) { return data; }
