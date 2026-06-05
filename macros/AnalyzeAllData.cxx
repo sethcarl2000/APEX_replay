@@ -3,17 +3,24 @@
 
 #include "AnalyzeAllData.h"
 #include "replay_paths.h" 
+#include "SlurmInterface.h" 
 
 #include <ROOT/RResultPtr.hxx> 
 #include <TString.h>
 #include <TAxis.h>
 #include <TError.h> 
 #include <DllImport.h>
+#include <TFile.h>
+#include <TTree.h> 
 
 #include <stdexcept>
 #include <cstdio>
 #include <iostream> 
 #include <algorithm> 
+#include <thread> 
+#include <mutex> 
+
+#include <RtypesCore.h> 
 
 namespace {
   const std::string kTestPath = "/volatile/halla/apex/full_replay/production/replay-4175-4199.root";
@@ -88,14 +95,168 @@ TH2D* AnalyzeAllData::Make_TH2D(const ROOT::RDF::TH2DModel& hmod, std::string br
   auto xax = hist->GetXaxis(); 
   auto yax = hist->GetYaxis(); 
 
-  if (fNThreads != 1) {
+  size_t n_threads = fNThreads;
+
+  //auto-determine the number of threads. note that this still works outside a slurm-job
+  if (n_threads==1) {
+    if (ROOT::IsImplicitMTEnabled()) ROOT::DisableImplicitMT();
     if (fVerbose>=1) 
-      std::cout << "In <"<<kClassName<<"::"<<__func__<<">: using " << fNThreads << " threads to process files.\n";  
-    ROOT::EnableImplicitMT(fNThreads);
+      std::printf("<%s::%s>: running in single-thread mode.\n",kClassName,__func__); 
+  } else {
+    //auto-detect the number of threads we should use 
+    if (n_threads==0) {
+      auto& slurm_interface = SlurmInterface::Instance();
+      n_threads = slurm_interface.get_n_threads(); 
+    }
+    ROOT::EnableImplicitMT(n_threads);   
+    if (fVerbose>=1) 
+      std::printf("<%s::%s>: running with %zi threads.\n",kClassName,__func__, n_threads); 
+  }
+  
+  //now, we will decide how much work to give each thread.
+  //to do this, we will first find how many events each thread has.
+  ULong64_t total_events=0;
+  for (const auto& segment : replay_paths::segments) {
+    if (segment.is_good) total_events += segment.n_events; 
+  }
+
+  ULong64_t n_events_per_thread = total_events / ((ULong64_t)n_threads);
+
+  std::mutex stack_mutex; 
+  
+  std::vector<std::thread> threads;
+  threads.reserve(n_threads); 
+  
+  for (int t=0; t<n_threads; t++) {
+
+    std::string thread_name{ Form("<thread [%2i/%zi]>",t+1,n_threads) }; 
+    
+    size_t start=t; 
+    
+    ULong64_t n_events_thread = 0; 
+    
+    std::vector<replay_paths::replay_segment> thread_segments{}; 
+
+    const auto& all_segments = replay_paths::segments; 
+
+    size_t end=start; 
+    while (end < replay_paths::segments.size()) {
+
+      const auto& seg = all_segments[end]; 
+      end += n_threads; 
+      
+      if (!seg.is_good) continue;
+
+      n_events_thread += seg.n_events;
+
+      thread_segments.push_back( seg ); 
+    }
+    
+    if (fVerbose>=2) {
+      std::printf("%s: to-do list (%llu events total):\n",
+		  thread_name.c_str(), n_events_thread);
+      
+      for (const auto& seg : thread_segments) {
+	std::printf("  runs %i - %i (%llu events)\n",
+		    seg.min_run, seg.max_run, seg.n_events); 
+      }
+    }
+    
+    //now, we can launch the threads.
+    threads.emplace_back([&stack_mutex, t, thread_name, thread_segments, hist,
+			 hmod, branch_x, branch_y, fcn, target_tree, this]
+    {
+      
+      TH2D *hist_thread = new TH2D(Form("hthread_t%i",t), hmod.fTitle,
+				   hmod.fNbinsX, hmod.fXLow, hmod.fXUp,
+				   hmod.fNbinsY, hmod.fYLow, hmod.fYUp
+				   );
+      hist_thread->SetDirectory(0); 
+      
+      if (fVerbose>=2) std::cout << thread_name << ": starting loop\n"; 
+
+      size_t i_task=1;
+      for (const auto& seg : thread_segments) {
+	
+	if (fVerbose>=2) std::printf("%s: processing task [%2zi/%zi]; runs %i - %i\n",
+				     thread_name.c_str(), i_task++,thread_segments.size(),
+				     seg.min_run, seg.max_run); 
+	
+	TH2D* sub_hist=nullptr; 
+	
+	try {      
+
+	  ROOT::RDF::RNode out_node = ROOT::RDataFrame(target_tree, seg.path);      
+	  
+	  //there are no new branches to add 
+	  if (fcn == nullptr) {
+      
+	    sub_hist = (TH2D*)out_node.Histo2D({Form("h_%i",t), "",
+		hmod.fNbinsX, hmod.fXLow, hmod.fXUp,
+		hmod.fNbinsY, hmod.fYLow, hmod.fYUp
+	      }, branch_x, branch_y)->Clone(Form("h_clone_%i",t));
+	    
+	  } else {
+	
+	    //add new branches
+	    out_node = (*fcn)(out_node); 
+	    sub_hist = (TH2D*)out_node.Histo2D({Form("h_%i",t), "",
+		hmod.fNbinsX, hmod.fXLow, hmod.fXUp,
+		hmod.fNbinsY, hmod.fYLow, hmod.fYUp
+	      }, branch_x, branch_y)->Clone(Form("h_clone_%i",t));
+	  }
+
+	  sub_hist->SetDirectory(0); 
+
+	} catch (const std::exception& e) {
+
+	  if (fVerbose>=2)
+	    std::printf("%s: error encountered; file skipped.\n"
+			" ~~ what(): %s\n", thread_name.c_str(), e.what());  
+	  continue; 
+	}
+    
+	    
+	if (sub_hist==nullptr) {
+      
+	  if (fVerbose>=2) std::printf("sub-hist is null; file skipped.\n");
+	  continue; 
+	}
+	//tell ROOT we want to manage the memory for this ourselves
+	//sub_hist->SetDirectory(0);
+
+	//stack histograms
+	if (fVerbose>=2) {
+	  std::printf("sub-hist has %.0f entries. adding to main result...\n", sub_hist->Integral());
+	}
+	
+	StackHistograms(hist_thread, sub_hist); 
+	
+	delete sub_hist;
+	
+	
+      }//for (const auto& segment : thread_segments)
+
+      stack_mutex.lock();
+      if (fVerbose>=2) { std::cout << thread_name << ": done. stacking final result.\n"; }
+      StackHistograms(hist, hist_thread);
+      stack_mutex.unlock();
+
+      delete hist_thread; 
+    }); 
+    
+    
+  }//for (int t=0; t<n_threads; t++) 
+
+  for (auto& thread : threads) thread.join();  
+  
+  return hist; 
+  /*  
+  if (fNThreads != 1) {
+    std::cout << "In <"<<kClassName<<"::"<<__func__<<">: using " << n_threads << " threads to process files.\n";  
   } else {
     if (fVerbose>=1)
       std::cout << "In <"<<kClassName<<"::"<<__func__<<">: executing in single-thread mode\n";
-    if (ROOT::IsImplicitMTEnabled()) ROOT::DisableImplicitMT();
   }
   
 
@@ -170,7 +331,7 @@ TH2D* AnalyzeAllData::Make_TH2D(const ROOT::RDF::TH2DModel& hmod, std::string br
     
     if (fVerbose>=2) std::cout << "done." << std::endl; 
   }
-
+  */ 
   return hist; 
 }
 //__________________________________________________________________________________________
