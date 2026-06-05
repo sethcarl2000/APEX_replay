@@ -15,14 +15,24 @@
 #include <iostream> 
 #include <algorithm> 
 
-
-const std::vector<std::string> AnalyzeAllData::fPathList = replay_paths::list; 
-
+namespace {
+  const std::string kTestPath = "/volatile/halla/apex/full_replay/production/replay-4175-4199.root";
+};
 //__________________________________________________________________________________________
-AnalyzeAllData::AnalyzeAllData(int n_threads, int verbose)
+AnalyzeAllData::AnalyzeAllData(int n_threads, int verbose, bool test_only)
   : fNThreads{n_threads},
-    fVerbose{verbose}
+    fVerbose{verbose},
+    fMinRun{replay_paths::min_run}, fMaxRun{replay_paths::max_run}
 {
+  //
+  if (test_only) {
+    fMinRun = 4175;
+    fMaxRun = 4199; 
+    fPathList.push_back( kTestPath );
+  } else {
+    fPathList = replay_paths::list;
+  }
+  
   //silence errors, unless they are fatal. 
   auto& err_handler = QuietErrorHandler::Instance();
   err_handler.SetMinPrintLevel(kBreak); 
@@ -106,9 +116,11 @@ TH2D* AnalyzeAllData::Make_TH2D(const ROOT::RDF::TH2DModel& hmod, std::string br
 
     try {      
 
-      ROOT::RDataFrame df(target_tree, path);
+      ROOT::RDF::RNode out_node = ROOT::RDataFrame(target_tree, path);
 
-      ROOT::RDF::RNode out_node = Add_metadata_to_node(df); 
+      if (fAddMetadata) 
+	out_node = Add_metadata_to_node(out_node); 
+      
       
       //there are no new branches to add 
       if (fcn == nullptr) {
@@ -201,9 +213,10 @@ TH1D* AnalyzeAllData::Make_TH1D(const ROOT::RDF::TH1DModel& hmod, std::string br
 
     try {
 
-      ROOT::RDataFrame df(target_tree, path);
-      
-      ROOT::RDF::RNode out_node = Add_metadata_to_node(df); 
+      ROOT::RDF::RNode out_node = ROOT::RDataFrame(target_tree, path);
+
+      if (fAddMetadata) 
+	out_node = Add_metadata_to_node(out_node); 
 
       //there are no new branches to add 
       if (fcn == nullptr) {
@@ -265,7 +278,6 @@ void AnalyzeAllData::StackHistograms(TH2D* target, TH2D* source)
     Error(__func__, "source (input) histogram is null!");
     return;
   }
-  
 
   auto xax = source->GetXaxis();
   auto yax = source->GetYaxis();
@@ -310,7 +322,7 @@ void AnalyzeAllData::StackHistograms(TH1D* target, TH1D* source)
 std::unique_ptr<MetadataFetcher> AnalyzeAllData::MakeMetadataFetcher(std::string branch) const 
 {
 
-  auto fetcher = std::make_unique<MetadataFetcher>(branch, replay_paths::min_run, replay_paths::max_run); 
+  auto fetcher = std::make_unique<MetadataFetcher>(branch, fMinRun, fMaxRun); 
 
   if (fVerbose>=1) 
     std::printf("in<%s::%s>: starting loop over all %zi files...\n",

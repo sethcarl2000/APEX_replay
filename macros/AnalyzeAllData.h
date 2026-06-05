@@ -26,7 +26,9 @@ class AnalyzeAllData {
   
   int fNThreads{1};
 
-  static const std::vector<std::string> fPathList; 
+  int fMinRun, fMaxRun; 
+  
+  std::vector<std::string> fPathList; 
   
   //add contents of 'source' into 'target' 
   void StackHistograms(TH2D* target, TH2D* source); 
@@ -43,7 +45,7 @@ class AnalyzeAllData {
 
   /// @brief construct AnalyzeAllData class.
   /// @param n_threads number of threads to use. '0' means use all available threads. 
-  AnalyzeAllData(int n_threads=1, int verbose=1);
+  AnalyzeAllData(int n_threads, int verbose=1, bool test_only=false);
   
   std::unique_ptr<MetadataFetcher> MakeMetadataFetcher(std::string branch) const; 
   
