@@ -354,7 +354,7 @@ std::unique_ptr<MetadataFetcher> AnalyzeAllData::MakeMetadataFetcher(std::string
   int ind=0; 
   for (size_t i=0; i<fSegmentList.size(); i++) {    
 
-    const auto& path = fSegmentList[i]; 
+    const auto& path = fSegmentList[i].path; 
 
     if (fVerbose>=2) { 
       std::printf(" ~~ processing file: %2zi/%zi '%s'...\n"

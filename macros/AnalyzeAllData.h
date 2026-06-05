@@ -4,6 +4,7 @@
 //APEX headers
 #include "MetadataFetcher.h"
 #include "QuietErrorHandler.h"
+#include "replay_paths.h"
 //root headers
 #include <TH2D.h>
 #include <TH1D.h> 

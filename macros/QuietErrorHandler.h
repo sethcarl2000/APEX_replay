@@ -9,9 +9,10 @@
 
 //meyers singleton class for handling errors
 class QuietErrorHandler {
- private:
+  public: 
+    struct level_and_name_t { int level; std::string name; }; 
+  private:
 
-  struct level_and_name_t { int level; std::string name; }; 
   
   static std::vector<level_and_name_t> fLevels;
   
