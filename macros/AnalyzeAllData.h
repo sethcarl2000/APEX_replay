@@ -28,7 +28,7 @@ class AnalyzeAllData {
 
   int fMinRun, fMaxRun; 
   
-  std::vector<std::string> fPathList; 
+  std::vector<replay_paths::replay_segment> fSegmentList; 
   
   //add contents of 'source' into 'target' 
   void StackHistograms(TH2D* target, TH2D* source); 

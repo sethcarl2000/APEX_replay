@@ -35,9 +35,9 @@ AnalyzeAllData::AnalyzeAllData(int n_threads, int verbose, bool test_only)
   if (test_only) {
     fMinRun = 4175;
     fMaxRun = 4199; 
-    fPathList.push_back( kTestPath );
+    fSegmentList = replay_paths::segment_laptop;
   } else {
-    fPathList = replay_paths::list;
+    fSegmentList = replay_paths::segments;
   }
   
   //silence errors, unless they are fatal. 
@@ -118,20 +118,20 @@ TH2D* AnalyzeAllData::Make_TH2D(const ROOT::RDF::TH2DModel& hmod, std::string br
   //now, we will decide how much work to give each thread.
   //to do this, we will first find how many events each thread has.
   ULong64_t total_events=0;
-  for (const auto& segment : replay_paths::segments) {
+  for (const auto& segment : fSegmentList) {
     if (segment.is_good) total_events += segment.n_events; 
   }
 
   if (fVerbose>=2) std::printf("<%s>: %llu total events to process\n", prefix, total_events);  
 
-  for (size_t i=0; i<replay_paths::segments.size(); i++) {
+  for (size_t i=0; i<fSegmentList.size(); i++) {
 
-    const auto& seg = replay_paths::segments[i];
+    const auto& seg = fSegmentList[i];
     if (!seg.is_good) continue; 
     
     if (fVerbose>=2){
       std::printf(" ~~ processing segment: %2zi/%zi '%s'...\n"
-		  " ~~ ", i+1,replay_paths::segments.size(), seg.path.c_str());  
+		  " ~~ ", i+1,fSegmentList.size(), seg.path.c_str());  
       std::cout << std::flush; 
     }
 
@@ -218,14 +218,14 @@ TH1D* AnalyzeAllData::Make_TH1D(const ROOT::RDF::TH1DModel& hmod, std::string br
   }
   
   
-  if (fVerbose>=1) std::printf("in<%s::%s>: starting loop over all %zi files...\n", kClassName,__func__, fPathList.size()); 
-  for (size_t i=0; i<fPathList.size(); i++) {    
+  if (fVerbose>=1) std::printf("in<%s::%s>: starting loop over all %zi files...\n", kClassName,__func__, fSegmentList.size()); 
+  for (size_t i=0; i<fSegmentList.size(); i++) {    
     
-    const auto& path = fPathList[i];
+    const auto& path = fSegmentList[i].path;
 
     if (fVerbose>=2) {
       std::printf(" ~~ processing file: %2zi/%zi '%s'...\n"
-		  " ~~ ", i+1,fPathList.size(), path.c_str());  
+		  " ~~ ", i+1,fSegmentList.size(), path.c_str());  
       std::cout << std::flush; 
     }
     
@@ -346,19 +346,19 @@ std::unique_ptr<MetadataFetcher> AnalyzeAllData::MakeMetadataFetcher(std::string
 
   if (fVerbose>=1) 
     std::printf("in<%s::%s>: starting loop over all %zi files...\n",
-		kClassName,__func__, fPathList.size()); 
+		kClassName,__func__, fSegmentList.size()); 
   
   //we need to do this in single-threading mode
   if (ROOT::IsImplicitMTEnabled()) ROOT::DisableImplicitMT(); 
   
   int ind=0; 
-  for (size_t i=0; i<fPathList.size(); i++) {    
+  for (size_t i=0; i<fSegmentList.size(); i++) {    
 
-    const auto& path = fPathList[i]; 
+    const auto& path = fSegmentList[i]; 
 
     if (fVerbose>=2) { 
       std::printf(" ~~ processing file: %2zi/%zi '%s'...\n"
-		  " ~~ ", i+1,fPathList.size(), path.c_str());  
+		  " ~~ ", i+1,fSegmentList.size(), path.c_str());  
       std::cout << std::flush; 
     }
     

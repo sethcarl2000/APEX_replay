@@ -16,6 +16,10 @@ namespace replay_paths
     std::string path{"null"};
   }; 
 
+  const std::vector<replay_segment> segment_laptop {
+    {4175, 4199,  2313442,  true, "/home/sethcarl2000/j_research_linux/APEX_replay/replay-4175-4199.root"}
+  }; 
+
   const std::vector<replay_segment> segments {
     {3800, 3824,        0, false, "/volatile/halla/apex/full_replay/production/replay-3800-3824.root"},
     {3825, 3849,        0, false, "/volatile/halla/apex/full_replay/production/replay-3825-3849.root"},
