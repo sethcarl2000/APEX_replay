@@ -1,6 +1,4 @@
 slurm-array-job-id|slurm-array-task-id|path-decode-input|path-replay-output|run-number|rawfile-num|segment-num|flags
-_all.sh||#!/bin/bash
-_all.sh||
 2968365|0|/scratch/slurm/2968365/decode.root|/volatile/halla/apex/full_replay/production/replay.5000.raw-num-0.seg-0.root|5000|0|0|LHRS-momentum-too-low,fail
 2968865|0|/scratch/slurm/2968869/decode.root|/volatile/halla/apex/full_replay/production/replay.3812.raw-num-0.seg-0.root|3812|0|0|no-epics-data,fail
 2968865|1|/scratch/slurm/2968870/decode.root|/volatile/halla/apex/full_replay/production/replay.3814.raw-num-0.seg-0.root|3814|0|0|main-tree-success,meta-data-tree-success,good-exit
