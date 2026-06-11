@@ -42,11 +42,15 @@ class AnalyzeAllData {
 
   ROOT::RDF::RNode Add_metadata_to_node(ROOT::RDF::RNode node) const; 
   
+  std::string fDataset_identifier; 
+
  public: 
 
   /// @brief construct AnalyzeAllData class.
-  /// @param n_threads number of threads to use. '0' means use all available threads. 
-  AnalyzeAllData(int n_threads, int verbose=1, bool test_only=false);
+  /// @param n_threads number of threads to use. '0' means use all available threads, '1' for single-threadded execution. 
+  /// @param verbose verbosity level: 0 -> no output; 1 -> [default] print msg at start and end of analysis loop. 2 -> print status for each file 
+  /// @param dataset_identifier identifier for dataset to use. see 'replay_paths.h' for valid options.  
+  AnalyzeAllData(int n_threads, int verbose=1, std::string dataset_identifier="ifarm-all");
   
   std::unique_ptr<MetadataFetcher> MakeMetadataFetcher(std::string branch) const; 
   

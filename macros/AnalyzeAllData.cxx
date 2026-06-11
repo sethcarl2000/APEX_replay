@@ -19,25 +19,30 @@
 #include <algorithm> 
 #include <thread> 
 #include <mutex> 
+#include <map> 
 
 #include <RtypesCore.h> 
 
 namespace {
   const std::string kTestPath = "/volatile/halla/apex/full_replay/production/replay-4175-4199.root";
+
 };
 //__________________________________________________________________________________________
-AnalyzeAllData::AnalyzeAllData(int n_threads, int verbose, bool test_only)
+AnalyzeAllData::AnalyzeAllData(int n_threads, int verbose, std::string dataset_identifier)
   : fNThreads{n_threads},
     fVerbose{verbose},
-    fMinRun{replay_paths::min_run}, fMaxRun{replay_paths::max_run}
+    fMinRun{replay_paths::min_run}, fMaxRun{replay_paths::max_run}, 
+    fDataset_identifier{dataset_identifier}
 {
-  //
-  if (test_only) {
-    fMinRun = 4175;
-    fMaxRun = 4199; 
-    fSegmentList = replay_paths::segment_laptop;
-  } else {
-    fSegmentList = replay_paths::segments;
+  try {
+    //try to fetch the list of segments 
+    if (fVerbose >= 1) { std::printf("in <%s>: fetching dataset '%s'...\n", __func__, dataset_identifier.c_str()); }
+    fSegmentList = replay_paths::get_segment(dataset_identifier);
+    if (fVerbose >= 1) { std::printf("done.\n"); }
+
+  } catch (const std::exception& e) {
+    throw std::logic_error(Form("in <AnalyzeAllData::constructor>: something went wrong trying to fetch dataset.\nwhat(): %s", e.what())); 
+    return; 
   }
   
   //silence errors, unless they are fatal. 
@@ -283,6 +288,16 @@ TH1D* AnalyzeAllData::Make_TH1D(const ROOT::RDF::TH1DModel& hmod, std::string br
     
     if (fVerbose>=2) std::cout << "done." << std::endl; 
   }
+
+  //manually set the histogram errors. 
+  // (they are set to nonsense-values when you manually set bin contents, as in the 'StackHistograms' method)
+  std::vector<double> errors; errors.reserve(xax->GetNbins()); 
+  for (int ix=1; ix<=xax->GetNbins(); ix++) errors.push_back( std::sqrt(hist->GetBinContent(ix)) ); 
+
+  hist->SetError( errors.data() ); 
+
+  hist->SetMinimum( 0. );
+  hist->SetMaximum( hist->GetMaximum()*1.1 );
 
   return hist; 
 }
