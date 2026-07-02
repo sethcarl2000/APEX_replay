@@ -12,6 +12,7 @@
 #include <DllImport.h>
 #include <TFile.h>
 #include <TTree.h> 
+#include <TStopwatch.h> 
 
 #include <stdexcept>
 #include <cstdio>
@@ -142,13 +143,19 @@ TH2D* AnalyzeAllData::Make_TH2D(const ROOT::RDF::TH2DModel& hmod, std::string br
 
     TH2D* sub_hist = nullptr; 
 
+    double user_time; 
     try {      
+
+      TStopwatch timer; 
 
       ROOT::RDataFrame df(target_tree, seg.path);
             
+
       //there are no new branches to add 
       if (fcn == nullptr) {
-      
+        
+
+
 	sub_hist = (TH2D*)df.Histo2D({Form("h_%zi",i), "",
 	    xax->GetNbins(), xax->GetXmin(), xax->GetXmax(), 
 	    yax->GetNbins(), yax->GetXmin(), yax->GetXmax()
@@ -165,6 +172,8 @@ TH2D* AnalyzeAllData::Make_TH2D(const ROOT::RDF::TH2DModel& hmod, std::string br
       }
       sub_hist->SetDirectory(0); 
 
+      user_time = timer.CpuTime(); 
+
     } catch (const std::exception& e) {
 
       if (fVerbose>=2)
@@ -172,8 +181,10 @@ TH2D* AnalyzeAllData::Make_TH2D(const ROOT::RDF::TH2DModel& hmod, std::string br
 		    " ~~ what(): %s\n", e.what());  
       continue; 
     }
-    
-    
+    if (fVerbose>=2) {
+      std::printf(" user-time: %6.2f s (%.3f us/thread-event). ", user_time, 1e6*user_time/((double)n_threads*seg.n_events));
+    }
+
     if (sub_hist==nullptr) {
       
       if (fVerbose>=2) std::printf("sub-hist is null; file skipped.\n");
@@ -237,6 +248,8 @@ TH1D* AnalyzeAllData::Make_TH1D(const ROOT::RDF::TH1DModel& hmod, std::string br
     TH1D* sub_hist = nullptr; 
 
     try {
+
+      TStopwatch timer; 
 
       ROOT::RDF::RNode out_node = ROOT::RDataFrame(target_tree, path);
 
