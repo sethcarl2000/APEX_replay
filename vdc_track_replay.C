@@ -12,6 +12,7 @@
 #include "functions/gen_react_vertex.h"
 #include "functions/gen_pid_data.h"
 #include "functions/logdata.h"
+#include "functions/get_n_cpus.h"
 #include <TapexReactVertex.h> 
 #include <TapexS2Hit.h> 
 #include <EventCounter.h> 
@@ -127,8 +128,12 @@ int vdc_track_replay(
   auto both_arms_active = [arm_mode](){ return (bool)(arm_mode == ArmMode::kBoth); };
   
 
+  //get the number of cpus that are available to us. (this will depend on whether
+  // or not we're in a slurm job). 
+  const size_t n_threads = get_n_cpus(); 
+
   //find the central-momentum of both arms using EPICS vars
-  ROOT::EnableImplicitMT(); 
+  ROOT::EnableImplicitMT(n_threads); 
   ROOT::RDataFrame d_E("E", path_infile.data());
 
   //check if epics tree 'E' is empty
@@ -139,11 +144,8 @@ int vdc_track_replay(
     return -1; 
   }
 
-  const double momentum_RHRS
-    = d_E.Histo1D({"","",200,-1,-1},"HacR_D1_P0rb")->GetMean() * (GeV / MeV);
-  
-  const double momentum_LHRS
-    = d_E.Histo1D({"","",200,-1,-1},"HacL_D1_P0rb")->GetMean() * (GeV / MeV);
+  const double momentum_RHRS = *d_E.Mean("HacR_D1_P0rb") * (GeV / MeV);  
+  const double momentum_LHRS = *d_E.Mean("HacL_D1_P0rb") * (GeV / MeV);
 
   Info(__func__, 
     "Momentum reported by RHRS/LHRS: %.1f / %.1f (MeV)", momentum_RHRS, momentum_LHRS
@@ -159,9 +161,9 @@ int vdc_track_replay(
     min_momentum_met=false; 
   } 
   if (!min_momentum_met) {
-    Error(__func__, "One or both arms failed to meet minimum spectrometer momentum threshold (%.1f MeV/c).", run_parameters::min_momentum); 
-    logdata::BadExit(); 
-    return -1; 
+    Warning(__func__, "One or both arms failed to meet minimum spectrometer momentum threshold (%.1f MeV/c).", run_parameters::min_momentum); 
+    //logdata::BadExit(); 
+    //return -1; 
   }
 
   //initialize the react vertex
@@ -175,7 +177,7 @@ int vdc_track_replay(
   //check status of multithreadding d
   if (!single_threadding) {
   
-    if (!ROOT::IsImplicitMTEnabled()) ROOT::EnableImplicitMT();
+    if (!ROOT::IsImplicitMTEnabled()) ROOT::EnableImplicitMT(n_threads);
     Info(__func__, "Multithreadding is enabled. Thread pool size: %i", ROOT::GetThreadPoolSize());
     
   } else {
@@ -587,11 +589,14 @@ int vdc_track_replay(
   rna_meta.DefineOutput("n_events_s2hit", wrap_value(n_pass_1s2hit), {});   
   rna_meta.DefineOutput("n_events_coinc", wrap_value(n_pass_coinc), {}); 
 
+  rna_meta.DefineOutput("RHRS_momentum",   wrap_value(momentum_RHRS), {});
+  rna_meta.DefineOutput("LHRS_momentum",   wrap_value(momentum_LHRS), {});
+  
   if (RHRS_active()) {
     rna_meta.DefineOutput("n_events_1group_R", wrap_value(n_pass_1group_R), {}); 
     rna_meta.DefineOutput("n_events_1pair_R",  wrap_value(n_pass_1pair_R), {}); 
     rna_meta.DefineOutput("n_events_1raw_R",   wrap_value(n_pass_1raw_R), {}); 
-    rna_meta.DefineOutput("n_events_1ref_R",   wrap_value(n_pass_1ref_R), {}); 
+    rna_meta.DefineOutput("n_events_1ref_R",   wrap_value(n_pass_1ref_R), {});
   }
   if (LHRS_active()) {
     rna_meta.DefineOutput("n_events_1group_L", wrap_value(n_pass_1group_L), {}); 
