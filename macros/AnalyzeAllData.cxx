@@ -236,8 +236,11 @@ TH1D* AnalyzeAllData::Make_TH1D(const ROOT::RDF::TH1DModel& hmod, std::string br
   
   if (fVerbose>=1) std::printf("in<%s::%s>: starting loop over all %zi files...\n", kClassName,__func__, fSegmentList.size()); 
   for (size_t i=0; i<fSegmentList.size(); i++) {    
+
+    const auto& seg = fSegmentList[i]; 
+    if (!seg.is_good) continue; 
     
-    const auto& path = fSegmentList[i].path;
+    const auto& path = seg.path;
 
     if (fVerbose>=2) {
       std::printf(" ~~ processing file: %2zi/%zi '%s'...\n"
@@ -313,6 +316,68 @@ TH1D* AnalyzeAllData::Make_TH1D(const ROOT::RDF::TH1DModel& hmod, std::string br
   hist->SetMaximum( hist->GetMaximum()*1.1 );
 
   return hist; 
+}
+//__________________________________________________________________________________________
+void AnalyzeAllData::ForEach(std::function<ULong64_t(ROOT::RDF::RNode)> expr, std::string target_tree)
+{
+  
+  if (fNThreads != 1) {
+    if (fVerbose>=1) std::cout << "In <"<<kClassName<<"::"<<__func__<<">: using " << fNThreads << " threads to process files.\n";  
+    ROOT::EnableImplicitMT(fNThreads);
+  } else {
+    if (fVerbose>=1) std::cout << "In <"<<kClassName<<"::"<<__func__<<">: executing in single-thread mode\n";
+    if (ROOT::IsImplicitMTEnabled()) ROOT::DisableImplicitMT();
+  }
+  
+
+  ULong64_t n_events_processed =0; 
+  
+  if (fVerbose>=1) std::printf("in<%s::%s>: starting loop over all %zi files...\n", kClassName,__func__, fSegmentList.size()); 
+  for (size_t i=0; i<fSegmentList.size(); i++) {    
+
+    const auto& seg = fSegmentList[i]; 
+    if (!seg.is_good) continue; 
+    
+    const auto& path = seg.path;
+
+    if (fVerbose>=2) {
+      std::printf(" ~~ processing file: %2zi/%zi '%s'...\n"
+		  " ~~ ", i+1,fSegmentList.size(), path.c_str());  
+      std::cout << std::flush; 
+    }
+    
+    ULong64_t n_events=0;
+    double elapsed; 
+    try {
+
+      TStopwatch timer; 
+
+      ROOT::RDF::RNode out_node = ROOT::RDataFrame(target_tree, path);
+
+      //try and execute the user's supplied function 
+      n_events = expr(out_node); 
+
+      elapsed = timer.RealTime(); 
+      
+    } catch (const std::exception& e) {
+
+      if (fVerbose>=2) 
+	std::printf("error encountered; file skipped.\n ~~ what(): %s\n", e.what());
+      
+      continue; 
+    }
+
+    //stack histograms
+    if (fVerbose>=2) { 
+      std::printf("sub-result reported %lu entries processed. in %.3f seconds (%.3f us/event)\n", (unsigned long)n_events, elapsed, 1e6*elapsed/((double)n_events));
+      std::cout << std::flush; 
+    }
+    n_events_processed += n_events; 
+  }
+
+  std::printf("total events processed: %lu\n", (unsigned long)n_events_processed); 
+  
+  return; 
 }
 //__________________________________________________________________________________________
 void AnalyzeAllData::StackHistograms(TH2D* target, TH2D* source)

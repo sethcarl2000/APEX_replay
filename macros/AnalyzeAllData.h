@@ -74,7 +74,12 @@ class AnalyzeAllData {
   /// @param branch_y branch to fill on y-axis of histogram
   /// @param fcn function that defines x and y branches. if none is provided, then no new branches are added to the df (they must already be present!)
   /// @param target_tree TTree to examine. can be either 'track_data' or 'meta_data'. 
-  TH1D* Make_TH1D(const ROOT::RDF::TH1DModel& h_params, std::string branch_x, const RDataframeUpdateFcn *fcn=nullptr, std::string target_tree="track_data"); 
+  TH1D* Make_TH1D(const ROOT::RDF::TH1DModel& h_params, std::string branch_x, const RDataframeUpdateFcn *fcn=nullptr, std::string target_tree="track_data");
+
+  /// @brief given a callable expression 'Expr' passes the RDataFrame for each file. should return the number of events processed
+  /// @param expr callable expression to execute on each input file
+  /// @param target_tree tree to use
+  void ForEach(std::function<ULong64_t(ROOT::RDF::RNode)> expr, std::string target_tree="track_data");  
   
 }; 
 
