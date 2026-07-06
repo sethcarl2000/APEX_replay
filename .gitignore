@@ -14,6 +14,9 @@ data/*
 # analyzer build files
 analyzer/build 
 
+# build directory
+build
+
 
 # misc directory
 misc
