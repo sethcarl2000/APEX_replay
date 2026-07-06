@@ -59,5 +59,3 @@ ApexPidManager::ApexPidManager()
     fDet_RHRS_sh->fCell_width_y = +0.180; 
     fDet_RHRS_sh->fCell_y0 = +0.37;
 } 
-
-ClassImp(ApexPidManager); 

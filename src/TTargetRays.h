@@ -133,7 +133,6 @@ private:
   
   void Build_coeffs(const TNPoly &poly, APEX::EFPCoordinate coord);
   
-  ClassDef(TXMap,0); 
 };
 //_________________________________________________________________________________
 

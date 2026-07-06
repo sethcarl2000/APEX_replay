@@ -422,4 +422,4 @@ void THaShower::PrintDecodedData( const THaEvData& evdata ) const
 }
 
 //_____________________________________________________________________________
-ClassImp(THaShower)
+

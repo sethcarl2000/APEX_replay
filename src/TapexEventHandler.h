@@ -76,7 +76,6 @@ class TapexEventHandler {
 		      const double *Y, 
 		      const int nPts ) const; 
   
-  ClassDef(TapexEventHandler,1);
 }; 
 
 #endif 

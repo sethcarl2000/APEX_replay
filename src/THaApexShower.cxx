@@ -515,4 +515,4 @@ Int_t THaApexShower::FineProcess( TClonesArray& tracks )
 }
 
 //_____________________________________________________________________________
-ClassImp(THaApexShower)
+

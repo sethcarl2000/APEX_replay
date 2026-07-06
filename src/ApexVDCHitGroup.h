@@ -45,7 +45,6 @@ private:
   std::vector<Hit> fHits; 
   int fPlane; 
 
-  ClassDef(HitGroup,1); 
 }; 
 
 }; 

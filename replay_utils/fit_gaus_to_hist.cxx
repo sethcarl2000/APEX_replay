@@ -1,7 +1,7 @@
 #ifndef fit_gaus_to_hist_H
 #define fit_gaus_to_hist_H 
 
-#include <replay_utils/interface.h>
+#include "replay_utils.h"
 #include <TH1.h> 
 #include <TF1.h>
 #include <TAxis.h>  
@@ -25,7 +25,7 @@ void fit_gaus_to_hist(
     double radius, 
     double &center, 
     double &sigma, 
-    bool do_draw=false
+    bool do_draw
 ) 
 {
     //first guess for the center of the fit. we assume here that the gaus we wanna fit is the tallest peak in the hist. 

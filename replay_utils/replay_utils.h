@@ -9,7 +9,7 @@
 #include <ApexVDCTrack.h>
 #include <TapexEventHandler.h>
 #include <PmtData.h> 
-#include <include/RDFNodeAccumulator.h>
+#include "../include/RDFNodeAccumulator.h"
 #include <EventCounter.h> 
 //ROOT
 #include <TH1D.h>

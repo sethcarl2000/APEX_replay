@@ -2,7 +2,7 @@
 #define group_vdc_hits_H
 
 // APEX headers
-#include <replay_utils/interface.h>
+#include "replay_utils.h"
 #include <ApexVDCHit.h> 
 #include <ApexVDCHitGroup.h> 
 #include <TapexEventHandler.h> 

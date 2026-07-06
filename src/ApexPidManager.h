@@ -26,8 +26,6 @@ private:
 
     //right-arm shower detectors
     std::unique_ptr<ApexPidDetector> fDet_RHRS_sh, fDet_RHRS_ps; 
-
-    ClassDef(ApexPidManager,1); 
 };
 
 #endif

@@ -117,7 +117,6 @@ private:
   //the x-y span of the raster, throughout the run (in HCS)
   TVector2 fRaster_amplitude; 
   
-  ClassDef(TapexReactVertex,1); 
 };
 //_________________________________________________________________________________
 

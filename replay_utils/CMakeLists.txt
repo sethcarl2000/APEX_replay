@@ -1,7 +1,8 @@
+cmake_minimum_required(VERSION 3.16)
 
 set(headers
     DataLog.h
-    interface.h
+    replay_utils.h
 )
 
 set(sources
@@ -29,4 +30,4 @@ add_library(replay_utils_lib STATIC ${sources} ${headers})
 target_include_directories(replay_utils_lib PUBLIC ${CMAKE_CURRENT_SOURCE_DIR})
 
 # link the library to other libraries that it will need
-target_link_libraries(replay_utils_lib PUBLIC src_lib ROOT::Core ROOT::RIO ROOT::RDataFrame)
+target_link_libraries(replay_utils_lib PUBLIC src_lib ROOT::Core ROOT::RIO ROOT::ROOTDataFrame)

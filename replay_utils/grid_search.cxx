@@ -1,7 +1,7 @@
 #ifndef grid_search_H
 #define grid_search_H
 
-#include <replay_utils/interface.h>
+#include "replay_utils.h"
 #include <EventCounter.h>
 #include <ApexVDCHitGroup.h> 
 #include <TapexEventHandler.h> 
@@ -23,8 +23,8 @@ double grid_search(
     double m2, 
     double x_Lo,
     double x_Hi, 
-    double TAU_sigma  =9e-9, 
-    double TAU_buffer =20e-9 ) 
+    double TAU_sigma, 
+    double TAU_buffer) 
 {
     using APEX::square;
 

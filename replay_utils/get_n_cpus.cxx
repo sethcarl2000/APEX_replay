@@ -1,7 +1,7 @@
 #ifndef get_n_cpus_h
 #define get_n_cpus_h
 
-#include <replay_utils/interface.h>
+#include "replay_utils.h"
 #include <string> 
 #include <cstdlib>
 #include <thread> 

@@ -26,7 +26,6 @@ public:
   double fIntercept; 
   double fEta_score; 
   
-  ClassDef(HitCluster,1); 
 };
 
 }; 

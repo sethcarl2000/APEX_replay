@@ -1,7 +1,7 @@
 #ifndef gen_pid_data_H
 #define gen_pid_data_H
 
-#include <replay_utils/interface.h>
+#include "replay_utils.h"
 #include <TapexEventHandler.h>
 #include "../include/RDFNodeAccumulator.h"
 #include <TapexS2Hit.h>

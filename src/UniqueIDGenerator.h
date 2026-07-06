@@ -26,7 +26,6 @@ private:
 
   std::atomic<EventCounter> fCounter; 
   
-  ClassDef(UniqueIDGenerator,1);
 }; 
 
 #endif 

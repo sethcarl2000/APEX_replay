@@ -1,7 +1,7 @@
 #ifndef refine_track_H
 #define refine_track_H
 
-#include <replay_utils/interface.h>
+#include "replay_utils.h"
 #include <ApexVDCTrack.h>
 #include <math.h> 
 #include <ROOT/RVec.hxx>
@@ -15,8 +15,8 @@ namespace replay_utils
 //   
 void refine_track( 
     ApexVDC::Track& trk, 
-    const int nCycles=10, 
-    double sigma=25e-9 ) 
+    const int nCycles, 
+    double sigma) 
 { 
     using APEX::square; 
 

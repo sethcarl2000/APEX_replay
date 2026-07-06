@@ -2,7 +2,7 @@
 #define generate_S2_hits_H
 
 // APEX headers
-#include <replay_utils/interface.h>
+#include "replay_utils.h"
 #include <TapexS2Hit.h> 
 #include <TapexEventHandler.h>
 #include "../run_parameters.h"

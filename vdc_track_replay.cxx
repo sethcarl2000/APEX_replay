@@ -1,18 +1,15 @@
 #ifndef vdc_track_replay_C
 #define vdc_track_replay_C
 
+//argparse
+#include <include/argparse.hpp>
 // APEX headers
+// replay-utils lib
+#include <replay_utils.h>
+#include "replay_utils/DataLog.h"
 //#define DEBUG_TRACK
 #include "include/RDFNodeAccumulator.h"
 #include "run_parameters.h"
-#include "functions/generate_vdc_tracks.h"
-#include "functions/generate_S2_hits.h"
-#include "functions/fit_gaus_to_hist.h"
-#include "functions/gen_coinc_events.h"
-#include "functions/gen_react_vertex.h"
-#include "functions/gen_pid_data.h"
-#include "functions/logdata.h"
-#include "functions/get_n_cpus.h"
 #include <TapexReactVertex.h> 
 #include <TapexS2Hit.h> 
 #include <EventCounter.h> 
@@ -41,6 +38,7 @@
 #include <fstream>
 #include <stdlib.h> 
 #include <sstream> 
+#include <thread> 
 
 namespace {
   constexpr bool kRHRS{true}, kLHRS{false};
@@ -58,25 +56,168 @@ namespace {
     {"both", ArmMode::kBoth} 
   }; 
 }
-//_________________________________________________________________________________________
+
 /// @brief manages the conversion of 'raw' (decoded) data, and outputs VDC tracks
 /// @param path_infile path to decoded data file
 /// @param path_outfile path to output .root file
 /// @param run_number the run number
 /// @param rawfile_number the number of the rawfile to run 
-/// @param segment_number the segment of this run. see 'scripts/run-full-replay'
+/// @param segment_number the number of the segment to run 
 /// @param arm_mode 'both' = replay both arms in coinc. mode. 'RHRS'/'LHRS' replay the R or L arm only
 /// @param max_entries 0 = process all events, use multithreadding. n (>0) = process 'n' events, run in single-threadding mode 
+/// @param n_threads number of threads to use in multi-threadding mode
 int vdc_track_replay(
-  std::string path_infile, 
-  std::string path_outfile, 
+  const std::string path_infile, 
+  const std::string path_outfile, 
   const int run_number,
   const int rawfile_number, 
-  const int segment_number, 
-  std::string arm_mode_str="both", //valid options are 'both', 'RHRS', "LHRS"
-  ULong64_t max_entries=0
+  const int segment_number,
+  const std::string arm_mode_str="both", //valid options are 'both', 'RHRS', "LHRS"
+  const ULong64_t max_entries=0,
+  const size_t n_threads=1
+);
+
+
+int main(int argc, char* argv[])
+{
+  //parse arguments
+  argparse::ArgumentParser program("vdc_track_replay"); 
+
+  program.add_argument("--run-number")
+    .required()
+    .help("index of run")
+    .scan<'i', int>()
+    .metavar("N")
+    .nargs(1);
+
+  program.add_argument("--rawfile-number")
+    .help("rawfile number")
+    .scan<'i', int>()
+    .default_value(0)
+    .metavar("R")
+    .nargs(1);
+
+  program.add_argument("--arm-mode")
+    .help("active-arm mode to operate in")
+    .metavar("MODE")
+    .choices("RHRS","LHRS","both")
+    .default_value("both")
+    .nargs(1);
+
+  program.add_argument("--max-entries")
+    .help("maximum raw-events to process. 0 => all events")
+    .metavar("N")
+    .scan<'i',unsigned int>()
+    .default_value(0U)
+    .nargs(1);
+
+  program.add_argument("--n-threads")
+    .help("number of threads to use in multi-threadding mode")
+    .metavar("N")
+    .scan<'i',int>()
+    .default_value((int)std::thread::hardware_concurrency())
+    .nargs(1);
+
+  
+  program.add_argument("stem_output")
+    .required()
+    .help("stem to output file destination. format: 'stem_output.[run].rawfile-[rawfile-num].seg-[seg-index].root")
+    .nargs(1);
+
+  program.add_argument("paths_input")
+    .required()
+    .help("space-separated list of absolute path(s) to input files")
+    .nargs(argparse::nargs_pattern::at_least_one);
+  
+  try {
+    program.parse_args(argc, argv);
+  } catch (const std::exception& e) {
+    std::cerr << e.what() << "\n"; 
+    std::cerr << program; 
+    return -1; 
+  }
+  
+  std::vector<std::string> paths_input  = program.get<std::vector<std::string>>("paths_input"); 
+  std::string stem_output         = program.get("stem_output");
+  const int run_number            = program.get<int>("--run-number");
+  const int rawfile_number        = program.get<int>("--rawfile-number");
+  std::string arm_mode_str        = program.get("--arm-mode");
+  const unsigned int max_entries  = program.get<unsigned int>("--max-entries");
+  const int n_threads             = program.get<int>("--n-threads");
+
+  try {
+      
+    std::printf(
+      "<vdc_track_replay>: There are %zi files to process ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~\n",
+      paths_input.size()
+    );
+
+    int i_segment=0; 
+    for (const auto& path_input : paths_input) {
+      
+      std::string path_output = Form("%s.%i.raw-num-%i.seg-%i.root",
+              stem_output.data(),
+              run_number,
+              rawfile_number,
+              i_segment 
+              );
+
+      printf(
+        "<vdc_track_replay>: ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~\n"
+        "                     Processing rawfile %i, segment %i/%zi\n"
+        "                     Input file '%s' ...\n"
+        "                     Output file '%s' ...\n",
+        rawfile_number, i_segment, paths_input.size(), 
+        path_input.data(),
+        path_output.data() 
+      );
+      
+      int ret = vdc_track_replay(
+        path_input, 
+        path_output, 
+        run_number, 
+        rawfile_number, 
+        i_segment, 
+        arm_mode_str, 
+        max_entries, 
+        n_threads
+      );
+
+      if (ret < 0) {
+        Warning("vdc_tracK_replay", "Bad return code on replay %i/%i/%i (<0)", run_number, rawfile_number, i_segment);
+      }
+
+      ++i_segment; 
+    }
+
+    printf(
+      "<replay_run_series>: done. ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~\n"
+    ); 
+    
+  } catch (const std::exception& e) {
+    std::cerr <<
+      "<replay_run_series>: exception caught executing replay.\nwhat():" << e.what() << "\n"; 
+    return -1; 
+  }
+
+  return 0; 
+}
+
+
+//________________________________________________________________________________________________________
+int vdc_track_replay(
+  const std::string path_infile, 
+  const std::string path_outfile, 
+  const int run_number,
+  const int rawfile_number, 
+  const int segment_number,
+  const std::string arm_mode_str, //valid options are 'both', 'RHRS', "LHRS"
+  const ULong64_t max_entries,
+  const size_t n_threads
 )
 {
+  using namespace replay_utils; 
+
   using namespace std; 
   using namespace ROOT::VecOps; 
   using RVecD = ROOT::RVec<double>; 
@@ -96,14 +237,14 @@ int vdc_track_replay(
   ); 
   
   //make it so that, whenever we exit, this function is called (it will log all our data)
-  std::atexit( logdata::WriteInfo );
+  auto& data_log = replay_utils::DataLog::instance(); 
 
   //register some data with the log file 
-  logdata::Append(path_infile, '|');
-  logdata::Append(path_outfile, '|');
-  logdata::Append(run_number, '|');
-  logdata::Append(rawfile_number, '|');
-  logdata::Append(segment_number, '|');
+  data_log.Append(path_infile, '|');
+  data_log.Append(path_outfile, '|');
+  data_log.Append(run_number, '|');
+  data_log.Append(rawfile_number, '|');
+  data_log.Append(segment_number, '|');
 
 
   //get which arm we're dealing with 
@@ -115,8 +256,8 @@ int vdc_track_replay(
 	  arm_mode_str.c_str(),
 	  oss.str().c_str()
 	  );
-    logdata::Append("invalid-arm-mode"); 
-    logdata::BadExit(); 
+    data_log.Append("invalid-arm-mode"); 
+    data_log.BadExit(); 
     return -1; 
   }
   //
@@ -127,11 +268,6 @@ int vdc_track_replay(
   auto LHRS_active      = [arm_mode](){ return (bool)(arm_mode & ArmMode::kLHRS); };
   auto both_arms_active = [arm_mode](){ return (bool)(arm_mode == ArmMode::kBoth); };
   
-
-  //get the number of cpus that are available to us. (this will depend on whether
-  // or not we're in a slurm job). 
-  const size_t n_threads = get_n_cpus(); 
-
   //find the central-momentum of both arms using EPICS vars
   ROOT::EnableImplicitMT(n_threads); 
   ROOT::RDataFrame d_E("E", path_infile.data());
@@ -139,8 +275,8 @@ int vdc_track_replay(
   //check if epics tree 'E' is empty
   if ((ULong64_t)*d_E.Count() < 1) {
     Error(__func__,"Epics tree 'E' of path \"%s\" is empty!",path_infile.data());
-    logdata::Append("no-epics-data"); 
-    logdata::BadExit(); 
+    data_log.Append("no-epics-data"); 
+    data_log.BadExit(); 
     return -1; 
   }
 
@@ -153,16 +289,16 @@ int vdc_track_replay(
 
   bool min_momentum_met=true; 
   if (RHRS_active() && (momentum_RHRS < run_parameters::min_momentum)) {
-    logdata::Append("RHRS-momentum-too-low"); 
+    data_log.Append("RHRS-momentum-too-low"); 
     min_momentum_met=false; 
   } 
   if (LHRS_active() && (momentum_LHRS < run_parameters::min_momentum)) {
-    logdata::Append("LHRS-momentum-too-low"); 
+    data_log.Append("LHRS-momentum-too-low"); 
     min_momentum_met=false; 
   } 
   if (!min_momentum_met) {
     Warning(__func__, "One or both arms failed to meet minimum spectrometer momentum threshold (%.1f MeV/c).", run_parameters::min_momentum); 
-    //logdata::BadExit(); 
+    //data_log.BadExit(); 
     //return -1; 
   }
 
@@ -197,8 +333,8 @@ int vdc_track_replay(
     } catch (const std::exception& e) {
 
       Error(__func__, "Something went wrong trying to construct the RHRS react-vertex handler.\n what(): %s", e.what()); 
-      logdata::Append("bad-react-vtx-R"); 
-      logdata::BadExit();   
+      data_log.Append("bad-react-vtx-R"); 
+      data_log.BadExit();   
       return -1; 
     }
 
@@ -214,8 +350,8 @@ int vdc_track_replay(
     } catch (const std::exception& e) {
 
       Error(__func__, "Something went wrong trying to construct the LHRS react-vertex handler.\n what(): %s", e.what()); 
-      logdata::Append("bad-react-vtx-L");   
-      logdata::BadExit();   
+      data_log.Append("bad-react-vtx-L");   
+      data_log.BadExit();   
       return -1; 
     }
     
@@ -286,7 +422,7 @@ int vdc_track_replay(
       
       //if the fit fails, we will just make it so that there is no coinc-cut. 
       Warning(__func__, "Fitting gaussian to coincidence peak failed; A TR-TL time-coincidence cut will not be applied for this run.\nn. events in hist: %.2e\n what(): %s", hist_dt->Integral(), e.what()); 
-      logdata::Append("coinc-fit-failed");   
+      data_log.Append("coinc-fit-failed");   
       dt_center = 1e20;
       dt_sigma  = 1e30;  
     }
@@ -373,8 +509,8 @@ int vdc_track_replay(
 
     default : { 
       Error(__func__, "unsupported arm-mode %s, (it should not be possible to get here..)", arm_mode_str.c_str()); 
-      logdata::Append("invalid-arm-mode");
-      logdata::BadExit(); 
+      data_log.Append("invalid-arm-mode");
+      data_log.BadExit(); 
       return -1; 
       break;
     }
@@ -507,14 +643,14 @@ int vdc_track_replay(
     rna.Snapshot("track_data", path_outfile); 
   } catch (const std::exception& e) {
     Error(__func__, "Something went wrong trying to make a snapshot.\n what(): %s", e.what());
-    logdata::Append("snapshot-threw-exception");
-    logdata::BadExit(); 
+    data_log.Append("snapshot-threw-exception");
+    data_log.BadExit(); 
     return -1; 
   }
   double elapsed  = timer.RealTime(); 
   double cpu_time = timer.CpuTime(); 
   
-  logdata::Append("main-tree-success"); 
+  data_log.Append("main-tree-success"); 
 
   EventCounter n_pass_1s2hit   = *rptr_nPass_coinc; 
   EventCounter n_pass_coinc    = *rptr_nPass_1event; 
@@ -623,15 +759,16 @@ int vdc_track_replay(
 
   } catch (const std::exception& e) {
     Error(__func__, "Something went wrong trying to make the meta-data snapshot.\n what(): %s", e.what());
-    logdata::Append("meta-data-tree-fail"); 
-    logdata::BadExit(); 
+    data_log.Append("meta-data-tree-fail"); 
+    data_log.BadExit(); 
     return -1; 
   }
-  logdata::Append("meta-data-tree-success");   
-  logdata::GoodExit(); 
+  data_log.Append("meta-data-tree-success");   
+  data_log.GoodExit(); 
     
   std::cout << "exiting..." << std::endl;
   return 0; 
 }
+
 
 #endif

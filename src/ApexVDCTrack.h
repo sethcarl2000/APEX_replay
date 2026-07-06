@@ -24,7 +24,7 @@ class Track {
     int unique_id=-1
   ); 
   
-  virtual ~Track() {
+  inline ~Track() {
     //cout << "Track:: deleting track..."<<endl; 
     
     //if (fPair_Lo) fPair_Lo->Remove_track(GetID()); 
@@ -34,20 +34,20 @@ class Track {
   void SetPair_Hi( ChamberPair *pHi );  
   void SetPair_Lo( ChamberPair *pLo );  
   
-  ChamberPair* GetPair_Hi() { return fPair_Hi; }
-  ChamberPair* GetPair_Lo() { return fPair_Lo; }
+  inline ChamberPair* GetPair_Hi() { return fPair_Hi; }
+  inline ChamberPair* GetPair_Lo() { return fPair_Lo; }
   
-  void SetEvent( TapexEventHandler *evt ) { fEvent=evt; }
-  const TapexEventHandler *GetEvent() { return fEvent; }
+  inline void SetEvent( TapexEventHandler *evt ) { fEvent=evt; }
+  inline const TapexEventHandler *GetEvent() { return fEvent; }
   
-  bool IsRightArm() const { return f_isRightArm; }
+  inline bool IsRightArm() const { return f_isRightArm; }
   
   void Set_uv_Hi( const double u, const double v ); 
   
   void Set_uv_Lo( const double u, const double v );
   
-  double T0() const { return fT0; }
-  void   Set_T0(const double T0) { fT0=T0; }
+  inline double T0() const { return fT0; }
+  inline void   Set_T0(const double T0) { fT0=T0; }
     
   //returns the agreement of this hit with the S2-paddle
   double xParam() const; 
@@ -64,7 +64,7 @@ class Track {
   
   void Set_params( const double params[5] ); 
   
-  ApexVDC::HitGroup *GetGroup(int plane) { return fGroup[plane]; }
+  inline ApexVDC::HitGroup *GetGroup(int plane) { return fGroup[plane]; }
     
   double Slope_u(); 
   double Slope_v(); 
@@ -100,12 +100,12 @@ class Track {
   //optics data ~~~~~~~~~~~~~~~~~~~~~~~~~~ (Computation handled by THRS class)
   //track target coordinates ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
   //placeholder functions 
-  double Transport_x() const { return FP_x(); } 
-  double Transport_y() const { return FP_y(); } 
-  double dx_dz()       const { return std::tan(Theta()); } 
-  double dy_dz()       const { return std::tan(Phi()); } 
+  inline double Transport_x() const { return FP_x(); } 
+  inline double Transport_y() const { return FP_y(); } 
+  inline double dx_dz()       const { return std::tan(Theta()); } 
+  inline double dy_dz()       const { return std::tan(Phi()); } 
     
-  void Set_targetCoords( const double tg_y, 
+  inline void Set_targetCoords( const double tg_y, 
 			 const double tg_theta, 
 			 const double tg_phi, 
 			 const double tg_dp ) 
@@ -115,13 +115,13 @@ class Track {
     f_tg_dp    =tg_dp; } 
   
   //all angles in radians 
-  double Get_tg_y()     const { return f_tg_y; } 
-  double Get_tg_theta() const { return f_tg_theta; } 
-  double Get_tg_phi()   const { return f_tg_phi; } 
+  inline double Get_tg_y()     const { return f_tg_y; } 
+  inline double Get_tg_theta() const { return f_tg_theta; } 
+  inline double Get_tg_phi()   const { return f_tg_phi; } 
   
   
   //track fp coordinates ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-  void Set_focalPlaneCoords( const double fp_y, 
+  inline void Set_focalPlaneCoords( const double fp_y, 
 			     const double fp_theta, 
 			     const double fp_phi ) 
   { f_fp_y     =fp_y;
@@ -129,9 +129,9 @@ class Track {
     f_fp_phi   =fp_phi; } 
   
   //all angles in radians 
-  double Get_fp_y()     const { return f_fp_y; } 
-  double Get_fp_theta() const { return f_fp_theta; } 
-  double Get_fp_phi()   const { return f_fp_phi; } 
+  inline double Get_fp_y()     const { return f_fp_y; } 
+  inline double Get_fp_theta() const { return f_fp_theta; } 
+  inline double Get_fp_phi()   const { return f_fp_phi; } 
     
   
   double GetTimeAtZ(const double z) const; 
@@ -146,43 +146,43 @@ class Track {
   //set/get track errors. 
   void Set_Errors( double errors[5] ); 
   
-  double Error_intercept(int plane) const { return fIntercept_ERR[plane]; }
-  double Error_T0()                 const { return fT0_ERR; }
+  inline double Error_intercept(int plane) const { return fIntercept_ERR[plane]; }
+  inline double Error_T0()                 const { return fT0_ERR; }
   
   //a general figure which is a stand-in for the error of all track intercepts
   double Error_allIntercept()       const; 
     
   
-  double Error_Theta()              const { return fTheta_ERR; }
-  double Error_Phi()                const { return fPhi_ERR; }
+  inline double Error_Theta()              const { return fTheta_ERR; }
+  inline double Error_Phi()                const { return fPhi_ERR; }
   
   
   //
-  void Set_goodPointGroup( int plane, ApexVDC::HitGroup *goodPointGroup ) {
+  inline void Set_goodPointGroup( int plane, ApexVDC::HitGroup *goodPointGroup ) {
     f_goodPointGroup[plane] = goodPointGroup; 
   }
   
-  ApexVDC::HitGroup *Get_goodPointGroup( int plane ) { 
+  inline ApexVDC::HitGroup *Get_goodPointGroup( int plane ) { 
     return f_goodPointGroup[plane]; 
   }
   
-  void   Set_Eta(int plane, double eta) { fPlane_Eta[plane]=eta; }
+  inline void   Set_Eta(int plane, double eta) { fPlane_Eta[plane]=eta; }
   void   Set_Eta(double eta[4]); 
-  double Get_Eta(int plane) const       { return fPlane_Eta[plane]; }
+  inline double Get_Eta(int plane) const       { return fPlane_Eta[plane]; }
   double Get_Eta()          const; //for all planes
   
-  void   Set_RMS(int plane, double RMS) { fPlane_RMS[plane]=RMS; }
-  double Get_RMS(int plane) const       { return fPlane_RMS[plane]; }
+  inline void   Set_RMS(int plane, double RMS) { fPlane_RMS[plane]=RMS; }
+  inline double Get_RMS(int plane) const       { return fPlane_RMS[plane]; }
   double Get_RMS()          const; //for all planes
   
-  void Set_nGoodPoints(int plane, int pts) { fPlane_goodPoints[plane]=pts; }
-  int  Get_nGoodPoints(int plane) const    { return fPlane_goodPoints[plane]; }
+  inline void Set_nGoodPoints(int plane, int pts) { fPlane_goodPoints[plane]=pts; }
+  inline int  Get_nGoodPoints(int plane) const    { return fPlane_goodPoints[plane]; }
   int  Get_nGoodPoints()          const; //for all planes
     
   
   //this flag is used for monte-carlo testing
-  void Set_isGoodTrack(bool isGood) { f_isGoodTrack =isGood; } 
-  bool IsGoodTrack() const { return f_isGoodTrack; }
+  inline void Set_isGoodTrack(bool isGood) { f_isGoodTrack =isGood; } 
+  inline bool IsGoodTrack() const { return f_isGoodTrack; }
     
   static TVector3 Rotate_uvw_to_xyz( const TVector3& vec ); 
   static TVector3 Rotate_xyz_to_uvw( const TVector3& vec ); 
@@ -199,12 +199,12 @@ class Track {
   TVector3 ComputeIntercept_z(const double z) const;   
 
   //use the uniqueness of each track's memory address to define a unique instance of a track
-  bool operator==(const ApexVDC::Track& rhs) { return (this)==(&rhs); }
+  inline bool operator==(const ApexVDC::Track& rhs) { return (this)==(&rhs); }
   
   /// @return unique ID of this track 
   int GetID() const { return fID; }
 
-  bool operator==(const Track& rhs) const { return (rhs.IsRightArm()==IsRightArm()) && (rhs.GetID()==GetID()); }
+  inline bool operator==(const Track& rhs) const { return (rhs.IsRightArm()==IsRightArm()) && (rhs.GetID()==GetID()); }
 
  private: 
   const TapexEventHandler *fEvent;
@@ -275,7 +275,6 @@ class Track {
   
   bool f_isGoodTrack;  
   
-  ClassDef(Track,1); 
 }; 
 
 };

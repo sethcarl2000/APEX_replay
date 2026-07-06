@@ -1,7 +1,7 @@
 #ifndef gen_coinc_events_H
 #define gen_coinc_events_H
 
-#include <replay_utils/interface.h>
+#include "replay_utils.h"
 #include <TapexEventHandler.h>
 #include <TapexS2Hit.h> 
 #include <ROOT/RVec.hxx>

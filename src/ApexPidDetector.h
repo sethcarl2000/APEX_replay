@@ -68,9 +68,7 @@ public:
 
     void GetCellXY(int row, int col, double& x, double& y) const; 
 
-    const Cell* GetNearestCell(double x, double y, double dxdz, double dydz) const; 
-
-    ClassDef(ApexPidDetector,1); 
+    const Cell* GetNearestCell(double x, double y, double dxdz, double dydz) const;  
 }; 
 
 

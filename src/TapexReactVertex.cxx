@@ -402,6 +402,5 @@ TapexReactVertex::OpticsWire_t TapexReactVertex::Get_wire() const {
   return fWire;
 }
 //_____________________________________________________________________________
-ClassImp(TapexReactVertex)
 
 

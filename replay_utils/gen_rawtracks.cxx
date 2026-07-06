@@ -2,7 +2,7 @@
 #define gen_rawtracks_H
 
 //APEX headers
-#include <replay_utils/interface.h>
+#include "replay_utils.h"
 #include "../run_parameters.h"
 #include <TapexEventHandler.h>
 #include <ApexVDCTrack.h> 

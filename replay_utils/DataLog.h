@@ -1,7 +1,7 @@
 #ifndef DataLog_h
 #define DataLog_h
 
-#include <replay_utils/interface.h>
+#include "replay_utils.h"
 #include <TError.h> 
 
 #include <fstream>
@@ -100,6 +100,7 @@ private:
             logfile.close();                 
 
             Info(here, "Wrote log data to file '%s'", path_logfile.c_str()); 
+            inst.replay_log.clear(); 
             return; 
 
         } else {

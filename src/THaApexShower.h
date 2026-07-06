@@ -70,7 +70,6 @@ protected:
   virtual Int_t  ReadDatabase( const TDatime& date );
   virtual Int_t  DefineVariables( EMode mode = kDefine );
 
-  ClassDef(THaApexShower,0)     //Generic shower detector class
 };
 
 ////////////////////////////////////////////////////////////////////////////////

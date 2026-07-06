@@ -1,7 +1,7 @@
 #ifndef gen_pairs_H
 #define gen_pairs_H
 
-#include <replay_utils/interface.h>
+#include "replay_utils.h"
 #include <ApexVDCHitGroup.h>
 #include <ApexVDCHitCluster.h>
 #include <ApexVDCChamberPair.h> 
