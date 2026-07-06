@@ -118,16 +118,6 @@ private:
     }
 };
 
-namespace logdata 
-{       
-    
-    //choose the delimiter to use 
-    constexpr char delim = '|';
-
-    bool unexpected_exit=true; 
-
-};
-
 };
 
 #endif
