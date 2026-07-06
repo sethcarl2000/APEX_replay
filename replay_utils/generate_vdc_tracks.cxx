@@ -3,7 +3,6 @@
 
 // APEX headers
 #include "../run_parameters.h"
-#include "../include/RDFNodeAccumulator.h"
 #include <EventCounter.h> 
 #include <TapexEventHandler.h> 
 #include <ApexVDCHitGroup.h> 
