@@ -232,6 +232,8 @@ public:
     //set whether an abort should be called when an error is encountered. 
     inline void SetAbortOnError(bool _val) { fAbortOnError=_val; }
 
+    inline std::vector<std::string> GetOutputBranches() const { return fOutputBranches; }
+
     //__________________________________________________________________________________________________________________________________
     //assignment operator 
     inline ROOT::RDF::RNode& operator=(const ROOT::RDF::RNode& node) {
