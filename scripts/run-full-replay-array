@@ -8,8 +8,8 @@
 #SBATCH --mem=4000M
 #SBATCH --gres=disk:5G
 #SBATCH --time 60
-#SBATCH --output=/volatile/halla/apex/full_replay/slurm/out/%x.%a.%A.out
-#SBATCH --error=/volatile/halla/apex/full_replay/slurm/err/%x.%a.%A.err
+#SBATCH --output=/volatile/halla/apex/full_replay/slurm/full-replay/%x.%a.%A.out
+#SBATCH --error=/volatile/halla/apex/full_replay/slurm/full-replay/%x.%a.%A.err
 
 
 # set up APEX env
