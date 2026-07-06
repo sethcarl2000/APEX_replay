@@ -108,11 +108,18 @@ do
     fi
 done < <(ls -1 ${stem_decode_output}.*)
 
+# try to find out how many cpus we have available
+n_cpus=${SLURM_CPUS_PER_TASK}
+if [[ -z "${n_cpus}" ]]
+then
+    n_cpus=$(nproc)
+fi  
+
 #now, use our script to compile our replay code once, and then run all inputs.
-cmd_string="replay_run_series.C(${run}, ${rawfile_number}, \"${stem_replay_output}\", {${paths_replay_input}}, \"both\")"
+cmd_string="./build/vdc_track_replay --n-threads ${n_cpus} --arm-mode ${mode} --run-number ${run} --rawfile-number ${rawfile_number} \"${stem_replay_output}\" ${paths_replay_input}"
 
 echo "command string: ${cmd_string}" 
-time analyzer -b -q "${cmd_string}" 
+time eval ${cmd_string}
 
 #echo "<${0}> hadd results together..."
 #hadd -k -j $(nrpoc) ${stem_replay_output}.${run}.root ${stem_replay_output}.${run}.part#-* && rm ${stem_replay_output}.${run}.part-*
