@@ -38,11 +38,11 @@ public:
 
     void GoodExit() {
         unexpected_exit=false;
-        replay_log << "good-exit"; 
+        replay_log << "good-exit\n"; 
     }
     void BadExit() {
         unexpected_exit=false;
-        replay_log << "bad-exit";
+        replay_log << "bad-exit\n";
     }
 
 private:
@@ -93,10 +93,9 @@ private:
             
             //was this exit unexpected? 
             if (inst.unexpected_exit) {
-                Warning(here, "unexpected exit / interrupted execution might have occured (neither GoodExit or BadExit were called..)"); 
-                logfile << "unexpected-exit"; 
+                Warning(here, "unexpected exit / interrupted execution might have occured (neither GoodExit() nor BadExit() were called..)"); 
+                logfile << "unexpected-exit\n"; 
             }
-            logfile << "\n";
             logfile.close();                 
 
             Info(here, "Wrote log data to file '%s'", path_logfile.c_str()); 
