@@ -1,15 +1,5 @@
 cmake_minimum_required(VERSION 3.5)
 
-project(ApexReplay LANGUAGES CXX)
-
-#----------------------------------------------------------------------------
-# Names of source files and target libraries.
-# You do want to modify this section.
-
-# The name of your package.
-# The generated shared library will be named lib$(PACKAGE).so/dylib
-set(PACKAGE ApexHRS)
-
 add_compile_options("-g")
 
 # Sources.
@@ -18,81 +8,56 @@ add_compile_options("-g")
 # List only the implementation files (*.cxx). For every implementation file
 # there must be a corresponding header file (*.h).
 set(src
-  #ApexHRS.cxx
-  TapexS2Hit.cxx
-  TapexEventHandler.cxx
-  ApexVDC.cxx
-  ApexVDCHit.cxx
-  ApexVDCHitGroup.cxx
-  ApexVDCHitCluster.cxx
-  ApexVDCChamberPair.cxx
-  ApexVDCTrack.cxx
-  ApexUtils.cxx
-  RMatrixD.cxx
-  TapexReactVertex.cxx
-  THaApexShower.cxx
   ApexPidDetector.cxx
   ApexPidManager.cxx
+  ApexUtils.cxx
+  ApexVDC.cxx
+  ApexVDCChamberPair.cxx
+  ApexVDCHit.cxx
+  ApexVDCHitCluster.cxx
+  ApexVDCHitGroup.cxx
+  ApexVDCTrack.cxx
+  RMatrixD.cxx
+  THaApexShower.cxx
+  THaShower.cxx
+  TapexEventHandler.cxx
+  TapexReactVertex.cxx
+  TapexS2Hit.cxx
 )
 
-# Headers.
-# Leave the following line untouched.
-string(REPLACE .cxx .h headers "${src}")
-
-# If you have any extra headers needed for building the ROOT dictionary,
-# add them here. Otherwise leave this line commented out.
-list(APPEND headers 
-  ArmMode.h 
+set(headers
+  ApexPidDetector.h
+  ApexPidManager.h
+  ApexUtils.h
+  ApexVDC.h
+  ApexVDCChamberPair.h
+  ApexVDCHit.h
+  ApexVDCHitCluster.h
+  ApexVDCHitGroup.h
+  ApexVDCTrack.h
+  ArmMode.h
+  EventCounter.h
+  PmtData.h
+  RMatrixD.h
+  THaApexShower.h
+  THaShower.h
+  TTargetRays.h
+  TapexEventHandler.h
+  TapexReactVertex.h
+  TapexS2Hit.h
+  TrdfHelper.h
   UniqueIDGenerator.h
 )
 
-# If you have other headers NOT needed for the ROOT dictionary but needed for
-# the library, add them here as shown in the line commented out below.
-set(allheaders ${headers})
-#set(allheaders ${headers} StandaloneHeader1.h StandaloneHeader2.h)
+# generate the ROOT dictionary
+root_generate_dictionary(G__src_lib ${headers} LINKDEF ApexHRS_LinkDef.h)
 
-#------------------------------------------------------------------------------
-# Do not change anything below here unless you know what you are doing
+# add this static library as a target
+add_library(src_lib STATIC ${sources} ${headers} G__src_lib.cxx)
 
-#----------------------------------------------------------------------------
-# Find Podd, if necessary, and load its CMake module
-if(NOT TARGET Podd::HallA)
-  if(DEFINED ENV{ANALYZER})
-    set(CMAKE_PREFIX_PATH "$ENV{ANALYZER}" "${CMAKE_PREFIX_PATH}")
-  endif()
+# add this as an include directory
+target_include_directories(src_lib PUBLIC ${CMAKE_CURRENT_SOURCE_DIR})
 
-  find_package(Podd 1.7 REQUIRED)
-endif()
-include(PoddCMakeEnv)
+# link the library to other libraries that it will need
+target_link_libraries(src_lib PUBLIC ROOT::Core ROOT::RIO ROOT::RDataFrame)
 
-set_diagnostic_flags(WALL WEXTRA)
-#report_build_info()
-
-#----------------------------------------------------------------------------
-# Library
-add_library(${PACKAGE} SHARED ${src} ${allheaders} ${PACKAGE}Dict.cxx)
-
-target_compile_options(${PACKAGE} PRIVATE ${${PROJECT_NAME_UC}_DIAG_FLAGS_LIST})
-
-target_include_directories(${PACKAGE}
-  PUBLIC
-    $<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}>
-    $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}>
-  )
-target_link_libraries(${PACKAGE} PUBLIC Podd::HallA)
-
-include(GNUInstallDirs)
-
-install(TARGETS ${PACKAGE}
-  LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
-  ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}
-  RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}
-  )
-install(FILES ${allheaders} DESTINATION ${CMAKE_INSTALL_INCLUDEDIR})
-
-#----------------------------------------------------------------------------
-# ROOT dictionary
-build_root_dictionary(${PACKAGE} ${headers}
-  TARGETS ${PACKAGE}
-  LINKDEF ${PACKAGE}_LinkDef.h
-  )
