@@ -2,7 +2,7 @@ cmake_minimum_required(VERSION 3.16)
 
 project(ApexReplay LANGUAGES CXX)
 
-find_package(ROOT 6.32 REQUIRED COMPONENTS Core RIO ROOTDataFrame MathCore Physics)
+find_package(ROOT 6.26 REQUIRED COMPONENTS Core RIO ROOTDataFrame MathCore Physics)
 
 
 add_subdirectory(src)
