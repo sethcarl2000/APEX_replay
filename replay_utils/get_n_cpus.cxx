@@ -1,9 +1,13 @@
 #ifndef get_n_cpus_h
 #define get_n_cpus_h
 
+#include <replay_utils/interface.h>
 #include <string> 
 #include <cstdlib>
 #include <thread> 
+
+namespace replay_utils
+{
 
 //tries to see if we are in a slurm job. If we are, then report the # of alloted cpus (if we are not, report 'hardware concurrency')
 unsigned int get_n_cpus()
@@ -19,5 +23,6 @@ unsigned int get_n_cpus()
     }
 }
 
+};
 
 #endif

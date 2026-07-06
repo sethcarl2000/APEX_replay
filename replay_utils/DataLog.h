@@ -1,21 +1,37 @@
-#ifndef logdata_HH
-#define logdata_HH
+#ifndef DataLog_h
+#define DataLog_h
 
+#include <replay_utils/interface.h>
 #include <TError.h> 
 
 #include <fstream>
 #include <sstream> 
 #include <stdlib.h> 
 
-namespace logdata 
-{       
+namespace replay_utils
+{
+
+//meyers singleton class, which logs data to an output file. 
+class DataLog {
+private: 
+
+    //keeps track of whether execution is aborted unexpectedly. 
+    bool unexpected_exit{true};
     std::ostringstream replay_log; 
 
-    //choose the delimiter to use 
-    constexpr char delim = '|';
+public: 
 
-    bool unexpected_exit=true; 
+    //delete copy constructor & assignment operator (so no copies can be made)
+    DataLog(const DataLog&) = delete; 
+    DataLog& operator=(const DataLog&) = delete; 
 
+
+    static DataLog& instance() { 
+        static DataLog inst; 
+        return inst; 
+    } 
+
+    
     template<typename T> void Append(const T& data, char delim=',') {
         replay_log << data << delim; 
     }; 
@@ -26,11 +42,17 @@ namespace logdata
     }
     void BadExit() {
         unexpected_exit=false;
-        replay_log << "fail";
+        replay_log << "bad-exit";
     }
 
+private:
+
     //upon program termination, log information to the logfile. 
-    void WriteInfo() {
+    static void WriteInfo() {
+        
+        //get instance of DataLog
+        auto& inst = instance(); 
+        
         const char here[] = "logdata::WriteInfo"; 
         
         const char* path_apex_volatile = std::getenv("PATH_APEX_VOLATILE"); 
@@ -67,10 +89,10 @@ namespace logdata
 
         if (logfile.is_open()) {
             
-            logfile << replay_log.str();  
+            logfile << inst.replay_log.str();  
             
             //was this exit unexpected? 
-            if (unexpected_exit) {
+            if (inst.unexpected_exit) {
                 Warning(here, "unexpected exit / interrupted execution might have occured (neither GoodExit or BadExit were called..)"); 
                 logfile << "unexpected-exit"; 
             }
@@ -86,6 +108,26 @@ namespace logdata
             return; 
         }
     }    
+
+    //l;;;;;;;;;;;we
+    // - Muon's comment 5 Jul 26 
+    //constructor
+    DataLog() {
+        //tell the OS to execute this fcn when the program exits 
+        std::atexit( DataLog::WriteInfo );
+    }
+};
+
+namespace logdata 
+{       
+    
+    //choose the delimiter to use 
+    constexpr char delim = '|';
+
+    bool unexpected_exit=true; 
+
+};
+
 };
 
 #endif

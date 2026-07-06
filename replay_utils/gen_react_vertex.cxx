@@ -1,9 +1,14 @@
 #ifndef gen_react_vertex_H
 #define gen_react_vertex_H 
 
+#include <replay_utils/interface.h>
 #include <TapexReactVertex.h> 
 #include "../include/RDFNodeAccumulator.h"
 #include <string> 
+
+
+namespace replay_utils
+{
 
 /// @brief Generates react vertex
 /// @param rna RDFNodeAccumulator to add branches to 
@@ -24,5 +29,7 @@ void gen_react_vertex(RDFNodeAccumulator& rna, TapexReactVertex* vtx)
         }, {raster_name+".rawcur.x", raster_name+".rawcur.y", rb_name+".BPMA.y", rb_name+".BPMB.y"});
 
 }
+
+}; 
 
 #endif

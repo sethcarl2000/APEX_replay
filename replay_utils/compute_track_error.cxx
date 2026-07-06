@@ -1,11 +1,15 @@
 #ifndef compute_track_error_H
 #define compute_track_error_H
 
+#include <replay_utils/interface.h>
 #include "../run_parameters.h"
 #include <ApexVDCTrack.h> 
 #include <ApexUtils.h> 
 #include <math.h> 
 #include <Math/QuantFuncMathCore.h> 
+
+namespace replay_utils
+{
 
 void Compute_trackError(ApexVDC::Track& trk) 
 {
@@ -59,5 +63,7 @@ void Compute_trackError(ApexVDC::Track& trk)
 
     trk.Set_Errors( param_error ); 
 }; 
+
+};
 
 #endif

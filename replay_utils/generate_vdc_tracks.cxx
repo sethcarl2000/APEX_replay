@@ -17,14 +17,7 @@
 #define DEBUG_RAW_TRACK
 #endif
 //
-#include "group_vdc_hits.h"
-#include "grid_search.h"
-#include "gen_rawtracks.h"
-#include "refine_track.h"
-#include "gen_pairs.h"
-#include "compute_trackdata.h"
-#include "compute_track_error.h"
-#include "theta_phi_model.h"
+#include <replay_utils/interface.h>
 //
 // ROOT headers
 #include <ROOT/RVec.hxx>
@@ -37,6 +30,8 @@
 #include <string> 
 #include <algorithm> 
 
+namespace replay_utils
+{
 
 namespace { 
     /// @return 'true' if RVec iss non-empty  
@@ -243,5 +238,7 @@ void generate_vdc_tracks(
     nPass_1refinedTrack = rna.Count(); 
     return; 
 }
+
+};
 
 #endif

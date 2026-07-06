@@ -2,9 +2,14 @@
 #define theta_phi_model_H
 
 
+#include <replay_utils/interface.h>
 #include <ApexVDCTrack.h> 
 #include <math.h> 
 #include <ApexUtils.h> 
+
+
+namespace replay_utils
+{
 
 double Phi_model(const ApexVDC::Track& track) { 
     
@@ -16,6 +21,8 @@ double Phi_model(const ApexVDC::Track& track) {
 double  Theta_model(const ApexVDC::Track& track) { 
     
     return 0.109648*track.S2_x(); 
+};
+
 };
 
 #endif

@@ -2,6 +2,7 @@
 #define group_vdc_hits_H
 
 // APEX headers
+#include <replay_utils/interface.h>
 #include <ApexVDCHit.h> 
 #include <ApexVDCHitGroup.h> 
 #include <TapexEventHandler.h> 
@@ -13,6 +14,9 @@
 // stdlib headers
 #include <vector> 
 #include <cmath> 
+
+namespace replay_utils
+{
 
 //#define DEBUG_GROUP
 
@@ -122,6 +126,8 @@ ROOT::RVec<ApexVDC::HitGroup> group_vdc_hits (
 #endif
   
   return group_vec;       
+}; 
+
 }; 
 
 #endif 

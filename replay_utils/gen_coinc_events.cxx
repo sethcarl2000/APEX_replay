@@ -1,10 +1,14 @@
 #ifndef gen_coinc_events_H
 #define gen_coinc_events_H
 
+#include <replay_utils/interface.h>
 #include <TapexEventHandler.h>
 #include <TapexS2Hit.h> 
 #include <ROOT/RVec.hxx>
 #include <math.h> 
+
+namespace replay_utils
+{
 
 ROOT::RVec<TapexEventHandler> gen_coinc_events(
     double dt_center,  //the 'central' TR - TL for this event
@@ -30,6 +34,6 @@ ROOT::RVec<TapexEventHandler> gen_coinc_events(
     return coinc_events; 
 }   
 
-
+}; 
 
 #endif

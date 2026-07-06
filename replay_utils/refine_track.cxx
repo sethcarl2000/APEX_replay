@@ -1,10 +1,14 @@
 #ifndef refine_track_H
 #define refine_track_H
 
+#include <replay_utils/interface.h>
 #include <ApexVDCTrack.h>
 #include <math.h> 
 #include <ROOT/RVec.hxx>
 #include <ApexUtils.h> 
+
+namespace replay_utils
+{
 
 //
 // Refine tracks from the hi-chamber using newton's method
@@ -188,5 +192,6 @@ void refine_track(
     }
 };   
 
+};
 
 #endif

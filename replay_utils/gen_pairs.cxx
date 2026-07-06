@@ -1,15 +1,18 @@
 #ifndef gen_pairs_H
 #define gen_pairs_H
 
+#include <replay_utils/interface.h>
 #include <ApexVDCHitGroup.h>
 #include <ApexVDCHitCluster.h>
 #include <ApexVDCChamberPair.h> 
 #include <ApexVDCTrack.h> 
-#include "grid_search.h"
 #include "../run_parameters.h"
 #include <math.h> 
 #include <TVector3.h> 
 #include <stdio.h> 
+
+namespace replay_utils
+{
 
 //#define DEBUG_PAIR
 
@@ -270,6 +273,8 @@ ROOT::RVec<ApexVDC::ChamberPair> gen_pairs(
     } //for (int cv=0; cv<clusters_v.size(); cv++)
     
     return pairs; 
+}; 
+
 }; 
 
 #endif

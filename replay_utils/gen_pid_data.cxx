@@ -1,14 +1,17 @@
 #ifndef gen_pid_data_H
 #define gen_pid_data_H
 
+#include <replay_utils/interface.h>
 #include <TapexEventHandler.h>
 #include "../include/RDFNodeAccumulator.h"
 #include <TapexS2Hit.h>
+#include <PmtData.h>
 #include <ROOT/RVec.hxx>
 #include <math.h>
 #include <string> 
 
-struct CerenkovPMT_t { int paddle; double adc, tdc; };
+namespace replay_utils
+{
 
 namespace {
 
@@ -26,7 +29,7 @@ void gen_pid_data(const bool is_RHRS, RDFNodeAccumulator& rna)
   rna.Define(arm+"_cerenkov_paddles", [](const rvecd& adc, const rvecd& tdc) {
       
       //add only the hits that have non-null TDC times
-      ROOT::RVec<CerenkovPMT_t> paddles; //paddles.reserve(adc.size()); 
+      ROOT::RVec<PmtData> paddles; //paddles.reserve(adc.size()); 
 
       for (int i=0; i<n_cerenkov_paddles; i++) {
 
@@ -41,15 +44,15 @@ void gen_pid_data(const bool is_RHRS, RDFNodeAccumulator& rna)
       
     }, {arm+".cer.a_c", arm+".cer.t_c"});
 
-  rna.DefineOutput(arm+"_cer_paddle", [](const ROOT::RVec<CerenkovPMT_t>& hits) {
+  rna.DefineOutput(arm+"_cer_paddle", [](const ROOT::RVec<PmtData>& hits) {
     
     ROOT::RVec<int> v; v.reserve(hits.size());
-    for (const auto& hit : hits) { v.push_back(hit.paddle); }
+    for (const auto& hit : hits) { v.push_back(hit.index); }
     return v; 
   }, {arm+"_cerenkov_paddles"}); 
   
   
-  rna.DefineOutput(arm+"_cer_time", [](const ROOT::RVec<CerenkovPMT_t>& hits) {
+  rna.DefineOutput(arm+"_cer_time", [](const ROOT::RVec<PmtData>& hits) {
     
     rvecd v; v.reserve(hits.size());
     for (const auto& hit : hits) { v.push_back(hit.tdc); }
@@ -57,7 +60,7 @@ void gen_pid_data(const bool is_RHRS, RDFNodeAccumulator& rna)
   }, {arm+"_cerenkov_paddles"}); 
   
   
-  rna.DefineOutput(arm+"_cer_adc", [](const ROOT::RVec<CerenkovPMT_t>& hits) {
+  rna.DefineOutput(arm+"_cer_adc", [](const ROOT::RVec<PmtData>& hits) {
       
     rvecd v; v.reserve(hits.size());
     for (const auto& hit : hits) { v.push_back(hit.adc); }
@@ -74,6 +77,6 @@ void gen_pid_data(const bool is_RHRS, RDFNodeAccumulator& rna)
   
 }   
 
-
+}; 
 
 #endif

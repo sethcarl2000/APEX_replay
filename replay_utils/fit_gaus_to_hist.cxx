@@ -1,6 +1,7 @@
 #ifndef fit_gaus_to_hist_H
 #define fit_gaus_to_hist_H 
 
+#include <replay_utils/interface.h>
 #include <TH1.h> 
 #include <TF1.h>
 #include <TAxis.h>  
@@ -9,6 +10,9 @@
 #include <TFitResult.h>
 #include <TString.h> 
 #include <math.h> 
+
+namespace replay_utils
+{
 
 /// @brief Attempts to fit a gaussian to a histogram, with a constant background
 /// @param hist histogram to fit
@@ -65,5 +69,7 @@ void fit_gaus_to_hist(
     
     return; 
 }
+
+}; 
 
 #endif 

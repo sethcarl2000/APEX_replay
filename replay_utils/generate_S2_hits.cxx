@@ -2,6 +2,7 @@
 #define generate_S2_hits_H
 
 // APEX headers
+#include <replay_utils/interface.h>
 #include <TapexS2Hit.h> 
 #include <TapexEventHandler.h>
 #include "../run_parameters.h"
@@ -9,6 +10,9 @@
 #include <ROOT/RVec.hxx>
 // stdlib headers
 #include <cmath> 
+
+namespace replay_utils
+{
 
 ROOT::VecOps::RVec<TapexS2Hit> generate_S2_hits(
     const bool is_RHRS,
@@ -46,5 +50,6 @@ ROOT::VecOps::RVec<TapexS2Hit> generate_S2_hits(
     return coinc_hits; 
 }
 
+};
 
 #endif
