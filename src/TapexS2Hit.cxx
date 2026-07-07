@@ -1,5 +1,8 @@
+
 #include <TapexS2Hit.h>
+
 #include <cmath> 
+#include <limits> 
 
 namespace {
     
@@ -14,6 +17,10 @@ namespace {
 
     const Double_t Left_L[16] 
     = {2817.96, 2760.24, 2763.8, 2760.99, 2764.22, 2764.18, 2765.38, 2767.82, 2764.86, 2763.6, 2764.22, 2758.28, 2759.5, 2759.49, 2763.37, 2821.76};
+
+  constexpr double kNaN = std::numeric_limits<double>::quiet_NaN(); 
+
+  inline bool is_nan(double x) { return x != x; }
 }
 
 ////////////////////////////////////////////////////////////////////////////////////
@@ -27,7 +34,7 @@ TapexS2Hit::TapexS2Hit( bool arm, int paddle, double T_pmtL, double T_pmtR ) {
   
   fTime = Compute_RealTime(); 
   
-  fIsCoinc = (fTime > -1e29); 
+  fIsCoinc = !is_nan(fTime); 
 
   //get the location of the paddle
   fZ = f_isRightArm ? 3.3098 : 3.1790 ; 
@@ -40,7 +47,7 @@ double TapexS2Hit::Compute_RealTime() {
   
   //check to make sure that the PMTs registered non-null times
   if (std::fabs(fRawTime_pmtL) > 1e7 || 
-      std::fabs(fRawTime_pmtR) > 1e7) return -1e30; 
+      std::fabs(fRawTime_pmtR) > 1e7) return kNaN;  
   
   if (f_isRightArm) { //RHRS 
     
@@ -54,8 +61,7 @@ double TapexS2Hit::Compute_RealTime() {
   }
     
   //check to make sure the raw times agree 
-  
-  if (std::fabs(fRealTime_pmtR-fRealTime_pmtL) > 7.5e-9) return -1e30; 
+  if (std::fabs(fRealTime_pmtR-fRealTime_pmtL) > 7.5e-9) return kNaN; 
   
   return 0.5*(fRealTime_pmtR + fRealTime_pmtL); 
 }
