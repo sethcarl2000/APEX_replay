@@ -14,6 +14,7 @@
 #include <TapexS2Hit.h> 
 #include <EventCounter.h> 
 #include <ArmMode.h>
+#include <ApexPidManager.h>
 #include <UniqueIDGenerator.h>
 #include "include/units.h" 
 // ROOT headers
@@ -525,7 +526,7 @@ int vdc_track_replay(
     return unique_id_generator.GetID();
   }, {}); 
   
-  
+  ApexPidManager pid_manager; 
   
   EventCounter_RPtr nPass_1group_R, nPass_1pair_R, nPass_1raw_R, nPass_1ref_R; 
   EventCounter_RPtr nPass_1group_L, nPass_1pair_L, nPass_1raw_L, nPass_1ref_L; 
@@ -540,7 +541,7 @@ int vdc_track_replay(
       nPass_1ref_R
     ); 
     //generate pid data
-    gen_pid_data(kRHRS, rna); 
+    gen_pid_data(kRHRS, rna, &pid_manager); 
   }
 
   //now, do the left-arm tracks
@@ -553,7 +554,7 @@ int vdc_track_replay(
       nPass_1ref_L
     );
     //generate pid data
-    gen_pid_data(kLHRS, rna); 
+    gen_pid_data(kLHRS, rna, &pid_manager); 
   }
 
   //let's do some react-vertex calculations
