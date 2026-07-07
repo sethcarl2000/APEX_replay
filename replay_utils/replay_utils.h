@@ -52,6 +52,15 @@ ROOT::RVec<TapexEventHandler> gen_coinc_events(
     const ROOT::RVec<TapexS2Hit>& L_s2_hits
 );
 
+ROOT::RVec<TapexEventHandler> gen_coinc_window_events(
+    double dt_min, 
+    double dt_max, 
+    double beam_current, 
+    unsigned int run_number,
+    const ROOT::RVec<TapexS2Hit>& R_s2_hits,
+    const ROOT::RVec<TapexS2Hit>& L_s2_hits
+);
+
 ROOT::RVec<ApexVDC::ChamberPair> gen_pairs( 
     const TapexEventHandler& evt, 
     ROOT::RVec<ApexVDC::HitGroup>& gVec_U, 
