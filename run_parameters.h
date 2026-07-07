@@ -59,6 +59,10 @@ namespace run_parameters {
 
     // minimum momentum to consider replaying a run (in MeV/c)
     constexpr double min_momentum = 800.; 
+
+    // Range of S2 T_RHRS - T_LHRS to keep 
+    constexpr double min_tr_tl = 10e-9; 
+    constexpr double max_tr_tl = 60e-9; 
 };
 
 #endif
