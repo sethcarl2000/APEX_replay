@@ -104,7 +104,7 @@ do
     then
 	paths_replay_input="\"${line}\""
     else			
-	paths_replay_input="\"${line}\", ${paths_replay_input}"
+	paths_replay_input="\"${line}\" ${paths_replay_input}"
     fi
 done < <(ls -1 ${stem_decode_output}.*)
 
