@@ -168,20 +168,22 @@ void generate_vdc_tracks(
     const double CUT_th_min = run_parameters::CUT_th_min[arm_int_index];
     const double CUT_th_max = run_parameters::CUT_th_max[arm_int_index];
         
+    const double x_param_offset = is_RHRS ? run_parameters::TRK_R_xParam_offset : run_parameters::TRK_L_xParam_offset; 
+
+    const double dt_offset = is_RHRS ? run_parameters::TRK_R_Dt_offset : run_parameters::TRK_L_Dt_offset; 
+    const double dt_cut    = is_RHRS ? run_parameters::TRK_R_CUT_Dt : run_parameters::TRK_L_CUT_Dt; 
+
     //refine track candidates
     string br_refined = arm+"_tracks_refined"; 
-    rna.Define(br_refined, [CUT_th_min, CUT_th_max, CUT_ph_min, CUT_ph_max] ( ROOT::RVec<ApexVDC::Track>& tracks ) 
+    rna.Define(br_refined, [CUT_th_min, CUT_th_max, CUT_ph_min, CUT_ph_max, x_param_offset, dt_offset,dt_cut] ( ROOT::RVec<ApexVDC::Track>& tracks ) 
         { 
-            RVec<ApexVDC::Track> refined_tracks; 
+            RVec<ApexVDC::Track> refined_tracks; refined_tracks.reserve(tracks.size());
                 
             const double tau_sigma = tracks.at(0).GetEvent()->Get_tauSigma(); 
             
-            for (int t=0; t<tracks.size(); t++) {
-                
-                auto& trk = tracks.at(t); 
+            for (auto& trk : tracks) {
                 
                 refine_track(trk, 20, 25e-9); 
-            
                 
                 double err_Theta = trk.Theta() - Theta_model(trk); 
                 double err_Phi   = trk.Phi()   - Phi_model(trk); 
@@ -197,30 +199,33 @@ void generate_vdc_tracks(
                 //find out how many 'good' points each plane has for this track
                 compute_trackdata( trk ); 
                 
-                //do some basic checks
-                double xParam = trk.xParam();
-                double Dt     = trk.T0(); 
-                        
                 if (trk.Get_Eta() < run_parameters::TRK_CUT_Eta || 
                     trk.Get_nGoodPoints(0) < run_parameters::TRK_CUT_nGoodPts_min_perPlane || 
                     trk.Get_nGoodPoints(1) < run_parameters::TRK_CUT_nGoodPts_min_perPlane || 
                     trk.Get_nGoodPoints(2) < run_parameters::TRK_CUT_nGoodPts_min_perPlane || 
                     trk.Get_nGoodPoints(3) < run_parameters::TRK_CUT_nGoodPts_min_perPlane || 
-                    trk.Get_nGoodPoints()  < run_parameters::TRK_CUT_nGoodPts_min ||
-                    std::fabs(xParam) > run_parameters::TRK_CUT_xParam ||
-                    std::fabs(Dt)     > run_parameters::TRK_CUT_Dt        ) { 
-                
-                    //delete this track 		  
+                    trk.Get_nGoodPoints()  < run_parameters::TRK_CUT_nGoodPts_min) 
+                {
                     continue; 
-                } 
+                }
                 
+                //do some basic checks
+                double xParam = trk.xParam();
+                double Dt     = trk.T0(); 
+
+                if ( std::fabs(xParam-x_param_offset) > run_parameters::TRK_CUT_xParam || std::fabs(Dt-dt_offset) > dt_cut ) 
+                { 
+                    //discard this track
+                    continue;  
+                } 
+
                 //compute track error
                 Compute_trackError( trk ); 
-		
+        
                 //add this track to the list of refined tracks
                 refined_tracks.push_back( trk );
             }
-            return tracks; 
+            return refined_tracks; 
         }, {arm+"_tracks_raw"});
         
     rna.Filter(RVec_not_empty<ApexVDC::Track>, {br_refined}); 

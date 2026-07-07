@@ -26,8 +26,13 @@ namespace run_parameters {
     constexpr double kCUT_minEta = 1.950; 
 
     //track cuts
-    constexpr double TRK_CUT_Dt     = 40e-9; 
-    constexpr double TRK_CUT_xParam = 1.55; 
+    constexpr double TRK_R_CUT_Dt     = 12e-9; 
+    constexpr double TRK_L_CUT_Dt     = 20e-9; 
+    constexpr double TRK_R_Dt_offset = +28e-9; 
+    constexpr double TRK_L_Dt_offset = -15e-9;   
+    constexpr double TRK_CUT_xParam = 0.60; 
+    constexpr double TRK_R_xParam_offset = 0.10; 
+    constexpr double TRK_L_xParam_offset = 0.00; 
     constexpr double TRK_CUT_Eta    = 3.750; 
     constexpr double TRK_measureSigma = 5e-9; 
     constexpr int    TRK_CUT_nGoodPts_min_perPlane = 2; //good points per plane
