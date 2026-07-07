@@ -3,6 +3,8 @@
 
 #include "replay_utils.h"
 #include <TapexEventHandler.h>
+#include <ApexPidManager.h>
+#include <ApexPidDetector.h>
 #include "../include/RDFNodeAccumulator.h"
 #include <TapexS2Hit.h>
 #include <PmtData.h>
@@ -19,25 +21,24 @@ namespace {
   
 }; 
 
-void gen_pid_data(const bool is_RHRS, RDFNodeAccumulator& rna)
+void gen_pid_data(const bool is_RHRS, RDFNodeAccumulator& rna, const ApexPidManager* pid_manager)
 {
   const std::string arm = is_RHRS ? "R" : "L"; 
   
   using rvecd = ROOT::VecOps::RVec<double>; 
 
-  
   rna.Define(arm+"_cerenkov_paddles", [](const rvecd& adc, const rvecd& tdc) {
       
       //add only the hits that have non-null TDC times
-      ROOT::RVec<PmtData> paddles; //paddles.reserve(adc.size()); 
+      ROOT::RVec<PmtData> paddles; paddles.reserve(adc.size()); 
 
       for (int i=0; i<n_cerenkov_paddles; i++) {
 
-	double t = tdc.at(i); 
-	
-	if ( std::fabs(t) > 1. ) continue;
+        double t = tdc.at(i); 
+        
+        if ( std::fabs(t) > 1. ) continue;
 
-	paddles.push_back({ i, adc.at(i), tdc.at(i) });
+        paddles.push_back({ i, adc.at(i), tdc.at(i) });
       }
       
       return paddles;
@@ -66,7 +67,6 @@ void gen_pid_data(const bool is_RHRS, RDFNodeAccumulator& rna)
     for (const auto& hit : hits) { v.push_back(hit.adc); }
     return v; 
   }, {arm+"_cerenkov_paddles"}); 
-
 
   //now, lets define the pre-shower & shower
   rna.DefineOutput(arm+"_ps_adc", [](const rvecd& v){ return v; },

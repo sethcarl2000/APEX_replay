@@ -30,14 +30,6 @@ double ApexPidDetector::GetVal(int row, int col, const ROOT::RVec<double>& data)
         return APEX::kNaN_double; 
     }
     if (cell) { return data[cell->id]; } else { return 0.; }
-    /*if (!cell) {
-        std::ostringstream oss; 
-        oss << "in <ApexPidDetector::"<<__func__<<"> Tried to access cell [row="<<row<<", col="<<col<<"]"; 
-        throw std::logic_error(oss.str());  
-        return APEX::kNaN_double; 
-    }*/
-    //we should be safe to access this array, then. 
-    return data[cell->id]; 
 }
 //_____________________________________________________________________________________________________________________
 const ApexPidDetector::Cell* ApexPidDetector::GetNearestCell(const ApexVDC::Track& track) const

@@ -16,6 +16,7 @@
 #include <ROOT/RVec.hxx>
 #include <ROOT/RDataFrame.hxx>
 
+class ApexPidManager; 
 
 namespace replay_utils
 {
@@ -58,7 +59,8 @@ ROOT::RVec<ApexVDC::ChamberPair> gen_pairs(
     bool is_LoChamber 
 );
 
-void gen_pid_data(const bool is_RHRS, RDFNodeAccumulator& rna);
+
+void gen_pid_data(const bool is_RHRS, RDFNodeAccumulator& rna, const ApexPidManager* pid_manager);
 
 ROOT::RVec<ApexVDC::Track> gen_rawtracks( 
     TapexEventHandler& evt, 
