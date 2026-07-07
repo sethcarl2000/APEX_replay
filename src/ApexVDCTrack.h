@@ -38,7 +38,7 @@ class Track {
   inline ChamberPair* GetPair_Lo() { return fPair_Lo; }
   
   inline void SetEvent( TapexEventHandler *evt ) { fEvent=evt; }
-  inline const TapexEventHandler *GetEvent() { return fEvent; }
+  inline const TapexEventHandler *GetEvent() const { return fEvent; }
   
   inline bool IsRightArm() const { return f_isRightArm; }
   

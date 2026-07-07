@@ -20,8 +20,7 @@ class TapexS2Hit {
   double Time()         const { return fTime; }
   int    Paddle()       const { return fPaddle; }
   
-  double DeltaT_raw()   const 
-  { return (fRawTime_pmtR - fRawTime_pmtL)/fTDC_resolution; }
+  double DeltaT_raw()   const;
   
   double X()            const { return fX; }
   double Y()            const { return fY; }

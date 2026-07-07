@@ -10,6 +10,7 @@ set(sources
     compute_trackdata.cxx
     fit_gaus_to_hist.cxx
     gen_coinc_events.cxx
+    gen_coinc_window_events.cxx
     gen_pairs.cxx
     gen_pid_data.cxx
     gen_rawtracks.cxx

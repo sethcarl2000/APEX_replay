@@ -43,6 +43,11 @@ TapexS2Hit::TapexS2Hit( bool arm, int paddle, double T_pmtL, double T_pmtR ) {
   
   fY = 0; 
 }
+double TapexS2Hit::DeltaT_raw() const
+{ 
+
+  return (fRawTime_pmtR - fRawTime_pmtL)/fTDC_resolution; 
+}
 double TapexS2Hit::Compute_RealTime() {
   
   //check to make sure that the PMTs registered non-null times
@@ -67,7 +72,10 @@ double TapexS2Hit::Compute_RealTime() {
 }
 void TapexS2Hit::Make_twinHit( TapexS2Hit *neighbor ) { 
   
-  fTime = 0.5*(fTime + neighbor->Time()); 
+  fRawTime_pmtL = (this->fRawTime_pmtL + neighbor->fRawTime_pmtL)/2.;
+  fRawTime_pmtR = (this->fRawTime_pmtR + neighbor->fRawTime_pmtR)/2.; 
+
+  fTime = 0.5*(fTime + neighbor->fTime); 
   
   fX += 0.5*fPaddleWidth_X; 
   

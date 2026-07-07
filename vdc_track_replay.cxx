@@ -40,6 +40,7 @@
 #include <stdlib.h> 
 #include <sstream> 
 #include <thread> 
+#include <limits> 
 
 namespace {
   constexpr bool kRHRS{true}, kLHRS{false};
@@ -56,6 +57,8 @@ namespace {
     {"LHRS", ArmMode::kLHRS},
     {"both", ArmMode::kBoth} 
   }; 
+
+  constexpr double kNaN = std::numeric_limits<double>::quiet_NaN(); 
 }
 
 /// @brief manages the conversion of 'raw' (decoded) data, and outputs VDC tracks
@@ -424,8 +427,8 @@ int vdc_track_replay(
       //if the fit fails, we will just make it so that there is no coinc-cut. 
       Warning(__func__, "Fitting gaussian to coincidence peak failed; A TR-TL time-coincidence cut will not be applied for this run.\nn. events in hist: %.2e\n what(): %s", hist_dt->Integral(), e.what()); 
       data_log.Append("coinc-fit-failed");   
-      dt_center = 1e20;
-      dt_sigma  = 1e30;  
+      dt_center = kNaN;
+      dt_sigma  = kNaN;  
     }
 
     std::printf(
@@ -450,8 +453,9 @@ int vdc_track_replay(
           const RVec<TapexS2Hit>& R_hits, 
           const RVec<TapexS2Hit>& L_hits )
         {
-          return gen_coinc_events(
-            dt_center, dt_sigma * run_parameters::kS2_coinc_sigma_cut, 
+          return gen_coinc_window_events(
+            run_parameters::min_tr_tl, 
+            run_parameters::max_tr_tl,
             beam_current, 
             run_number, 
             R_hits, 
@@ -582,6 +586,45 @@ int vdc_track_replay(
     define_output_from_track(track_branch, arm+"_y_fp", &ApexVDC::Track::FP_y);
     define_output_from_track(track_branch, arm+"_dxdz_fp", &ApexVDC::Track::FP_dx_dz);
     define_output_from_track(track_branch, arm+"_dydz_fp", &ApexVDC::Track::FP_dy_dz);
+    
+    define_output_from_track(track_branch, arm+"_s2_x", &ApexVDC::Track::S2_x);
+    define_output_from_track(track_branch, arm+"_s2_y", &ApexVDC::Track::S2_y);
+
+    define_output_from_track(track_branch, arm+"_S2_x_param", &ApexVDC::Track::xParam);
+    define_output_from_track(track_branch, arm+"_S2_dt", &ApexVDC::Track::T0);
+
+    //separation between PMT times for our S2 hit
+    rna.DefineOutput(arm+"_S2_pmt_dt", [](const RVec<ApexVDC::Track>& tracks){
+      RVecD ret; ret.reserve(tracks.size()); 
+      for (const auto& trk : tracks) {
+        
+        const auto s2_hit = trk.GetEvent()->GetS2Hit(trk.IsRightArm());
+        ret.push_back(s2_hit->DeltaT_raw());
+      }
+      return ret; 
+    }, {track_branch});
+
+    rna.DefineOutput(arm+"_S2_paddle", [](const RVec<ApexVDC::Track>& tracks){
+      RVec<int> ret; ret.reserve(tracks.size()); 
+      for (const auto& trk : tracks) {
+        
+        const auto s2_hit = trk.GetEvent()->GetS2Hit(trk.IsRightArm());
+        ret.push_back(s2_hit->Paddle());
+      }
+      return ret; 
+    }, {track_branch});
+
+    //separation between PMT times for our S2 hit
+    rna.DefineOutput(arm+"_S2_is_twin_hit", [](const RVec<ApexVDC::Track>& tracks){
+      RVec<bool> ret; ret.reserve(tracks.size()); 
+      for (const auto& trk : tracks) {
+        
+        const auto s2_hit = trk.GetEvent()->GetS2Hit(trk.IsRightArm());
+        ret.push_back(s2_hit->Is_twinHit());
+      }
+      return ret; 
+    }, {track_branch});
+
     rna.AddBranchToOutput("R_position_vtx");
     rna.DefineOutput("R_y_BPM", [](double bpma_y, double bpmb_y){ return (bpma_y + bpmb_y)/2; }, {"Rrb.BPMA.y","Rrb.BPMB.y"});  
   }
@@ -593,6 +636,45 @@ int vdc_track_replay(
     define_output_from_track(track_branch, arm+"_y_fp", &ApexVDC::Track::FP_y);
     define_output_from_track(track_branch, arm+"_dxdz_fp", &ApexVDC::Track::FP_dx_dz);
     define_output_from_track(track_branch, arm+"_dydz_fp", &ApexVDC::Track::FP_dy_dz);
+    
+    define_output_from_track(track_branch, arm+"_S2_x", &ApexVDC::Track::S2_x);
+    define_output_from_track(track_branch, arm+"_S2_y", &ApexVDC::Track::S2_y);
+
+    define_output_from_track(track_branch, arm+"_S2_x_param", &ApexVDC::Track::xParam);
+    define_output_from_track(track_branch, arm+"_S2_dt", &ApexVDC::Track::T0);
+
+    //separation between PMT times for our S2 hit
+    rna.DefineOutput(arm+"_S2_pmt_dt", [](const RVec<ApexVDC::Track>& tracks){
+      RVecD ret; ret.reserve(tracks.size()); 
+      for (const auto& trk : tracks) {
+        
+        const auto s2_hit = trk.GetEvent()->GetS2Hit(trk.IsRightArm());
+        ret.push_back(s2_hit->DeltaT_raw());
+      }
+      return ret; 
+    }, {track_branch});
+
+    rna.DefineOutput(arm+"_S2_paddle", [](const RVec<ApexVDC::Track>& tracks){
+      RVec<int> ret; ret.reserve(tracks.size()); 
+      for (const auto& trk : tracks) {
+        
+        const auto s2_hit = trk.GetEvent()->GetS2Hit(trk.IsRightArm());
+        ret.push_back(s2_hit->Paddle());
+      }
+      return ret; 
+    }, {track_branch});
+    
+    //separation between PMT times for our S2 hit
+    rna.DefineOutput(arm+"_S2_is_twin_hit", [](const RVec<ApexVDC::Track>& tracks){
+      RVec<bool> ret; ret.reserve(tracks.size()); 
+      for (const auto& trk : tracks) {
+        
+        const auto s2_hit = trk.GetEvent()->GetS2Hit(trk.IsRightArm());
+        ret.push_back(s2_hit->Is_twinHit());
+      }
+      return ret; 
+    }, {track_branch});
+
     rna.AddBranchToOutput("L_position_vtx");
     rna.DefineOutput("L_y_BPM", [](double bpma_y, double bpmb_y){ return (bpma_y + bpmb_y)/2; }, {"Lrb.BPMA.y","Lrb.BPMB.y"});  
   } 
@@ -602,7 +684,7 @@ int vdc_track_replay(
 
     //defined as (S2_r - S2_l)/sigma **for the hit associated with this specific track**
     
-    rna.DefineOutput("R_track_dt", [dt_sigma, dt_center](RVec<ApexVDC::Track>& tracks)
+    /*rna.DefineOutput("R_track_dt", [dt_sigma, dt_center](RVec<ApexVDC::Track>& tracks)
     {
       RVec<double> dt; dt.reserve(tracks.size());
       for (auto& trk : tracks) {
@@ -619,7 +701,7 @@ int vdc_track_replay(
 	dt.push_back( (trk.GetEvent()->Get_Dt()-dt_center)/dt_sigma ); 
       }
       return dt; 
-    }, {"L_tracks_refined"});
+    }, {"L_tracks_refined"});*/ 
       
   }
 
@@ -627,6 +709,9 @@ int vdc_track_replay(
   rna.DefineOutput("run_number", wrap_value(run_number), {}); 
   rna.DefineOutput("rawfile_number", wrap_value(rawfile_number), {}); 
   rna.DefineOutput("segment_number", wrap_value(segment_number), {}); 
+  rna.DefineOutput("S2R_S2L_dt_center", wrap_value(dt_center), {});
+  rna.DefineOutput("S2R_S2L_dt_sigma",  wrap_value(dt_sigma), {});
+
   
   rna.DefineOutput("beam_current", [](double beam_current){
     return beam_current;
