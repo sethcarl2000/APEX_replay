@@ -99,7 +99,7 @@ private:
             logfile.close();                 
 
             Info(here, "Wrote log data to file '%s'", path_logfile.c_str()); 
-            inst.replay_log.clear(); 
+            //inst.replay_log.clear(); 
             return; 
 
         } else {

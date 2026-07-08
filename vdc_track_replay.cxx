@@ -7,6 +7,7 @@
 // replay-utils lib
 #include <replay_utils.h>
 #include "replay_utils/DataLog.h"
+#include "replay_utils/slurm_info.h"
 //#define DEBUG_TRACK
 #include "include/RDFNodeAccumulator.h"
 #include "run_parameters.h"
@@ -101,6 +102,14 @@ int main(int argc, char* argv[])
     .metavar("R")
     .nargs(1);
 
+  program.add_argument("--segment-number")
+    .help("segment number")
+    .scan<'i', int>()
+    .default_value(0)
+    .metavar("S")
+    .nargs(1);
+
+  
   program.add_argument("--arm-mode")
     .help("active-arm mode to operate in")
     .metavar("MODE")
@@ -128,10 +137,10 @@ int main(int argc, char* argv[])
     .help("stem to output file destination. format: 'stem_output.[run].rawfile-[rawfile-num].seg-[seg-index].root")
     .nargs(1);
 
-  program.add_argument("paths_input")
+  program.add_argument("path_input")
     .required()
-    .help("space-separated list of absolute path(s) to input files")
-    .nargs(argparse::nargs_pattern::at_least_one);
+    .help("absolute path to input file")
+    .nargs(1);
   
   try {
     program.parse_args(argc, argv);
@@ -141,69 +150,60 @@ int main(int argc, char* argv[])
     return -1; 
   }
   
-  std::vector<std::string> paths_input  = program.get<std::vector<std::string>>("paths_input"); 
+  std::string path_input          = program.get<std::string>("path_input"); 
   std::string stem_output         = program.get("stem_output");
   const int run_number            = program.get<int>("--run-number");
   const int rawfile_number        = program.get<int>("--rawfile-number");
+  const int segment_number        = program.get<int>("--segment-number");
   std::string arm_mode_str        = program.get("--arm-mode");
   const unsigned int max_entries  = program.get<unsigned int>("--max-entries");
   const int n_threads             = program.get<int>("--n-threads");
 
   try {
-      
-    std::printf(
-      "<vdc_track_replay>: There are %zi files to process ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~\n",
-      paths_input.size()
-    );
-
-    int i_segment=0; 
-    for (const auto& path_input : paths_input) {
-      
-      std::string path_output = Form("%s.%i.raw-num-%i.seg-%i.root",
-              stem_output.data(),
-              run_number,
-              rawfile_number,
-              i_segment 
-              );
-
-      printf(
-        "<vdc_track_replay>: ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~\n"
-        "                     Processing rawfile %i, segment %i/%zi\n"
-        "                     Input file '%s' ...\n"
-        "                     Output file '%s' ...\n",
-        rawfile_number, i_segment, paths_input.size(), 
-        path_input.data(),
-        path_output.data() 
-      );
-      
-      int ret = vdc_track_replay(
-        path_input, 
-        path_output, 
-        run_number, 
-        rawfile_number, 
-        i_segment, 
-        arm_mode_str, 
-        max_entries, 
-        n_threads
-      );
-
-      if (ret < 0) {
-        Warning("vdc_tracK_replay", "Bad return code on replay %i/%i/%i (<0)", run_number, rawfile_number, i_segment);
-      }
-
-      ++i_segment; 
-    }
+          
+    std::string path_output = Form("%s.%i.raw-num-%i.seg-%i.root",
+				   stem_output.data(),
+				   run_number,
+				   rawfile_number,
+				   segment_number
+				   );
 
     printf(
-      "<replay_run_series>: done. ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~\n"
-    ); 
+	   "<vdc_track_replay>: ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~\n"
+	   "                     Processing run/rawfile/segment: %i/%i/%i\n"
+	   "                     Input file '%s' ...\n"
+	   "                     Output file '%s' ...\n",
+	   run_number, rawfile_number, segment_number, 
+	   path_input.data(),
+	   path_output.data() 
+	   );
+    
+    int ret = vdc_track_replay(
+			       path_input, 
+			       path_output, 
+			       run_number, 
+			       rawfile_number, 
+			       segment_number, 
+			       arm_mode_str, 
+			       max_entries, 
+			       n_threads
+			       );
+    
+    if (ret < 0) {
+      Warning("vdc_tracK_replay", "Bad return code on replay %i/%i/%i (<0)", run_number, rawfile_number, segment_number);
+    }
+    
+    
+    printf(
+	   "<replay_run_series>: done. ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~\n"
+	   ); 
     
   } catch (const std::exception& e) {
     std::cerr <<
       "<replay_run_series>: exception caught executing replay.\nwhat():" << e.what() << "\n"; 
     return -1; 
   }
-
+  
   return 0; 
 }
 
@@ -243,8 +243,12 @@ int vdc_track_replay(
   //make it so that, whenever we exit, this function is called (it will log all our data)
   auto& data_log = replay_utils::DataLog::instance(); 
 
+  int slurm_job_id = slurm_info::job_id();
+  int slurm_array_task_id = slurm_info::array_task_id();
+
   //register some data with the log file 
-  data_log.Append(path_infile, '|');
+  data_log.Append(slurm_job_id, '|');
+  data_log.Append(slurm_array_task_id, '|');
   data_log.Append(path_outfile, '|');
   data_log.Append(run_number, '|');
   data_log.Append(rawfile_number, '|');
@@ -590,9 +594,20 @@ int vdc_track_replay(
     define_output_from_track(track_branch, arm+"_s2_x", &ApexVDC::Track::S2_x);
     define_output_from_track(track_branch, arm+"_s2_y", &ApexVDC::Track::S2_y);
 
-    define_output_from_track(track_branch, arm+"_S2_x_param", &ApexVDC::Track::xParam);
+    //define_output_from_track(track_branch, arm+"_S2_x_param", &ApexVDC::Track::xParam);
     define_output_from_track(track_branch, arm+"_S2_dt", &ApexVDC::Track::T0);
 
+    //define_output_from_track(track_branch, arm+"_Eta", &ApexVDC::Track::Get_Eta);
+
+    rna.DefineOutput(arm+"_n_points", [](const RVec<ApexVDC::Track>& tracks){
+      RVec<int> ret; ret.reserve(tracks.size()); 
+      for (const auto& trk : tracks) {
+	ret.push_back( trk.Get_nGoodPoints() ); 
+      }
+      return ret; 
+    }, {track_branch});
+
+    
     //separation between PMT times for our S2 hit
     rna.DefineOutput(arm+"_S2_pmt_dt", [](const RVec<ApexVDC::Track>& tracks){
       RVecD ret; ret.reserve(tracks.size()); 
@@ -640,9 +655,19 @@ int vdc_track_replay(
     define_output_from_track(track_branch, arm+"_S2_x", &ApexVDC::Track::S2_x);
     define_output_from_track(track_branch, arm+"_S2_y", &ApexVDC::Track::S2_y);
 
-    define_output_from_track(track_branch, arm+"_S2_x_param", &ApexVDC::Track::xParam);
+    //define_output_from_track(track_branch, arm+"_S2_x_param", &ApexVDC::Track::xParam);
     define_output_from_track(track_branch, arm+"_S2_dt", &ApexVDC::Track::T0);
 
+    //define_output_from_track(track_branch, arm+"_Eta", &ApexVDC::Track::Get_Eta);
+
+    rna.DefineOutput(arm+"_n_points", [](const RVec<ApexVDC::Track>& tracks){
+      RVec<int> ret; ret.reserve(tracks.size()); 
+      for (const auto& trk : tracks) {
+	ret.push_back( trk.Get_nGoodPoints() ); 
+      }
+      return ret; 
+    }, {track_branch});
+    
     //separation between PMT times for our S2 hit
     rna.DefineOutput(arm+"_S2_pmt_dt", [](const RVec<ApexVDC::Track>& tracks){
       RVecD ret; ret.reserve(tracks.size()); 

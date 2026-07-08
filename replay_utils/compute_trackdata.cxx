@@ -19,7 +19,7 @@ void compute_trackdata(ApexVDC::Track &trk)
 #endif 
 
     //good-point group
-    const double CUT_goodPoint = 40e-9; 
+    const double CUT_goodPoint = 15e-9; 
     const double measure_sigma = run_parameters::TRK_measureSigma; 
 
     for (int p=0; p<4; p++) { 

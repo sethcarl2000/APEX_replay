@@ -33,10 +33,10 @@ namespace run_parameters {
     constexpr double TRK_CUT_xParam = 0.60; 
     constexpr double TRK_R_xParam_offset = 0.10; 
     constexpr double TRK_L_xParam_offset = 0.00; 
-    constexpr double TRK_CUT_Eta    = 3.750; 
+    constexpr double TRK_CUT_Eta    = 6.; 
     constexpr double TRK_measureSigma = 5e-9; 
     constexpr int    TRK_CUT_nGoodPts_min_perPlane = 2; //good points per plane
-    constexpr int    TRK_CUT_nGoodPts_min          = 12;   
+    constexpr int    TRK_CUT_nGoodPts_min          = 10;   
 
     //for numerically-evaluated integrals with gaussians, this is the number of points sampled 
     constexpr int    kGausIntPoints = 20; 

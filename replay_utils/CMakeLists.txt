@@ -3,6 +3,7 @@ cmake_minimum_required(VERSION 3.16)
 set(headers
     DataLog.h
     replay_utils.h
+    slurm_info.h
 )
 
 set(sources
