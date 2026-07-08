@@ -80,33 +80,18 @@ path_odef="outDefs/full_replay.odef"
 # 'both' means that both arms will be replayed in coincidence mode 
 mode="both"
 
+# max number of raw decode events to process at once. 
+raw_decode_events_step=500000
 
-path_decode_output="${stem_decode_output}.root"
-
-echo "<${0}>: PROCESSING decode ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~" 
-echo "<${0}>: input:  $path_decode_input"
-echo "<${0}>: output: $path_decode_output"
-echo "<${0}>: ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~"
-
-cmd_string="macros/decode_run.C(\"$path_decode_input\", \"$path_decode_output\", \"$path_odef\")"
-echo "command string: $cmd_string"
-
-time analyzer -b -q "${cmd_string}"
-
-echo "<${0}>: done with decoding. ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~"
-
-# assemble a comma-separated, quoted list of all input path(s)
-paths_replay_input=""
-while read -r line
-do 
-    #see if this is the first path. if so, then don't add a trailing comma
-    if [[ -z "${paths_replay_input}" ]]
-    then
-	paths_replay_input="\"${line}\""
-    else			
-	paths_replay_input="\"${line}\" ${paths_replay_input}"
-    fi
-done < <(ls -1 ${stem_decode_output}.*)
+# get the total number of raw events
+path_n_events="${PATH_SCRATCH}/n-events"
+analyzer -l -b -q "macros/count_coda_events.C(\"${path_decode_input}\", \"${path_n_events}\")"
+n_raw_events=$(cat ${path_n_events})
+if [[ "${n_raw_events}" == "bad-read" ]];
+then
+    echo "$<${0}> could not read number of raw events for file '${path_decode_input}'" >&2 
+    exit 1
+fi
 
 # try to find out how many cpus we have available
 n_cpus=${SLURM_CPUS_PER_TASK}
@@ -115,14 +100,55 @@ then
     n_cpus=$(nproc)
 fi  
 
-#now, use our script to compile our replay code once, and then run all inputs.
-cmd_string="./build/vdc_track_replay --n-threads ${n_cpus} --arm-mode ${mode} --run-number ${run} --rawfile-number ${rawfile_number} \"${stem_replay_output}\" ${paths_replay_input}"
 
-echo "command string: ${cmd_string}" 
-time eval ${cmd_string}
+i_segment=0
+starting_event=0
 
-#echo "<${0}> hadd results together..."
-#hadd -k -j $(nrpoc) ${stem_replay_output}.${run}.root ${stem_replay_output}.${run}.part#-* && rm ${stem_replay_output}.${run}.part-*
+while [[ $starting_event -lt $n_raw_events ]];
+do
+    ending_event=$(( $starting_event + $raw_decode_events_step - 1 ))
 
+    if [[ $ending_event -gt $n_raw_events ]]; then
+	ending_event=$n_raw_events
+    fi
+    
+    path_decode_output="${stem_decode_output}.seg-${i_segment}.root"
+
+    echo "<${0}>: PROCESSING decode ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~" 
+    echo "<${0}>: event range: ${starting_event}-${ending_event} (total: $n_raw_events)"
+    echo "<${0}>: input:  $path_decode_input"
+    echo "<${0}>: output: $path_decode_output"
+    echo "<${0}>: ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~"
+    
+    cmd_string="macros/decode_run.C(\"$path_decode_input\", \"$path_decode_output\", \"$path_odef\", ${starting_event}, ${ending_event})"
+    echo "command string: $cmd_string"
+    
+    time analyzer -b -q "${cmd_string}"
+    
+    echo "<${0}>: done with decoding. ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~"
+
+    # now, execute the replay on this file
+
+    path_replay_input="${path_decode_output}"
+
+    echo "<${0}>: PROCESSING replay ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~" 
+    echo "<${0}>: event range: ${starting_event}-${ending_event} (total: $n_raw_events)"
+    echo "<${0}>: input:  $path_replay_input"
+    echo "<${0}>: output: ${stem_replay_output}.${run}.raw-num-${rawfile_number}.seg-${i_segment}.root"
+    echo "<${0}>: ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~"
+    
+    cmd_string="./build/vdc_track_replay --n-threads ${n_cpus} --arm-mode ${mode} --run-number ${run} --segment-number ${i_segment} --rawfile-number ${rawfile_number} \"${stem_replay_output}\" \"${path_replay_input}\""
+
+    echo "command string: ${cmd_string}" 
+    time eval ${cmd_string}
+
+    # now, remove the decode file we don't need anymore
+    rm ${path_decode_output}
+
+    starting_event=$(( $starting_event + $raw_decode_events_step ))
+    i_segment=$(( $i_segment + 1 ))
+    
+done
+    
 echo "<${0}> done. ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~" 
 

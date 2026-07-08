@@ -101,6 +101,14 @@ int main(int argc, char* argv[])
     .metavar("R")
     .nargs(1);
 
+  program.add_argument("--segment-number")
+    .help("segment number")
+    .scan<'i', int>()
+    .default_value(0)
+    .metavar("S")
+    .nargs(1);
+
+  
   program.add_argument("--arm-mode")
     .help("active-arm mode to operate in")
     .metavar("MODE")
@@ -128,10 +136,10 @@ int main(int argc, char* argv[])
     .help("stem to output file destination. format: 'stem_output.[run].rawfile-[rawfile-num].seg-[seg-index].root")
     .nargs(1);
 
-  program.add_argument("paths_input")
+  program.add_argument("path_input")
     .required()
-    .help("space-separated list of absolute path(s) to input files")
-    .nargs(argparse::nargs_pattern::at_least_one);
+    .help("absolute path to input file")
+    .nargs(1);
   
   try {
     program.parse_args(argc, argv);
@@ -141,10 +149,11 @@ int main(int argc, char* argv[])
     return -1; 
   }
   
-  std::vector<std::string> paths_input  = program.get<std::vector<std::string>>("paths_input"); 
+  std::string path_input          = program.get<std::string>("path_input"); 
   std::string stem_output         = program.get("stem_output");
   const int run_number            = program.get<int>("--run-number");
   const int rawfile_number        = program.get<int>("--rawfile-number");
+  const int segment_number        = program.get<int>("--segment-number");
   std::string arm_mode_str        = program.get("--arm-mode");
   const unsigned int max_entries  = program.get<unsigned int>("--max-entries");
   const int n_threads             = program.get<int>("--n-threads");
@@ -152,58 +161,53 @@ int main(int argc, char* argv[])
   try {
       
     std::printf(
-      "<vdc_track_replay>: There are %zi files to process ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~\n",
-      paths_input.size()
-    );
-
-    int i_segment=0; 
-    for (const auto& path_input : paths_input) {
-      
-      std::string path_output = Form("%s.%i.raw-num-%i.seg-%i.root",
-              stem_output.data(),
-              run_number,
-              rawfile_number,
-              i_segment 
-              );
-
-      printf(
-        "<vdc_track_replay>: ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~\n"
-        "                     Processing rawfile %i, segment %i/%zi\n"
-        "                     Input file '%s' ...\n"
-        "                     Output file '%s' ...\n",
-        rawfile_number, i_segment, paths_input.size(), 
-        path_input.data(),
-        path_output.data() 
-      );
-      
-      int ret = vdc_track_replay(
-        path_input, 
-        path_output, 
-        run_number, 
-        rawfile_number, 
-        i_segment, 
-        arm_mode_str, 
-        max_entries, 
-        n_threads
-      );
-
-      if (ret < 0) {
-        Warning("vdc_tracK_replay", "Bad return code on replay %i/%i/%i (<0)", run_number, rawfile_number, i_segment);
-      }
-
-      ++i_segment; 
-    }
+		"<vdc_track_replay>: There are %zi files to process ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~\n",
+		path_input.size()
+		);
+    
+    std::string path_output = Form("%s.%i.raw-num-%i.seg-%i.root",
+				   stem_output.data(),
+				   run_number,
+				   rawfile_number,
+				   segment_number
+				   );
 
     printf(
-      "<replay_run_series>: done. ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~\n"
-    ); 
+	   "<vdc_track_replay>: ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~\n"
+	   "                     Processing rawfile %i, segment %i/%zi\n"
+	   "                     Input file '%s' ...\n"
+	   "                     Output file '%s' ...\n",
+	   rawfile_number, segment_number, path_input.size(), 
+	   path_input.data(),
+	   path_output.data() 
+	   );
+    
+    int ret = vdc_track_replay(
+			       path_input, 
+			       path_output, 
+			       run_number, 
+			       rawfile_number, 
+			       segment_number, 
+			       arm_mode_str, 
+			       max_entries, 
+			       n_threads
+			       );
+    
+    if (ret < 0) {
+      Warning("vdc_tracK_replay", "Bad return code on replay %i/%i/%i (<0)", run_number, rawfile_number, segment_number);
+    }
+    
+    
+    printf(
+	   "<replay_run_series>: done. ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~\n"
+	   ); 
     
   } catch (const std::exception& e) {
     std::cerr <<
       "<replay_run_series>: exception caught executing replay.\nwhat():" << e.what() << "\n"; 
     return -1; 
   }
-
+  
   return 0; 
 }
 
