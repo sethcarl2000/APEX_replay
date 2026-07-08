@@ -592,6 +592,17 @@ int vdc_track_replay(
     define_output_from_track(track_branch, arm+"_S2_x_param", &ApexVDC::Track::xParam);
     define_output_from_track(track_branch, arm+"_S2_dt", &ApexVDC::Track::T0);
 
+    define_output_from_track(track_branch, arm+"_Eta", &ApexVDC::Track::Get_Eta);
+
+    rna.DefineOutput(arm+"_n_points", [](const RVec<ApexVDC::Track>& tracks){
+      RVec<int> ret; ret.reserve(tracks.size()); 
+      for (const auto& trk : tracks) {
+	ret.push_back( trk.Get_nGoodPoints() ); 
+      }
+      return ret; 
+    }, {track_branch});
+
+    
     //separation between PMT times for our S2 hit
     rna.DefineOutput(arm+"_S2_pmt_dt", [](const RVec<ApexVDC::Track>& tracks){
       RVecD ret; ret.reserve(tracks.size()); 
@@ -642,6 +653,16 @@ int vdc_track_replay(
     define_output_from_track(track_branch, arm+"_S2_x_param", &ApexVDC::Track::xParam);
     define_output_from_track(track_branch, arm+"_S2_dt", &ApexVDC::Track::T0);
 
+    define_output_from_track(track_branch, arm+"_Eta", &ApexVDC::Track::Get_Eta);
+
+    rna.DefineOutput(arm+"_n_points", [](const RVec<ApexVDC::Track>& tracks){
+      RVec<int> ret; ret.reserve(tracks.size()); 
+      for (const auto& trk : tracks) {
+	ret.push_back( trk.Get_nGoodPoints() ); 
+      }
+      return ret; 
+    }, {track_branch});
+    
     //separation between PMT times for our S2 hit
     rna.DefineOutput(arm+"_S2_pmt_dt", [](const RVec<ApexVDC::Track>& tracks){
       RVecD ret; ret.reserve(tracks.size()); 
