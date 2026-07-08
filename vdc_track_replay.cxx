@@ -594,10 +594,10 @@ int vdc_track_replay(
     define_output_from_track(track_branch, arm+"_s2_x", &ApexVDC::Track::S2_x);
     define_output_from_track(track_branch, arm+"_s2_y", &ApexVDC::Track::S2_y);
 
-    define_output_from_track(track_branch, arm+"_S2_x_param", &ApexVDC::Track::xParam);
+    //define_output_from_track(track_branch, arm+"_S2_x_param", &ApexVDC::Track::xParam);
     define_output_from_track(track_branch, arm+"_S2_dt", &ApexVDC::Track::T0);
 
-    define_output_from_track(track_branch, arm+"_Eta", &ApexVDC::Track::Get_Eta);
+    //define_output_from_track(track_branch, arm+"_Eta", &ApexVDC::Track::Get_Eta);
 
     rna.DefineOutput(arm+"_n_points", [](const RVec<ApexVDC::Track>& tracks){
       RVec<int> ret; ret.reserve(tracks.size()); 
@@ -655,10 +655,10 @@ int vdc_track_replay(
     define_output_from_track(track_branch, arm+"_S2_x", &ApexVDC::Track::S2_x);
     define_output_from_track(track_branch, arm+"_S2_y", &ApexVDC::Track::S2_y);
 
-    define_output_from_track(track_branch, arm+"_S2_x_param", &ApexVDC::Track::xParam);
+    //define_output_from_track(track_branch, arm+"_S2_x_param", &ApexVDC::Track::xParam);
     define_output_from_track(track_branch, arm+"_S2_dt", &ApexVDC::Track::T0);
 
-    define_output_from_track(track_branch, arm+"_Eta", &ApexVDC::Track::Get_Eta);
+    //define_output_from_track(track_branch, arm+"_Eta", &ApexVDC::Track::Get_Eta);
 
     rna.DefineOutput(arm+"_n_points", [](const RVec<ApexVDC::Track>& tracks){
       RVec<int> ret; ret.reserve(tracks.size()); 
