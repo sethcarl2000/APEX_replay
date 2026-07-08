@@ -159,12 +159,7 @@ int main(int argc, char* argv[])
   const int n_threads             = program.get<int>("--n-threads");
 
   try {
-      
-    std::printf(
-		"<vdc_track_replay>: There are %zi files to process ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~\n",
-		path_input.size()
-		);
-    
+          
     std::string path_output = Form("%s.%i.raw-num-%i.seg-%i.root",
 				   stem_output.data(),
 				   run_number,
@@ -174,10 +169,10 @@ int main(int argc, char* argv[])
 
     printf(
 	   "<vdc_track_replay>: ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~\n"
-	   "                     Processing rawfile %i, segment %i/%zi\n"
+	   "                     Processing run/rawfile/segment: %i/%i/%i\n"
 	   "                     Input file '%s' ...\n"
 	   "                     Output file '%s' ...\n",
-	   rawfile_number, segment_number, path_input.size(), 
+	   run_number, rawfile_number, segment_number, 
 	   path_input.data(),
 	   path_output.data() 
 	   );
