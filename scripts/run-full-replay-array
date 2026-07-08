@@ -5,8 +5,8 @@
 #SBATCH --account halla
 #SBATCH --ntasks 1
 #SBATCH --cpus-per-task=4
-#SBATCH --mem=4000M
-#SBATCH --gres=disk:7500M
+#SBATCH --mem=2500M
+#SBATCH --gres=disk:2500M
 #SBATCH --time 90
 #SBATCH --output=/volatile/halla/apex/full_replay/slurm/full-replay/%x.%a.%A.out
 #SBATCH --error=/volatile/halla/apex/full_replay/slurm/full-replay/%x.%a.%A.err
@@ -81,7 +81,7 @@ path_odef="outDefs/full_replay.odef"
 mode="both"
 
 # max number of raw decode events to process at once. 
-raw_decode_events_step=500000
+raw_decode_events_step=250000
 
 # get the total number of raw events
 path_n_events="${PATH_SCRATCH}/n-events"
@@ -112,7 +112,7 @@ do
 	ending_event=$n_raw_events
     fi
     
-    path_decode_output="${stem_decode_output}.seg-${i_segment}.root"
+    path_decode_output="${stem_decode_output}.root"
 
     echo "<${0}>: PROCESSING decode ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~" 
     echo "<${0}>: event range: ${starting_event}-${ending_event} (total: $n_raw_events)"
@@ -126,27 +126,31 @@ do
     time analyzer -b -q "${cmd_string}"
     
     echo "<${0}>: done with decoding. ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~"
+    echo "<${0}>: scratch disk usage: $(du -sh ${PATH_SCRATCH}/*)"    
 
     # now, execute the replay on this file
 
-    path_replay_input="${path_decode_output}"
+    while read -r path_replay_input; do
+	
+	echo "<${0}>: PROCESSING replay ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~" 
+	echo "<${0}>: event range: ${starting_event}-${ending_event} (total: $n_raw_events)"
+	echo "<${0}>: input:  ${path_replay_input}"
+	echo "<${0}>: output: ${stem_replay_output}.${run}.raw-num-${rawfile_number}.seg-${i_segment}.root"
+	echo "<${0}>: ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~"
+	
+	cmd_string="./build/vdc_track_replay --n-threads ${n_cpus} --arm-mode ${mode} --run-number ${run} --segment-number ${i_segment} --rawfile-number ${rawfile_number} \"${stem_replay_output}\" \"${path_replay_input}\""
 
-    echo "<${0}>: PROCESSING replay ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~" 
-    echo "<${0}>: event range: ${starting_event}-${ending_event} (total: $n_raw_events)"
-    echo "<${0}>: input:  $path_replay_input"
-    echo "<${0}>: output: ${stem_replay_output}.${run}.raw-num-${rawfile_number}.seg-${i_segment}.root"
-    echo "<${0}>: ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~"
+	echo "command string: ${cmd_string}" 
+	time eval ${cmd_string}
+
+	# now, remove the decode file we don't need anymore
+	i_segment=$(( $i_segment + 1 ))
     
-    cmd_string="./build/vdc_track_replay --n-threads ${n_cpus} --arm-mode ${mode} --run-number ${run} --segment-number ${i_segment} --rawfile-number ${rawfile_number} \"${stem_replay_output}\" \"${path_replay_input}\""
+    done < <(ls -1 "${stem_decode_output}"*)
 
-    echo "command string: ${cmd_string}" 
-    time eval ${cmd_string}
-
-    # now, remove the decode file we don't need anymore
-    rm ${path_decode_output}
-
+    rm "${stem_decode_output}"*
+    
     starting_event=$(( $starting_event + $raw_decode_events_step ))
-    i_segment=$(( $i_segment + 1 ))
     
 done
     
