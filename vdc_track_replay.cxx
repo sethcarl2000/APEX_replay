@@ -7,6 +7,7 @@
 // replay-utils lib
 #include <replay_utils.h>
 #include "replay_utils/DataLog.h"
+#include "replay_utils/slurm_info.h"
 //#define DEBUG_TRACK
 #include "include/RDFNodeAccumulator.h"
 #include "run_parameters.h"
@@ -242,8 +243,12 @@ int vdc_track_replay(
   //make it so that, whenever we exit, this function is called (it will log all our data)
   auto& data_log = replay_utils::DataLog::instance(); 
 
+  int slurm_job_id = slurm_info::job_id();
+  int slurm_array_task_id = slurm_info::array_task_id();
+
   //register some data with the log file 
-  data_log.Append(path_infile, '|');
+  data_log.Append(slurm_job_id, '|');
+  data_log.Append(slurm_array_task_id, '|');
   data_log.Append(path_outfile, '|');
   data_log.Append(run_number, '|');
   data_log.Append(rawfile_number, '|');
