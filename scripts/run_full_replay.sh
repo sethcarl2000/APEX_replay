@@ -19,7 +19,7 @@ slurm_array_ids=""
 #the output file in which to put slurm array info.
 #the structure of the '|' delimited file is as follows:
 # array-id | run-number | raw-file-number | raw-file-path
-slurm_array_file="${PATH_APEX_VOLATILE}/slurm/array_${run0}_${run1}.list"
+slurm_array_file="${PATH_APEX_VOLATILE}/slurm/array_lists/array_${run0}_${run1}.list"
 
 #wipe the data file, if it exists
 echo -n > "${slurm_array_file}" 
@@ -95,7 +95,7 @@ do
     
 done
 
-cmd=" --partition=production --array=${slurm_array_ids} --time=50 --job-name=apex_replay_${run0}_${run1} scripts/run-full-replay-array ${slurm_array_file} ${PATH_APEX_VOLATILE}/production/replay"
+cmd=" --partition=production --array=${slurm_array_ids} --job-name=apex_replay_${run0}_${run1} scripts/run-full-replay-array ${slurm_array_file} ${PATH_APEX_VOLATILE}/production/replay"
 
 sbatch $cmd
 
