@@ -1,5 +1,4 @@
 #include "THaRun.h"
-#include "THaEvent.h"
 
 #include <memory>
 #include <iostream>
@@ -13,10 +12,6 @@ void count_coda_events(std::string path_input, std::string path_output)
   bool status_ok=true;
   
   auto run = make_unique<THaRun>(path_input.c_str(), "CODA input file");
-  auto event = make_unique<THaEvent>();
-
-  run->SetEvent( event ); 
-  
   run->SetDataRequired(0);
   
   auto st = run->Init();
@@ -31,13 +26,8 @@ void count_coda_events(std::string path_input, std::string path_output)
     status_ok=false; 
   }
   
-  cout << "<count_coda_events>: starting event " << event->GetEventNum() << "\n"; 
-  
   ULong64_t iev = 0;
   while( (st = run->ReadEvent()) == THaRunBase::READ_OK ) { ++iev; }
-
-  cout << "<count_coda_events>: ending event " << event->GetEventNum() << "\n"; 
-  
   
   cout << "<count_coda_events>:  Number of events read = " << iev << endl;
   
