@@ -1,6 +1,8 @@
 # build files
 old-src/build
-src/build
+decode/build
+analyzer/build 
+build
 
 # vscode files
 .vscode
@@ -9,14 +11,7 @@ src/build
 data
 data/* 
 # emacs backups
-*~
-
-# analyzer build files
-analyzer/build 
-
-# build directory
-build
-
+**~
 
 # misc directory
 misc

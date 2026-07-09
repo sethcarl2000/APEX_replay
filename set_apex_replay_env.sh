@@ -63,7 +63,7 @@ LOADED_APEX=$(find-path-in-list "${LD_LIBRARY_PATH}" "${PATH_APEX_REPLAY}/src/bu
 
 if [[ ${LOADED_APEX} == "not found" ]]; then
     echo "<${0}> apex lib not yet loaded" 
-    export LD_LIBRARY_PATH="${PATH_APEX_REPLAY}/src/build:${LD_LIBRARY_PATH}"
+    export LD_LIBRARY_PATH="${PATH_APEX_REPLAY}/decode/build:${LD_LIBRARY_PATH}"
 else
     echo "<${0}> apex lib already loaded"
 fi
