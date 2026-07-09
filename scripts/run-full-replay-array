@@ -120,7 +120,7 @@ do
     echo "<${0}>: output: $path_decode_output"
     echo "<${0}>: ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~"
     
-    cmd_string="macros/decode_run.C(\"$path_decode_input\", \"$path_decode_output\", \"$path_odef\", ${starting_event}, ${ending_event})"
+    cmd_string="decode/decode_run.C(\"$path_decode_input\", \"$path_decode_output\", \"$path_odef\", ${starting_event}, ${ending_event})"
     echo "command string: $cmd_string"
     
     time analyzer -b -q "${cmd_string}"

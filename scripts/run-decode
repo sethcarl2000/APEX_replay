@@ -37,7 +37,7 @@ do
     echo "<${0}>: output: $path_output"
     echo "<${0}>: ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~"
 
-    cmd_string="macros/decode_run.C(\"$path_input\", \"$path_output\", \"$path_odef\")"
+    cmd_string="decode/decode_run.C(\"$path_input\", \"$path_output\", \"$path_odef\")"
     echo "command string: $cmd_string"
     
     echo ".x ${cmd_string}" | analyzer
