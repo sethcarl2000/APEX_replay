@@ -5,9 +5,9 @@
 #SBATCH --account halla
 #SBATCH --ntasks 1
 #SBATCH --cpus-per-task=4
-#SBATCH --mem=3G
-#SBATCH --gres=disk:1600M
-#SBATCH --time 120
+#SBATCH --mem=4G
+#SBATCH --gres=disk:3G
+#SBATCH --time 600
 #SBATCH --output=/volatile/halla/apex/full_replay/slurm/full-replay/%x.%a.%A.out
 #SBATCH --error=/volatile/halla/apex/full_replay/slurm/full-replay/%x.%a.%A.err
 
@@ -17,20 +17,27 @@ source set_apex_replay_env.sh
 cd ${PATH_APEX_REPLAY}
 echo "<${0}>: pwd: '$(pwd)'" 
 
-PATH_SCRATCH="/scratch/slurm/${SLURM_JOB_ID}"
 
 #first task is to parse the data which is relevant to this slurm array
 array_id=${SLURM_ARRAY_TASK_ID}
 
-slurm_array_file=${1}
-stem_replay_output=${2}
+PATH_SCRATCH="/scratch/slurm/${SLURM_JOB_ID}"
+
+stem_replay_output="${VOLATILE_DIR}/production/replay"
+
+slurm_array_file_stem=${1}
 
 #if there is no slurm_array_task_id
 if [[ -z "${array_id}" ]]
 then
-    echo "no slurm array task id. taking argument 3; array_id='${3}'" >&2
-    array_id=${3}
+    echo "no slurm array task id. taking argument 3; array_id='${2}'" >&2
+    array_id=${2}
+    PATH_SCRATCH="misc/scratch"
 fi
+
+slurm_array_file="${slurm_array_file_stem}_${array_id}.list"
+stem_decode_output="${PATH_SCRATCH}/decode"
+
 
 #check if the slurm array file exists
 if ! [[ -f "${slurm_array_file}" ]]
@@ -39,120 +46,73 @@ then
     exit 1
 fi
 
-run=""
+path_odef="outDefs/full_replay.odef"
+
+min_events=1000
+
+n_cpus=${SLURM_CPUS_PER_TASK}
+if [[ -z "${SLURM_CPUS_PER_TASK}" ]]
+then
+    n_cpus=$(nproc)
+fi
+
+echo "<${0}> array file: ${slurm_array_file}"
+echo "<${0}> total files to read: $(cat ${slurm_array_file} | wc -l)" 
+
 while read -r line;
 do
     # now, split the line into an array
     IFS='|' read -ra line_array <<< "${line}"
-    if [[ "${line_array[0]}" == "${array_id}" ]];
-    then	
-	run="${line_array[1]}"
-	rawfile_number="${line_array[2]}" 
-	path_decode_input="${line_array[3]}"
-	break;
-    fi     
-done < <(cat "${slurm_array_file}") 
-
-#check to see if the run / path was found
-if [[ -z "${run}" ]]
-then
-    echo "<${0}> array parameters for this task not found."  >&2 
-    echo "<${0}>   array parameter file: '${slurm_array_file}'" >&2
-    echo "<${0}>   array id: '${array_id}'" >&2
-    exit 1
-fi
-
-echo "<${0}> for array id '${array_id}':"
-echo "---run: '${run}'"
-echo "---raw data file num: $rawfile_number" 
-echo "---raw data path: '${path_decode_input}'"
-
-raw_KB=$(du -s "${path_decode_input}" | awk 'END{ print $1}')
-raw_GB=$(bc <<< "scale=3; ${raw_KB}/(1024*1024)")
-echo "---raw file size: $raw_GB GB" 
-
-# the place our 'decode' files will be put (they will be deleted on slurm job exit!) 
-stem_decode_output="${PATH_SCRATCH}/decode"
-
-# path to our .odef file 
-path_odef="outDefs/full_replay.odef"
-
-# 'both' means that both arms will be replayed in coincidence mode 
-mode="both"
-
-# max number of raw decode events to process at once. 
-raw_decode_events_step=250000
-
-# get the total number of raw events
-path_n_events="${PATH_SCRATCH}/n-events"
-analyzer -l -b -q "macros/count_coda_events.C(\"${path_decode_input}\", \"${path_n_events}\")"
-n_raw_events=$(cat ${path_n_events})
-if [[ "${n_raw_events}" == "bad-read" ]];
-then
-    echo "$<${0}> could not read number of raw events for file '${path_decode_input}'" >&2 
-    exit 1
-fi
-
-# try to find out how many cpus we have available
-n_cpus=${SLURM_CPUS_PER_TASK}
-if [[ -z "${n_cpus}" ]]
-then
-    n_cpus=$(nproc)
-fi  
-
-
-i_segment=0
-starting_event=0
-
-while [[ $starting_event -lt $n_raw_events ]];
-do
-    ending_event=$(( $starting_event + $raw_decode_events_step - 1 ))
-
-    if [[ $ending_event -gt $n_raw_events ]]; then
-	ending_event=$n_raw_events
-    fi
     
-    path_decode_output="${stem_decode_output}.root"
+    run="${line_array[0]}"
+        
+    rawfile_num="${line_array[1]}"
+    decode_start_event="${line_array[2]}"
+    decode_end_event="${line_array[3]}"
+    path_decode_input="${line_array[4]}"
+      
+    echo "<${0}>: run/rawfile ${run}/${rawfile_num} ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~" 
+    echo "<${0}>: event-range ${decode_start_event}-${decode_end_event} (n. events: $(( $decode_end_event - $decode_start_event ))"
 
+    n_raw_events=$(( ${decode_end_event} - ${decode_start_event} ))
     echo "<${0}>: PROCESSING decode ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~" 
-    echo "<${0}>: event range: ${starting_event}-${ending_event} (total: $n_raw_events)"
+    echo "<${0}>: event range: ${decode_start_event}-${decode_end_event} (total: ${n_raw_events})"
     echo "<${0}>: input:  $path_decode_input"
     echo "<${0}>: output: $path_decode_output"
     echo "<${0}>: ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~"
+
     
-    cmd_string="decode/decode_run.C(\"$path_decode_input\", \"$path_decode_output\", \"$path_odef\", ${starting_event}, ${ending_event})"
-    echo "command string: $cmd_string"
+    cmd_string="decode/decode_run.C(\"${path_decode_input}\", \"${stem_decode_output}.root\", \"${path_odef}\")"
+    echo "command string: ${cmd_string}"
     
-    time analyzer -b -q "${cmd_string}"
+    time analyzer -l -b -q "${cmd_string}"
+    #cat "data data data" > "${stem_decode_output}.root" 
     
     echo "<${0}>: done with decoding. ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~"
     echo "<${0}>: scratch disk usage: $(du -sh ${PATH_SCRATCH}/*)"    
 
     # now, execute the replay on this file
-
-    while read -r path_replay_input; do
+    segment_num=0
+    
+    while read -r path_replay_input;
+    do
 	
 	echo "<${0}>: PROCESSING replay ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~" 
-	echo "<${0}>: event range: ${starting_event}-${ending_event} (total: $n_raw_events)"
 	echo "<${0}>: input:  ${path_replay_input}"
-	echo "<${0}>: output: ${stem_replay_output}.${run}.raw-num-${rawfile_number}.seg-${i_segment}.root"
+	echo "<${0}>: output: ${stem_replay_output}.${run}.raw-num-${rawfile_num}.seg-${segment_num}.root"
 	echo "<${0}>: ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~"
 	
-	cmd_string="./build/vdc_track_replay --n-threads ${n_cpus} --arm-mode ${mode} --run-number ${run} --segment-number ${i_segment} --rawfile-number ${rawfile_number} \"${stem_replay_output}\" \"${path_replay_input}\""
+	cmd_string="./build/vdc_track_replay --n-threads ${n_cpus} --arm-mode \"both\" --run-number ${run} --segment-number ${segment_num} --rawfile-number ${rawfile_num} \"${stem_replay_output}\" \"${path_replay_input}\""
 
 	echo "command string: ${cmd_string}" 
 	time eval ${cmd_string}
+	#cat "data data data" > "${stem_replay_output}.${run}.rawfile-num-${rawfile_num}.seg-${segment_num}.root" 
 
+	rm ${path_replay_input}
+	
 	# now, remove the decode file we don't need anymore
-	i_segment=$(( $i_segment + 1 ))
-    
+	segment_num=$(( $segment_num + 1 ))
+	
     done < <(ls -1 "${stem_decode_output}"*)
-
-    rm "${stem_decode_output}"*
     
-    starting_event=$(( $starting_event + $raw_decode_events_step ))
-    
-done
-    
-echo "<${0}> done. ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~" 
-
+done < <(cat "${slurm_array_file}")
