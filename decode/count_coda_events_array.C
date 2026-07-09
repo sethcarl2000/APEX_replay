@@ -13,8 +13,6 @@ void count_coda_events_array(int run_number,
 			     std::string path_output
 			     )
 {
-  auto run = make_unique<THaRun>(paths_input.front().c_str(), "CODA input file");
-  run->SetDataRequired(0);
 
   int rawfile_num=0;
 
@@ -23,11 +21,10 @@ void count_coda_events_array(int run_number,
   std::fstream outfile(path_output.c_str(), std::ios::out | std::ios::app);  
     
   for (const auto& path : paths_input) {
-
-    //run->Clear();
-    run->SetFilename( path.c_str() );
-
-    run->Open(); 
+    
+    auto run = make_unique<THaRun>(paths_input.front().c_str(), "CODA input file");
+    run->SetDataRequired(0);
+      
     run->Init(); 
     
     bool status_ok=true;
@@ -47,12 +44,12 @@ void count_coda_events_array(int run_number,
     ULong64_t iev = 0;
     while( (st = run->ReadEvent()) == THaRunBase::READ_OK ) { ++iev; }
   
-    cout << "<count_coda_events>:  Number of events read = " << iev << endl;
+    //cout << "<count_coda_events>:  Number of events read = " << iev << endl;
   
     cout << "<count_coda_events>:  Finished file scan, final status = ";
     switch( st ) {
     case THaRunBase::READ_EOF:
-      cout << "EOF"; break;
+      cout << "EOF\n"; break;
     case THaRunBase::READ_ERROR:
       status_ok=false; 
       cout << "ERROR"; break;
@@ -63,7 +60,7 @@ void count_coda_events_array(int run_number,
       status_ok=false; 
       cout << "UNKNOWN? = " << st; break;
     }
-    cout << endl;
+    //cout << endl;
     if( st != THaRunBase::READ_EOF ) {
       status_ok=false; 
       cerr << "<count_coda_events>:  Error reading ev " << iev << endl;
@@ -74,7 +71,7 @@ void count_coda_events_array(int run_number,
       status_ok=false; 
       cerr << "<count_coda_events>:  Error closing?" << endl;
     }
-    cout << "<count_coda_events>:  All successful" << endl;
+    //cout << "<count_coda_events>:  All successful" << endl;
 
     outfile << run_number << "|" << rawfile_num++ << "|" << event << "|" << event + iev - 1 << "|";
     
@@ -88,7 +85,6 @@ void count_coda_events_array(int run_number,
     
     event += iev; 
     
-    run->Clear(); 
   }
   outfile.close();
 
