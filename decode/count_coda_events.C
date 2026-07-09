@@ -1,4 +1,6 @@
 #include "THaRun.h"
+#include "THaEvent.h"
+
 #include <memory>
 #include <iostream>
 #include <fstream> 
@@ -11,26 +13,35 @@ void count_coda_events(std::string path_input, std::string path_output)
   bool status_ok=true;
   
   auto run = make_unique<THaRun>(path_input.c_str(), "CODA input file");
+  auto event = make_unique<THaEvent>();
+
+  run->SetEvent( event ); 
+  
   run->SetDataRequired(0);
   
   auto st = run->Init();
   if( st != THaRunBase::READ_OK ) {
-    cerr << ">>>>>>>>>>>>> Error initializing" << endl;
+    cerr << "<count_coda_events>:  Error initializing" << endl;
     status_ok=false; 
   }
 
   st = run->Open();
   if( st != THaRunBase::READ_OK ) {
-    cerr << ">>>>>>>>>>>>> Error opening" << endl;
+    cerr << "<count_coda_events>:  Error opening" << endl;
     status_ok=false; 
   }
-
+  
+  cout << "<count_coda_events>: starting event " << event->GetEventNum() << "\n"; 
+  
   ULong64_t iev = 0;
   while( (st = run->ReadEvent()) == THaRunBase::READ_OK ) { ++iev; }
+
+  cout << "<count_coda_events>: ending event " << event->GetEventNum() << "\n"; 
   
-  cout << ">>>>>>>>>>>>> Number of events read = " << iev << endl;
   
-  cout << ">>>>>>>>>>>>> Finished file scan, final status = ";
+  cout << "<count_coda_events>:  Number of events read = " << iev << endl;
+  
+  cout << "<count_coda_events>:  Finished file scan, final status = ";
   switch( st ) {
   case THaRunBase::READ_EOF:
     cout << "EOF"; break;
@@ -47,15 +58,15 @@ void count_coda_events(std::string path_input, std::string path_output)
   cout << endl;
   if( st != THaRunBase::READ_EOF ) {
     status_ok=false; 
-    cerr << ">>>>>>>>>>>>> Error reading ev " << iev << endl;
+    cerr << "<count_coda_events>:  Error reading ev " << iev << endl;
   }
 
   st = run->Close();
   if( st != THaRunBase::READ_OK ) {
     status_ok=false; 
-    cerr << ">>>>>>>>>>>>> Error closing?" << endl;
+    cerr << "<count_coda_events>:  Error closing?" << endl;
   }
-  cout << ">>>>>>>>>>>>> All successful" << endl;
+  cout << "<count_coda_events>:  All successful" << endl;
 
   std::fstream outfile(path_output.c_str(), std::ios::out | std::ios::trunc);
 
