@@ -1,0 +1,58 @@
+#ifndef count_physics_events_C
+#define count_physics_events_C
+
+// Podd headers
+#include "THaRun.h"
+#include "THaEvent.h" 
+// stdlib headers
+#include <memory>
+#include <iostream>
+#include <fstream> 
+#include <string>
+#include <sstream> 
+#include <stdexcept> 
+
+Long64_t count_physics_events(const std::string& path_input)
+{ 
+  std::cout << "in <" << __func__ << ">: in body\n"; 
+  
+  bool status_ok=true;  
+
+  //create the 'analyzer' 
+  auto analyzer = std::make_unique<THaAnalyzer>(); 
+  
+  //create the 'event'
+  auto event = std::make_unique<THaEvent>(); 
+  
+  //create the 'run' 
+  auto run = std::make_unique<THaRun>(path_input.c_str(), "CODA input file");
+  
+  //only count physics events
+  analyzer->SetCountMode( THaAnalyzer::kCountPhysics ); 
+
+  //set the minimum verbosity for output to stdout 
+  analyzer->SetVerbosity(0);
+
+  //give the analyzer a dummy output file 
+  analyzer->SetOutFile("misc/dump.root"); 
+  
+  //now, actually perform the analysis. 
+  Long64_t count = analyzer->Process( run.get() );
+  
+  if (count < 0) {
+
+    std::ostringstream oss;
+    oss << "in <"<<__func__<<">: something went wrong trying to count the number of physics events."
+      " File: '" << path_input << "'";
+    
+    
+    throw std::runtime_error(oss.str());
+    return 0; 
+  }
+
+  std::cout << "in <" << __func__ << ">: exiting, "<<count<<" physics events counted.\n"; 
+  return count; 
+
+}
+
+#endif
