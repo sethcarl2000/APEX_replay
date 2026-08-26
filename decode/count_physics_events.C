@@ -4,6 +4,7 @@
 // Podd headers
 #include "THaRun.h"
 #include "THaEvent.h" 
+#include "THaAnalyzer.h"
 // stdlib headers
 #include <memory>
 #include <iostream>
