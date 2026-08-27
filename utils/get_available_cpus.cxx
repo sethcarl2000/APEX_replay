@@ -11,10 +11,10 @@ namespace APEX
 namespace utils
 {
 
-int get_available_cpus()
+unsigned int get_available_cpus()
 {
     //try to fetch the env variable.
-    auto n_cpus_slurm = get_env_variable("SLURM_CPUS_PER_TASK"); 
+    auto n_cpus_slurm = get_env_variable_integer("SLURM_CPUS_PER_TASK"); 
 
     if (!n_cpus_slurm) {
 
@@ -23,25 +23,7 @@ int get_available_cpus()
     
     } else {
 
-        // we **are** in a slurm job
-        int n_cpus;
-
-        try { 
-            n_cpus = std::stoi(n_cpus_slurm.value()); 
-        }
-        catch (const std::exception& e) {
-            
-            //report this failure (this should not have happened!)
-            std::ostringstream oss; 
-            oss << "in <APEX::utils::"<<__func__<<">: exception caught trying to convert env value 'SLURM_CPUS_PER_TASK' to an integer.\n"
-                " SLURM_CPUS_PER_TASK: '"<<n_cpus_slurm.value()<<"'\n"
-                " what(): "<< e.what(); 
-            
-            throw std::runtime_error(oss.str()); 
-            return -1; 
-        }
-        
-        return n_cpus; 
+        return n_cpus_slurm.value(); 
     }
     
 }
