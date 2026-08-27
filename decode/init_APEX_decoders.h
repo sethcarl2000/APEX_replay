@@ -1,8 +1,6 @@
 #ifndef init_APEX_decoders_h
 #define init_APEX_decoders_h
 
-// APEX headers
-#include "THaApexShower.h"
 // Podd Headers
 #include <THaRun.h>
 #include <THaAnalyzer.h>
@@ -42,8 +40,8 @@ void init_APEX_decoders()
   // method, for debug purposes.
 
   //decode showers only
-  RHRS->AddDetector( new THaApexShower  ("ps",  "pre-shower EMC") ); 
-  RHRS->AddDetector( new THaApexShower  ("sh",  "shower EMC")     ); 
+  RHRS->AddDetector( new THaShower  ("ps",  "pre-shower EMC") ); 
+  RHRS->AddDetector( new THaShower  ("sh",  "shower EMC")     ); 
   RHRS->AddDetector( new THaScintillator("s2",  "S2 Scintillator"));  
   //*/
   //decode cerenkov only
@@ -62,8 +60,8 @@ void init_APEX_decoders()
   LHRS->AddDetector( L_vdc ); 
 
   //decode shower only
-  LHRS->AddDetector( new THaApexShower ("prl1",  "pre-shower EMC")  ); 
-  LHRS->AddDetector( new THaApexShower ("prl2",  "shower EMC")      ); 
+  LHRS->AddDetector( new THaShower ("prl1",  "pre-shower EMC")  ); 
+  LHRS->AddDetector( new THaShower ("prl2",  "shower EMC")      ); 
   LHRS->AddDetector( new THaScintillator("s2",  "S2 Scintillator"));  
   //*/
   //decode cerenkov only

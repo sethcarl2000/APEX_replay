@@ -23,4 +23,3 @@ target_link_libraries(vdc_track_replay PRIVATE
     replay_utils_lib
     ROOT::Core ROOT::RIO ROOT::ROOTDataFrame ROOT::MathCore ROOT::Physics
 )
-

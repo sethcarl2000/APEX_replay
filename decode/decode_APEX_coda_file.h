@@ -1,8 +1,6 @@
 #ifndef decode_APEX_coda_file_h
 #define decode_APEX_coda_file_h
 
-// APEX headers
-#include "THaApexShower.h"
 // Podd Headers
 #include <THaRun.h>
 #include <THaAnalyzer.h>
