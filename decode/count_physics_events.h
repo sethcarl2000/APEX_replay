@@ -1,5 +1,5 @@
-#ifndef count_physics_events_C
-#define count_physics_events_C
+#ifndef count_physics_events_h
+#define count_physics_events_h
 
 // Podd headers
 #include "THaRun.h"

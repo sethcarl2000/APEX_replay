@@ -1,9 +1,6 @@
 #ifndef init_APEX_decoders_h
 #define init_APEX_decoders_h
 
-#include "../include/def_apex.h"
-#include "../include/def_apex.h"
-
 // APEX headers
 #include "THaApexShower.h"
 // Podd Headers
@@ -19,6 +16,7 @@
 #include <THaRasteredBeam.h>
 #include <THaRaster.h>
 #include <THaBPM.h>
+#include <THaGlobals.h> 
 // stdlib headers
 #include <string> 
 #include <cstdio>
