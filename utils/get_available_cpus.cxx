@@ -14,7 +14,7 @@ namespace utils
 unsigned int get_available_cpus()
 {
     //try to fetch the env variable.
-    auto n_cpus_slurm = get_env_variable_integer("SLURM_CPUS_PER_TASK"); 
+    auto n_cpus_slurm = get_env_variable_int("SLURM_CPUS_PER_TASK"); 
 
     if (!n_cpus_slurm) {
 
