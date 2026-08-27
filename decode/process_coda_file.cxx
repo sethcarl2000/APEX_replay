@@ -1,5 +1,4 @@
-#ifndef decode_APEX_coda_file_h
-#define decode_APEX_coda_file_h
+#include <APEX_decode.h> 
 
 // Podd Headers
 #include <THaRun.h>
@@ -24,8 +23,12 @@
 #define DECODE_ONLY true
 #define VERBOSITY 1
 
+namespace APEX
+{
+namespace decode
+{
 
-void decode_APEX_coda_file(const std::string& path_infile,
+void process_coda_file(const std::string& path_infile,
 			   const std::string& path_outfile,
 			   ULong64_t first_event =0, 
 			   ULong64_t last_event  =1e7, 
@@ -75,4 +78,5 @@ void decode_APEX_coda_file(const std::string& path_infile,
   std::printf("in <%s>: done\n", __func__); 
 }
 
-#endif
+}
+}

@@ -1,5 +1,4 @@
-#ifndef init_APEX_decoders_h
-#define init_APEX_decoders_h
+#include <APEX_decode.h> 
 
 // Podd Headers
 #include <THaRun.h>
@@ -19,11 +18,13 @@
 #include <string> 
 #include <cstdio>
 
-#define DECODE_ONLY true
-#define VERBOSITY 1
+namespace APEX
+{
+namespace decode
+{
 
 //initialize apps needed to decode raw APEX data
-void init_APEX_decoders()
+void init_decoders()
 {
   //add the left HRS & associated detectors
   THaHRS *RHRS = new THaHRS("R", "Right HRS");
@@ -93,4 +94,5 @@ void init_APEX_decoders()
   gHaApps->Add( Rrb );
 }
 
-#endif
+}
+}

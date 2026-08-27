@@ -1,5 +1,4 @@
-#ifndef count_physics_events_h
-#define count_physics_events_h
+#include <APEX_decode.h>
 
 // Podd headers
 #include "THaRun.h"
@@ -12,6 +11,11 @@
 #include <string>
 #include <sstream> 
 #include <stdexcept> 
+
+namespace APEX
+{
+namespace decode
+{
 
 Long64_t count_physics_events(const std::string& path_input)
 { 
@@ -53,7 +57,7 @@ Long64_t count_physics_events(const std::string& path_input)
 
   std::cout << "in <" << __func__ << ">: exiting, "<<count<<" physics events counted.\n"; 
   return count; 
-
 }
 
-#endif
+}
+}
