@@ -1,13 +1,15 @@
-#ifndef refine_track_H
-#define refine_track_H
 
-#include "replay_utils.h"
+#include "APEX_replay_helpers.h"
 #include <ApexVDCTrack.h>
 #include <math.h> 
 #include <ROOT/RVec.hxx>
 #include <ApexUtils.h> 
 
-namespace replay_utils
+namespace APEX
+{
+namespace replay
+{
+namespace helpers
 {
 
 //
@@ -192,6 +194,6 @@ void refine_track(
     }
 };   
 
-};
-
-#endif
+}
+}
+}

@@ -1,12 +1,16 @@
 #ifndef get_n_cpus_h
 #define get_n_cpus_h
 
-#include "replay_utils.h"
+#include "APEX_replay_helpers.h"
 #include <string> 
 #include <cstdlib>
 #include <thread> 
 
-namespace replay_utils
+namespace APEX
+{
+namespace replay
+{
+namespace helpers
 {
 
 //tries to see if we are in a slurm job. If we are, then report the # of alloted cpus (if we are not, report 'hardware concurrency')

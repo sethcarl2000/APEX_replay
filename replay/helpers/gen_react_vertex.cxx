@@ -1,13 +1,15 @@
-#ifndef gen_react_vertex_H
-#define gen_react_vertex_H 
 
-#include "replay_utils.h"
+#include "APEX_replay_helpers.h"
 #include <TapexReactVertex.h> 
-#include "../include/RDFNodeAccumulator.h"
+#include "RDFNodeAccumulator.h"
 #include <string> 
 
 
-namespace replay_utils
+namespace APEX
+{
+namespace replay
+{
+namespace helpers
 {
 
 /// @brief Generates react vertex
@@ -30,6 +32,9 @@ void gen_react_vertex(RDFNodeAccumulator& rna, TapexReactVertex* vtx)
 
 }
 
-}; 
+}
+}
+}
 
-#endif
+//ioooooooooooooooozxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxqw    
+// - muon's comment 27 aug 26

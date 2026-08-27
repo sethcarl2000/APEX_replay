@@ -1,17 +1,19 @@
-#ifndef generate_S2_hits_H
-#define generate_S2_hits_H
 
 // APEX headers
-#include "replay_utils.h"
+#include "APEX_replay_helpers.h"
 #include <TapexS2Hit.h> 
 #include <TapexEventHandler.h>
-#include "../run_parameters.h"
+#include <run_parameters.h>
 // ROOT headers
 #include <ROOT/RVec.hxx>
 // stdlib headers
 #include <cmath> 
 
-namespace replay_utils
+namespace APEX
+{
+namespace replay
+{
+namespace helpers
 {
 
 ROOT::VecOps::RVec<TapexS2Hit> generate_S2_hits(
@@ -50,6 +52,6 @@ ROOT::VecOps::RVec<TapexS2Hit> generate_S2_hits(
     return coinc_hits; 
 }
 
-};
-
-#endif
+}
+}
+}

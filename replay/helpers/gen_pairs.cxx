@@ -1,17 +1,19 @@
-#ifndef gen_pairs_H
-#define gen_pairs_H
 
-#include "replay_utils.h"
+#include "APEX_replay_helpers.h"
+#include "run_parameters.h"
 #include <ApexVDCHitGroup.h>
 #include <ApexVDCHitCluster.h>
 #include <ApexVDCChamberPair.h> 
 #include <ApexVDCTrack.h> 
-#include "../run_parameters.h"
 #include <math.h> 
 #include <TVector3.h> 
 #include <stdio.h> 
 
-namespace replay_utils
+namespace APEX
+{
+namespace replay
+{
+namespace helpers
 {
 
 //#define DEBUG_PAIR
@@ -275,6 +277,7 @@ ROOT::RVec<ApexVDC::ChamberPair> gen_pairs(
     return pairs; 
 }; 
 
-}; 
 
-#endif
+}
+}
+}

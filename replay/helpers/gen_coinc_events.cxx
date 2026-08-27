@@ -1,13 +1,15 @@
-#ifndef gen_coinc_events_H
-#define gen_coinc_events_H
 
-#include "replay_utils.h"
+#include "APEX_replay_helpers.h"
 #include <TapexEventHandler.h>
 #include <TapexS2Hit.h> 
 #include <ROOT/RVec.hxx>
 #include <math.h> 
 
-namespace replay_utils
+namespace APEX
+{
+namespace replay
+{
+namespace helpers
 {
 
 ROOT::RVec<TapexEventHandler> gen_coinc_events(
@@ -34,6 +36,6 @@ ROOT::RVec<TapexEventHandler> gen_coinc_events(
     return coinc_events; 
 }   
 
-}; 
-
-#endif
+}
+}
+}

@@ -1,16 +1,18 @@
-#ifndef grid_search_H
-#define grid_search_H
 
-#include "replay_utils.h"
+#include "APEX_replay_helpers.h"
 #include <EventCounter.h>
 #include <ApexVDCHitGroup.h> 
 #include <TapexEventHandler.h> 
 #include <ApexUtils.h> 
 #include <math.h> 
-#include "../run_parameters.h"
+#include <run_parameters.h>
 #include <stdio.h> 
 
-namespace replay_utils
+namespace APEX
+{
+namespace replay
+{
+namespace helpers
 {
 
 //#define DEBUG_GRID
@@ -103,6 +105,6 @@ double grid_search(
 };
 //////////////////////////////////////////////////////////////////////////////
 
-};
-
-#endif 
+}
+}
+}

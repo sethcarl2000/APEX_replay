@@ -1,13 +1,11 @@
-#ifndef group_vdc_hits_H
-#define group_vdc_hits_H
 
 // APEX headers
-#include "replay_utils.h"
+#include "APEX_replay_helpers.h"
 #include <ApexVDCHit.h> 
 #include <ApexVDCHitGroup.h> 
 #include <TapexEventHandler.h> 
-#include "../run_parameters.h"
-#include "../include/units.h"
+#include <run_parameters.h>
+#include "units.h"
 // ROOT headers
 #include <ROOT/RVec.hxx>
 #include <ROOT/RDataFrame.hxx> 
@@ -15,7 +13,11 @@
 #include <vector> 
 #include <cmath> 
 
-namespace replay_utils
+namespace APEX
+{
+namespace replay
+{
+namespace helpers
 {
 
 //#define DEBUG_GROUP
@@ -128,6 +130,6 @@ ROOT::RVec<ApexVDC::HitGroup> group_vdc_hits (
   return group_vec;       
 }; 
 
-}; 
-
-#endif 
+}
+}
+}

@@ -1,9 +1,7 @@
-#ifndef gen_rawtracks_H
-#define gen_rawtracks_H
 
 //APEX headers
-#include "replay_utils.h"
-#include "../run_parameters.h"
+#include "APEX_replay_helpers.h"
+#include <run_parameters.h>
 #include <TapexEventHandler.h>
 #include <ApexVDCTrack.h> 
 #include <ApexVDCChamberPair.h> 
@@ -15,7 +13,11 @@
 #include <algorithm> 
 #include <vector> 
 
-namespace replay_utils
+namespace APEX
+{
+namespace replay
+{
+namespace helpers
 {
 
 ROOT::RVec<ApexVDC::Track> gen_rawtracks( 
@@ -215,6 +217,6 @@ ROOT::RVec<ApexVDC::Track> gen_rawtracks(
     return tracks; 
 }; 
 
-}; 
-
-#endif
+}
+}
+}

@@ -1,11 +1,10 @@
-#ifndef generate_vdc_tracks_H
-#define generate_vdc_tracks_H
 
 // APEX headers
-#include "../run_parameters.h"
+#include <run_parameters.h>
 #include <EventCounter.h> 
 #include <TapexEventHandler.h> 
 #include <ApexVDCHitGroup.h> 
+#include <ApexVDCTrack.h>
 //
 //functions 
 #ifdef DEBUG_TRACK
@@ -16,7 +15,7 @@
 #define DEBUG_RAW_TRACK
 #endif
 //
-#include "replay_utils.h"
+#include "APEX_replay_helpers.h"
 //
 // ROOT headers
 #include <ROOT/RVec.hxx>
@@ -29,7 +28,11 @@
 #include <string> 
 #include <algorithm> 
 
-namespace replay_utils
+namespace APEX
+{
+namespace replay
+{
+namespace helpers
 {
 
 namespace { 
@@ -243,6 +246,6 @@ void generate_vdc_tracks(
     return; 
 }
 
-};
-
-#endif
+}
+}
+}

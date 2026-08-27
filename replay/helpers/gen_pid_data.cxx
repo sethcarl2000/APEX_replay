@@ -1,18 +1,20 @@
-#ifndef gen_pid_data_H
-#define gen_pid_data_H
 
-#include "replay_utils.h"
+#include "APEX_replay_helpers.h"
 #include <TapexEventHandler.h>
 #include <ApexPidManager.h>
 #include <ApexPidDetector.h>
-#include "../include/RDFNodeAccumulator.h"
+#include "RDFNodeAccumulator.h"
 #include <TapexS2Hit.h>
 #include <PmtData.h>
 #include <ROOT/RVec.hxx>
 #include <math.h>
 #include <string> 
 
-namespace replay_utils
+namespace APEX
+{
+namespace replay
+{
+namespace helpers
 {
 
 namespace {
@@ -77,6 +79,6 @@ void gen_pid_data(const bool is_RHRS, RDFNodeAccumulator& rna, const ApexPidMana
   
 }   
 
-}; 
-
-#endif
+}
+}
+}
