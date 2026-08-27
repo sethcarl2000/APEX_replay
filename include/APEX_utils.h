@@ -4,6 +4,8 @@
 #include <string> 
 #include <optional> 
 
+class TH1; 
+
 namespace APEX
 {
 namespace utils
@@ -17,11 +19,25 @@ std::optional<std::string> get_env_variable_string(const std::string& param);
 /// @brief Fetch an environment variable, return value as int  
 /// @param param name of the parameter
 /// @return returned value for parameter if not-null. nullopt_t if param is null, or failed to be converted to an integer. 
-std::optional<int> get_env_variable_integer(const std::string& param); 
+std::optional<int> get_env_variable_int(const std::string& param); 
 
 
 /// @return the number of available cpus (wether in a slurm job or not)
 unsigned int get_available_cpus(); 
+
+/// @brief Attempts to fit a gaussian to a histogram, with a constant background
+/// @param hist histogram to fit
+/// @param radius radius of fit
+/// @param center center of gaus, to be optimized by fit (value of arg. overwritten)
+/// @param sigma sigma of gaus, to be optimized by fit (value of arg. overwritten) 
+/// @param do_draw if true, then the fit will be drawn 
+void fit_gaus_to_hist( 
+    TH1 *hist, 
+    double radius, 
+    double &center, 
+    double &sigma, 
+    bool do_draw=false
+); 
 
 }
 }
