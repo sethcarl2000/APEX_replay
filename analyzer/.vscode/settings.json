@@ -1,8 +1,0 @@
-{
-    "files.associations": {
-        "fit_points.C": "cpp",
-        "locate_holes.C": "cpp",
-        "function_lib.C": "cpp",
-        "locatePeak.C": "cpp"
-    }
-}
