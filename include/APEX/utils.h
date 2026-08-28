@@ -54,6 +54,8 @@ template <int N> double intpow(double x);
 
 constexpr double kNaN = std::numeric_limits<double>::quiet_NaN(); 
 
+//null integer value
+constexpr int kNaN_int = -99999999;
 
 class UniqueIDGenerator { 
   
