@@ -1,10 +1,13 @@
-#ifndef TapexEventHandler_H 
-#define TapexEventHandler_H 
+#ifndef APEX_EventHandler_H 
+#define APEX_EventHandler_H 
 
-#include <TapexS2Hit.h>
+#include <APEX/S2Hit.h>
 #include <ROOT/RVec.hxx>
 
-class TapexEventHandler { 
+namespace APEX
+{
+
+class EventHandler { 
   
  public: 
   /*** 
@@ -12,19 +15,19 @@ class TapexEventHandler {
    * 
    ***/ 
   
-  TapexEventHandler( bool arm=true, 
+  EventHandler( bool arm=true, 
 		 double beamCurrent=0.,
 		 int runNumber=-1, 
-		 const TapexS2Hit *fHit_R=0, 
-		 const TapexS2Hit *fHit_L=0  ); 
+		 const S2Hit *fHit_R=0, 
+		 const S2Hit *fHit_L=0  ); 
   
-  virtual ~TapexEventHandler() {}; 
+  virtual ~EventHandler() {}; 
   
   void SetActiveArm(bool arm) { f_activeArm=arm; }
   
   bool ActiveArm() const { return f_activeArm; }
   
-  const TapexS2Hit* GetS2Hit(bool is_RHRS) const { return is_RHRS ? fS2Hit_Right : fS2Hit_Left; }
+  const S2Hit* GetS2Hit(bool is_RHRS) const { return is_RHRS ? fS2Hit_Right : fS2Hit_Left; }
     
   //un-blurred drift function
   double Drift_X( double tau, double slope, int derivative=0 ) const; 
@@ -44,8 +47,8 @@ class TapexEventHandler {
   
  private: 
   bool f_activeArm; 
-  const TapexS2Hit *fS2Hit_Right; 
-  const TapexS2Hit *fS2Hit_Left; 
+  const S2Hit *fS2Hit_Right; 
+  const S2Hit *fS2Hit_Left; 
 
   int fUniqueTrackCounter_RHRS{0};
   int fUniqueTrackCounter_LHRS{0};
@@ -64,7 +67,7 @@ class TapexEventHandler {
   
   bool   f_isNullBeamCurrent;  //sometimes, the beam-current reading is null 
 
-  //each TapexEventHandler instance must have its own copy of this; as these parameters
+  //each EventHandler instance must have its own copy of this; as these parameters
   // are dependent on beam current, and whether a patricular run is pre-or-post-
   // VDC-fix. For the Right arm, however, the parameters do not change. 
   double fParams_L[5][5]; 
@@ -77,5 +80,7 @@ class TapexEventHandler {
 		      const int nPts ) const; 
   
 }; 
+
+}
 
 #endif 

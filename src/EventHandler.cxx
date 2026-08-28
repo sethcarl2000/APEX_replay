@@ -1,5 +1,5 @@
 
-#include <TapexEventHandler.h>
+#include <APEX/EventHandler.h>
 #include <cmath> 
 #include <TMath.h> 
 
@@ -84,11 +84,14 @@ namespace {
     double dP_spread; 
 }
 
-TapexEventHandler::TapexEventHandler( bool arm, 
+namespace APEX
+{
+
+EventHandler::EventHandler( bool arm, 
 			      double beamCurrent,
 			      int runNumber, 
-			      const TapexS2Hit *fHit_R, 
-			      const TapexS2Hit *fHit_L ) { 
+			      const S2Hit *fHit_R, 
+			      const S2Hit *fHit_L ) { 
   f_activeArm  =arm; 
   
   fRunNumber = runNumber; 
@@ -132,12 +135,12 @@ TapexEventHandler::TapexEventHandler( bool arm,
 double f_SIGMA_INTERPOLATE[2] = { 5e-9, 5e-9 }; 
 double f_SIGMA_FIXED = 5e-9; 
 
-double TapexEventHandler::Get_Dt() const
+double EventHandler::Get_Dt() const
 {
   return GetS2Hit(true)->Time() - GetS2Hit(false)->Time(); 
 }
 
-double TapexEventHandler::Get_tauSigma() const { 
+double EventHandler::Get_tauSigma() const { 
   
   if (fRunNumber < FIRST_FIXED_RUN && ActiveArm()==false ) { 
     
@@ -145,7 +148,7 @@ double TapexEventHandler::Get_tauSigma() const {
   } 
   return f_SIGMA_FIXED; 
 }
-double TapexEventHandler::Drift_X( double tau, double slope, int derivative ) const { 
+double EventHandler::Drift_X( double tau, double slope, int derivative ) const { 
   
   double par[N_PARAMS];
   
@@ -170,7 +173,7 @@ double TapexEventHandler::Drift_X( double tau, double slope, int derivative ) co
   
   return ( tau - (y0+y1) )/m + x1; 
 }
-double TapexEventHandler::Drift_T_raw( const double x, 
+double EventHandler::Drift_T_raw( const double x, 
 				   const double *par, 
 				   const int derivative ) const {
   
@@ -191,7 +194,7 @@ double TapexEventHandler::Drift_T_raw( const double x,
   //derivative==2
   return absX < x1  ?  y1*( 2. )/(x1*x1 + b*x1)  :  0.; 
 }
-double TapexEventHandler::Drift_T( double x, double slope, int derivative ) const { 
+double EventHandler::Drift_T( double x, double slope, int derivative ) const { 
   
   double par[N_PARAMS];
   
@@ -236,7 +239,7 @@ double TapexEventHandler::Drift_T( double x, double slope, int derivative ) cons
   }    
   
 }
-double TapexEventHandler::Interpolate( const double x, 
+double EventHandler::Interpolate( const double x, 
 				   const double *X, 
 				   const double *Y, 
 				   const int nPts   ) const {
@@ -262,4 +265,6 @@ double TapexEventHandler::Interpolate( const double x,
   //if were in a valid 'zone', then interpolate
   return Y[zone-1] + (Y[zone]-Y[zone-1])*( (x - X[zone-1])/(X[zone]-X[zone-1]) ); 
  
+}
+
 }
