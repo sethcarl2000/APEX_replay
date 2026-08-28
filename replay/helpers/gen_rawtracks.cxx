@@ -1,11 +1,11 @@
 
 //APEX headers
-#include "APEX_replay_helpers.h"
-#include <run_parameters.h>
-#include <TapexEventHandler.h>
-#include <ApexVDCTrack.h> 
-#include <ApexVDCChamberPair.h> 
-#include <ApexUtils.h> 
+#include <APEX/replay/helpers.h>
+#include <APEX/run_parameters.h>
+#include <APEX/EventHandler.h>
+#include <APEX/VDC/Track.h> 
+#include <APEX/VDC/ChamberPair.h> 
+#include <APEX/Utils.h> 
 //ROOT headers
 #include <ROOT/RVec.hxx>
 //stdlib headers
@@ -20,10 +20,10 @@ namespace replay
 namespace helpers
 {
 
-ROOT::RVec<ApexVDC::Track> gen_rawtracks( 
-    TapexEventHandler& evt, 
-    ROOT::RVec<ApexVDC::ChamberPair>& pairs_Lo, 
-    ROOT::RVec<ApexVDC::ChamberPair>& pairs_Hi ) 
+ROOT::RVec<VDC::Track> gen_rawtracks( 
+    EventHandler& evt, 
+    ROOT::RVec<VDC::ChamberPair>& pairs_Lo, 
+    ROOT::RVec<VDC::ChamberPair>& pairs_Hi ) 
 {             
 #ifdef DEBUG_RAW_TRACK
     std::printf("<%s>: in body\n", __func__); 
@@ -40,7 +40,7 @@ ROOT::RVec<ApexVDC::Track> gen_rawtracks(
     const double CUT_th_min = run_parameters::CUT_th_min[arm_int_index];
     const double CUT_th_max = run_parameters::CUT_th_max[arm_int_index];
     
-    ROOT::RVec<ApexVDC::Track> tracks; 
+    ROOT::RVec<VDC::Track> tracks; 
 
     //returns ptr to track with given id 
     //__________________________________________________________________________________________________________________
@@ -48,17 +48,17 @@ ROOT::RVec<ApexVDC::Track> gen_rawtracks(
 #ifdef DEBUG_RAW_TRACK
         printf("<gen_rawtracks::get_track_ptr> searching for track %i...", id); 
 #endif
-        auto it = std::find_if(tracks.begin(), tracks.end(), [id](const ApexVDC::Track& rhs){ return rhs.GetID()==id; });
+        auto it = std::find_if(tracks.begin(), tracks.end(), [id](const VDC::Track& rhs){ return rhs.GetID()==id; });
         if (it == tracks.end()) {
 #ifdef DEBUG_RAW_TRACK
             printf("not found, returning nullptr\n"); 
 #endif    
-            return (ApexVDC::Track*)nullptr;
+            return (VDC::Track*)nullptr;
         }
 #ifdef DEBUG_RAW_TRACK
         printf("found\n"); 
 #endif    
-        return (ApexVDC::Track*)it; 
+        return (VDC::Track*)it; 
     };
     //__________________________________________________________________________________________________________________
     
@@ -76,7 +76,7 @@ ROOT::RVec<ApexVDC::Track> gen_rawtracks(
         trk->GetPair_Lo()->Remove_track(id);
         trk->GetPair_Hi()->Remove_track(id);
         tracks.erase(
-            std::remove_if(tracks.begin(), tracks.end(), [id](const ApexVDC::Track& rhs){ return rhs.GetID()==id; }),
+            std::remove_if(tracks.begin(), tracks.end(), [id](const VDC::Track& rhs){ return rhs.GetID()==id; }),
             tracks.end()
         );
 #ifdef DEBUG_RAW_TRACK
@@ -98,7 +98,7 @@ ROOT::RVec<ApexVDC::Track> gen_rawtracks(
             //add a new track to the list of tracks
             tracks.emplace_back( &evt, &pLo, &pHi, evt.GenUniqueTrackID(is_RHRS) ); 
             
-            ApexVDC::Track& track = tracks.back(); 
+            VDC::Track& track = tracks.back(); 
 #ifdef DEBUG_RAW_TRACK
             printf("<gen_rawtracks> created test track %i (pairs lo-%i / hi-%i)\n", track.GetID(), pL,pH); 
 #endif 
@@ -149,7 +149,7 @@ ROOT::RVec<ApexVDC::Track> gen_rawtracks(
     
     //cout << "Size before pruning = " << tracks.size() << endl; 
     
-    auto delete_shared_tracks = [&tracks, &get_track_ptr, &delete_track](ApexVDC::ChamberPair *pair) { 
+    auto delete_shared_tracks = [&tracks, &get_track_ptr, &delete_track](VDC::ChamberPair *pair) { 
 #ifdef DEBUG_RAW_TRACK 
         printf("<gen_rawtracks::delete_shared_tracks> "
             "in body. event tracks ids (%zi total): { ", 
@@ -165,7 +165,7 @@ ROOT::RVec<ApexVDC::Track> gen_rawtracks(
 #endif 
         if (pair->N_tracks() <= 1) return; 
         
-        //ApexVDC::Track* best_track = get_track_ptr(pair->GetTrackID(0));  
+        //VDC::Track* best_track = get_track_ptr(pair->GetTrackID(0));  
         int best_track_id = pair->GetTrackID(0); 
         double best_eta = get_track_ptr(best_track_id)->Get_Eta(); 
 
