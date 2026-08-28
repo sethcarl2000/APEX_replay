@@ -2,42 +2,28 @@
 
 //////////////////////////////////////////////////////////////////////////
 //     
-// TapexReactVertex
+// ReactVertex
 //
 // Computes the reaction-vertex 
 //     
 //////////////////////////////////////////////////////////////////////////
 
-/*#include <cmath>
-#include <vector>
-#include <array>
-#include <map>
-#include "ApexUtils.h"
-#include "TNPoly.h"
-#include "TXMap.h"
-#include "TOpticsModel.h"
-#include "RMatrixD.h"
-#include "TVector3.h"
-#include "TMath.h"
-
-#include "TString.h"
-
-#include <iostream>*/
-
-#include "ROOT/RVec.hxx"
-#include "TapexReactVertex.h" 
+// APEX 
+#include <APEX/ReactVertex.h>
+#include <RMatrixD.h> 
+// ROOT
+#include <ROOT/RVec.hxx>
 #include <ROOT/RDataFrame.hxx>
-#include <ArmMode.h> 
-#include "TFile.h"
-#include "TVector2.h"
-#include "RMatrixD.h"
+#include <TFile.h>
+#include <TVector2.h>
+// stdlib 
 #include <memory> 
 #include <string> 
 #include <math.h> 
 #include <stdexcept> 
 
 using namespace std;
-//using namespace APEX; 
+//using namespace APEX/; 
 
 using RVecD = ROOT::RVec<double>; 
 
@@ -58,8 +44,11 @@ namespace {
   constexpr double kBPM_buffer = 1e-3; 
 }
 
+namespace APEX 
+{
+
 //_____________________________________________________________________________
-TapexReactVertex::TapexReactVertex(
+ReactVertex::ReactVertex(
   bool is_RHRS,
   TString path_decode_epics,
   ROOT::RDF::RNode dT, 
@@ -81,7 +70,7 @@ TapexReactVertex::TapexReactVertex(
     // then we will search for whichever wire it wanted to use
     if (auto findWire = fWireMap.find(target); findWire == fWireMap.end()) {
       //wire-name given is invalid
-      Warning("TapexReactVertex",
+      Warning("ReactVertex",
 	      "Target-name passed: '%s', but this name does not match any wire-name. Proceeding without any optic-wire selected..",
 	      target.Data());
     } else {
@@ -89,7 +78,7 @@ TapexReactVertex::TapexReactVertex(
       f_isWireMode=true;
       
       fWire = findWire->second; 
-      Info("TapexReactVertex",
+      Info("ReactVertex",
 	   "Engaging optics-wire mode.. (Target name = %s)", fWire.name.Data() );
     }
   }
@@ -136,27 +125,27 @@ TapexReactVertex::TapexReactVertex(
   
   //do some basic checks before we start
 
-  //you can launch TapexReactVertex in 'no-decode' mode, in which you're just using it
+  //you can launch ReactVertex in 'no-decode' mode, in which you're just using it
   // basically to store optics wire-data.
   if (path_decode_epics=="") return;
     
   auto file = unique_ptr<TFile>(new TFile(path_decode_epics.Data()));
   
   if (!file || file->IsZombie()) {
-    Error("TapexReactVertex()", "Pointer to file \"%s\" invalid. Check path?",
+    Error("ReactVertex()", "Pointer to file \"%s\" invalid. Check path?",
 	  path_decode_epics.Data());
     return;
   }
   
   
   if (!file->IsOpen() || file->IsZombie()) {
-    Error("TapexReactVertex()", "File \"%s\" is zombie / is not open.", path_decode_epics.Data());
+    Error("ReactVertex()", "File \"%s\" is zombie / is not open.", path_decode_epics.Data());
     return;
   }
     
   //now, check to make sure that the right trees are present
   if (!file->GetListOfKeys()->Contains("E")) {
-    Error("TapexReactVertex",
+    Error("ReactVertex",
 	  "File \"%s\" does not contain Epics tree (E). React-vertex & raster set to 0,0",
 	  path_decode_epics.Data()); 
     return;    
@@ -191,7 +180,7 @@ TapexReactVertex::TapexReactVertex(
   
   //now, check to make sure that the right trees are present
   if (!file->GetListOfKeys()->Contains("T")) {
-    Error("TapexReactVertex",
+    Error("ReactVertex",
 	  "File \"%s\" does not contain CODA tree (T). Avg. Raster set to 0,0",
 	  path_decode_epics.Data()); 
     return;    
@@ -314,7 +303,7 @@ TapexReactVertex::TapexReactVertex(
 				yRast[1]-yRast[0] ); 
 			
     */ 
-  Info("TapexReactVertex", "Done with initial react-point calculations");
+  Info("ReactVertex", "Done with initial react-point calculations");
 
   //reset this to its previous value
   //if (is_mt_enabled) ROOT::EnableImplicitMT(); 
@@ -322,12 +311,12 @@ TapexReactVertex::TapexReactVertex(
   f_hasData = true; 
 }
 //_____________________________________________________________________________
-TVector3 TapexReactVertex::Compute_reactVertex(double current_x, double current_y, double y_BPM) const
+TVector3 ReactVertex::Compute_reactVertex(double current_x, double current_y, double y_BPM) const
 {
-  //NOTE: this is given in hall-coordinates (HCS), in meters, from the APEX
+  //NOTE: this is given in hall-coordinates (HCS), in meters, from the APEX/
   // scattering-chamber center. 
   if (!f_hasData) {
-    throw std::logic_error("<TapexReactVertex::Compute_reactVertex> "
+    throw std::logic_error("<ReactVertex::Compute_reactVertex> "
 	    "not created with valid run-data, cannot compute react-vertex."
     );
     return TVector3(0,0,0);
@@ -380,21 +369,21 @@ TVector3 TapexReactVertex::Compute_reactVertex(double current_x, double current_
    */ 
 }
 //_____________________________________________________________________________
-TVector2 TapexReactVertex::Get_beamCenter() const
+TVector2 ReactVertex::Get_beamCenter() const
 {
   if (!f_hasData) {
     Error("Get_beamCenter",
-	  "TapexReactVertex not created with valid run-data, cannot compute beam-center.");
+	  "ReactVertex not created with valid run-data, cannot compute beam-center.");
     return TVector2(0,0);
   }
 
-  //NOTE: this is given in hall-coordinates (HCS), in meters, from the APEX
+  //NOTE: this is given in hall-coordinates (HCS), in meters, from the APEX/
   // scattering-chamber center. 
   
   return fBeamCenter; 
 }
 //_____________________________________________________________________________
-TapexReactVertex::OpticsWire_t TapexReactVertex::Get_wire() const {
+ReactVertex::OpticsWire_t ReactVertex::Get_wire() const {
 
   if (!f_isWireMode) {
     Warning("Get_wire", "Wire requested, but not in wire-mode, so wire returned is null.");
@@ -404,3 +393,4 @@ TapexReactVertex::OpticsWire_t TapexReactVertex::Get_wire() const {
 //_____________________________________________________________________________
 
 
+}

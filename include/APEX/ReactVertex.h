@@ -1,9 +1,9 @@
-#ifndef Podd_TapexReactVertex_h_
-#define Podd_TapexReactVertex_h_
+#ifndef APEX_ReactVertex_h_
+#define APEX_ReactVertex_h_
 
 //////////////////////////////////////////////////////////////////////////
 //
-// TapexReactVertex
+// APEX ReactVertex
 // Handles computation of the react vertex. 
 //
 //////////////////////////////////////////////////////////////////////////
@@ -19,21 +19,25 @@
 #include <map> 
 #include <functional> 
 
+
+namespace APEX
+{
+
 //_________________________________________________________________________________
-class TapexReactVertex { 
+class ReactVertex { 
 
 public:
   
-  TapexReactVertex() {};
+  ReactVertex() {};
   
   enum EOpticsTarget { kNone=0, kV1,kV2,kV3, kH1,kH2,kH3,kH4 }; 
   
-  TapexReactVertex(bool isRHRS,
+  ReactVertex(bool isRHRS,
 	       TString path_decode_epics,
          ROOT::RDF::RNode df,
 	       TString target="");
 
-  virtual ~TapexReactVertex() {}; 
+  virtual ~ReactVertex() {}; 
 
   /// @brief computes react vertex x & y 
   /// @param current_x raw current from Raster2 (x): [R/L]rb.Raster2.rawcur.x 
@@ -66,7 +70,7 @@ private:
   
   OpticsWire_t fWire;
 
-  const std::map<TString,TapexReactVertex::OpticsWire_t> fWireMap = {
+  const std::map<TString,ReactVertex::OpticsWire_t> fWireMap = {
     {"V1", {.name="V1", .isVertical=true,  .x=-3.225e-3, .y= 0e-3,     .z=-196.214e-3}},
     {"V2", {.name="V2", .isVertical=true,  .x=-0.725e-3, .y= 0e-3,     .z=   3.786e-3}},
     {"V3", {.name="V3", .isVertical=true,  .x= 1.725e-3, .y= 0e-3,     .z= 203.786e-3}},
@@ -119,5 +123,7 @@ private:
   
 };
 //_________________________________________________________________________________
+
+}
 
 #endif
