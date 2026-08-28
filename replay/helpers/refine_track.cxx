@@ -1,9 +1,12 @@
 
-#include "APEX_replay_helpers.h"
-#include <ApexVDCTrack.h>
-#include <math.h> 
+// APEX
+#include <APEX/replay/helpers.h>
+#include <APEX/VDC/Track.h>
+#include <APEX/Utils.h> 
+// ROOT
 #include <ROOT/RVec.hxx>
-#include <ApexUtils.h> 
+// stdlib
+#include <cmath> 
 
 namespace APEX
 {
@@ -16,7 +19,7 @@ namespace helpers
 // Refine tracks from the hi-chamber using newton's method
 //   
 void refine_track( 
-    ApexVDC::Track& trk, 
+    VDC::Track& trk, 
     const int nCycles, 
     double sigma) 
 { 
@@ -98,7 +101,7 @@ void refine_track(
                                 200, VDC_min_realTime, VDC_max_realTime); 
             //*//////////////////////////////////////////////////////////////////////
 
-            ApexVDC::HitGroup* group = trk.GetGroup(p); 
+            VDC::HitGroup* group = trk.GetGroup(p); 
 
             for (uint h=0; h<group->Nhits(); h++) { 
                     
