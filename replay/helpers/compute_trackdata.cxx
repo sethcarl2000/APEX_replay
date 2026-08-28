@@ -4,9 +4,9 @@
 //"""""
 // - muon's comment 
 
-#include "APEX_replay_helpers.h"
-#include <run_parameters.h>
-#include <ApexVDCTrack.h> 
+#include <APEX/replay/helpers.h>
+#include <APEX/run_parameters.h>
+#include <APEX/VDC/Track.h> 
 #include <math.h> 
 
 namespace APEX
@@ -16,7 +16,7 @@ namespace replay
 namespace helpers
 {
 
-void compute_trackdata(ApexVDC::Track &trk) 
+void compute_trackdata(VDC::Track &trk) 
 { 
 
 #if DEBUG 
