@@ -18,6 +18,7 @@ set(src_utils
     utils/get_available_cpus.cxx
     utils/get_env_variable_int.cxx
     utils/get_env_variable_string.cxx
+    utils/get_slurm_scratch_directory.cxx
     utils/intpow.cxx
 )
 

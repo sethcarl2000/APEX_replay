@@ -43,6 +43,10 @@ void fit_gaus_to_hist(
     bool do_draw=false
 ); 
 
+/// @brief Based on ifarm's slurm configuration
+/// @return path to the root directory of this slurm job's /scratch disk allocation. if it detects we are **not** in a slurm job / array, or the directory is missing, then throws a std::runtime_exception. 
+std::string get_slurm_scratch_directory();
+
 /// @brief Raise value 'x' to integer power 'N'
 /// @tparam N power. only valid for N = 2,3,4.  
 /// @param x argument  
