@@ -25,9 +25,22 @@ std::optional<std::string> get_env_variable_string(const std::string& param);
 /// @return returned value for parameter if not-null. nullopt_t if param is null, or failed to be converted to an integer. 
 std::optional<int> get_env_variable_int(const std::string& param); 
 
-
 /// @return the number of available cpus (wether in a slurm job or not)
 unsigned int get_available_cpus(); 
+
+/// @return a 'FileCheck' 
+struct PathCheckStatus { 
+
+  std::string message{""};
+
+  operator bool() const { return message=="success"; }; 
+};
+
+/// @brief Check if the given path 1.) exists and 2.) is a regular file
+PathCheckStatus is_path_regular_file(const std::string& path); 
+
+/// @brief Check if the given path 1.) exists and 2.) is a directory 
+PathCheckStatus is_path_directory(const std::string& path); 
 
 /// @brief Attempts to fit a gaussian to a histogram, with a constant background
 /// @param hist histogram to fit

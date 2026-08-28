@@ -20,6 +20,8 @@ set(src_utils
     utils/get_env_variable_string.cxx
     utils/get_slurm_scratch_directory.cxx
     utils/intpow.cxx
+    utils/is_path_directory.cxx
+    utils/is_path_regular_file.cxx
 )
 
 set(headers_utils
