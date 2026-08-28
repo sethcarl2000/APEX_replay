@@ -1,7 +1,10 @@
 
-#include "APEX_replay_helpers.h"
-#include <TapexReactVertex.h> 
-#include "RDFNodeAccumulator.h"
+
+// APEX
+#include <APEX/replay/helpers.h>
+#include <APEX/ReactVertex.h> 
+#include <RDFNodeAccumulator.h>
+// stdlib
 #include <string> 
 
 
@@ -15,7 +18,7 @@ namespace helpers
 /// @brief Generates react vertex
 /// @param rna RDFNodeAccumulator to add branches to 
 /// @param vtx const ptr to TapexReactVertex obj (arm specific!)
-void gen_react_vertex(RDFNodeAccumulator& rna, TapexReactVertex* vtx)
+void gen_react_vertex(RDFNodeAccumulator& rna, ReactVertex* vtx)
 {
     const bool is_RHRS = vtx->IsRHRS(); 
 
