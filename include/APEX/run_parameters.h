@@ -21,7 +21,7 @@ namespace run_parameters {
     constexpr double kCUT_S2_twinHit_timeErr =5e-9; 
 
     // spacing between coarse-grained grid-search 
-    constexpr double kGridSpacing = ApexVDC::kWireSpacing/10.; 
+    constexpr double kGridSpacing = VDC::kWireSpacing/10.; 
 
     //min eta of one plane (during grid-searching). 
     // this is analogous to the num. of points found
