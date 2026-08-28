@@ -1,5 +1,7 @@
+#ifndef APEX_replay_Manager_h
+#define APEX_replay_Manager_h
 
-#include <APEX_replay.h>
+#include <APEX/replay.h>
 // ROOT headers
 #include <RtypesCore.h> 
 // stdlib headers
@@ -10,7 +12,7 @@ namespace APEX
 namespace replay
 {
 
-class ReplayManager {
+class Manager {
 private: 
 
     // if this is <= 0, then we process all 
@@ -24,18 +26,18 @@ private:
 
 public: 
     //default ctor. 
-    ReplayManager(); 
+    Manager(); 
 
     //we don't want anyone to make copies!!! (this deletes the copy-ctor)
-    ReplayManager(const ReplayManager&) = delete; 
-    ReplayManager& operator=(const ReplayManager&) = delete; 
+    Manager(const Manager&) = delete; 
+    Manager& operator=(const Manager&) = delete; 
 
     /// @brief Process a replay. throws std::runtime_error and quits on failure. 
     /// @param path_input absolute path to the input 'decoded' .root file. 
     /// @param stem_output 'stem' of the output repaly file. The final file output will be under the path [stem_output].[run-num].rawfile-[num].segment-[num].root 
     /// @param rawfile_number index of the rawfile (starts at 0)
     /// @param segment_number index of the rawfile 'segment' for rawfiles that had to be split into smaller pieces (starts at 0)
-    void Process(const std::string& path_input, const std::string& stem_input, int rawfile_number, int segment_number);
+    int Process(const std::string& path_input, const std::string& stem_output, int rawfile_number, int segment_number);
 
 
     //setters / getters
@@ -53,6 +55,7 @@ public:
     void SetArmMode(const std::string& mode); 
 }; 
 
+}
+}
 
-}
-}
+#endif
