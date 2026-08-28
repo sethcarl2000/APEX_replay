@@ -1,19 +1,20 @@
-#ifndef TapexS2Hit_H 
-#define TapexS2Hit_H 
+#ifndef APEX_S2Hit_H 
+#define APEX_S2Hit_H 
 
-#include <TObject.h> 
+namespace APEX 
+{
 
 ////////////////////////////////////////////////////////////////////////////////////
-class TapexS2Hit { 
+class S2Hit { 
   
  public: 
   /***
    *      Tracks information for S2m hits of either arm, including the ability 
    *      to convert between raw/realtime. 
    ***/
-  TapexS2Hit( bool arm=true, int paddle=-1, double T_pmtL=-1e30, double T_pmtR=-1e30 ); 
+  S2Hit( bool arm=true, int paddle=-1, double T_pmtL=-1e30, double T_pmtR=-1e30 ); 
   
-  virtual ~TapexS2Hit() {/*noop*/}; 
+  virtual ~S2Hit() {/*noop*/}; 
   
   bool   IsCoinc()      const { return fIsCoinc; }
   bool   Is_RightArm()  const { return f_isRightArm; } 
@@ -31,7 +32,7 @@ class TapexS2Hit {
   
   //this hit is now a 'twin'-hit, i.e., both this paddle (and its neighbor) were 
   // likely triggerd by the same particle. merge it with its neighbor. 
-  void Make_twinHit(TapexS2Hit *neighbor); 
+  void Make_twinHit(S2Hit *neighbor); 
 
   bool Is_twinHit() const { return f_isTwinHit; }
   
@@ -61,5 +62,7 @@ class TapexS2Hit {
   
 };
 /////////////////////////////////////////////////////////////////////////////////
+
+}
 
 #endif 
