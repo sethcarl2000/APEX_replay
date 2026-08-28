@@ -1,14 +1,18 @@
-#ifndef ApexPidDetector_H
-#define ApexPidDetector_H
+#ifndef APEX_PidDetector_H
+#define APEX_PidDetector_H
 
+#include <APEX/VDC/Track.h>
 #include <utility>
 #include <vector> 
 #include <ROOT/RVec.hxx>
-#include <ApexVDCTrack.h>
-//#include <ApexPidManager.h> 
-class ApexPidManager; 
+//#include <APEX/PidManager.h> 
 
-class ApexPidDetector {
+namespace APEX
+{
+
+class PidManager; 
+
+class PidDetector {
 public:   
 
     struct Cell {
@@ -24,7 +28,7 @@ public:
 
 private: 
     // we declare the ApexPidManager as a friend, so it can access the following private data members 
-    friend class ApexPidManager;     
+    friend class PidManager;     
 
     // generate cells in the ususal order 
     std::vector<Cell> GenerateCells(int n_rows, int n_cols); 
@@ -48,9 +52,7 @@ private:
 
 public: 
 
-    ApexPidDetector() {}; 
-
-    virtual ~ApexPidDetector() {}; 
+    PidDetector() = default; 
 
     /// @brief given array of ADC data, return the data of cell indexed by 'row / col'.  
     /// @param row row of cell
@@ -62,7 +64,7 @@ public:
     /// @brief Get the closest cell associated with this track 
     /// @param track the track to project 
     /// @return the cell the track intercepts with 
-    const Cell* GetNearestCell(const ApexVDC::Track& track) const; 
+    const Cell* GetNearestCell(const APEX::VDC::Track& track) const; 
 
     inline double GetZ() const { return fZ; }
 
@@ -70,6 +72,8 @@ public:
 
     const Cell* GetNearestCell(double x, double y, double dxdz, double dydz) const;  
 }; 
+
+}
 
 
 #endif
