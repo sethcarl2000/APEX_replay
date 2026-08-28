@@ -39,6 +39,7 @@ add_path_to_list () {
 # first, add the 'decode' and 'replay' libraries' include directories to ROOT's list, so it can find the headers. 
 export ROOT_INCLUDE_PATH=$(add_path_to_list "${PATH_APEX_REPLAY}/decode/include" "${ROOT_INCLUDE_PATH}")
 export ROOT_INCLUDE_PATH=$(add_path_to_list "${PATH_APEX_REPLAY}/replay/include" "${ROOT_INCLUDE_PATH}")
+export ROOT_INCLUDE_PATH=$(add_path_to_list "${PATH_APEX_REPLAY}/utils/include" "${ROOT_INCLUDE_PATH}")
 
 # now, add the build directory to the library, so it can find the shared libraries 
 export LD_LIBRARY_PATH=$(add_path_to_list "${PATH_APEX_REPLAY}/build" "${LD_LIBRARY_PATH}")
