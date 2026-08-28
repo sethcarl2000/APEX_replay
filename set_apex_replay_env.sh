@@ -1,6 +1,6 @@
 #!/bin/bash
 
-export PATH_APEX_REPLAY="/work/halla/apex/disk1/sethhall/apex_replay"
+export PATH_APEX_REPLAY="$(pwd)"
 #export PATH_APEX_ANALYZER="${PATH_APEX_REPLAY}/analyzer" 
 
 # set path to our DB files 
@@ -34,7 +34,15 @@ add_path_to_list () {
     echo "${path_list}"
 }
 
-export ROOT_INCLUDE_PATH=$(add_path_to_list "${PATH_APEX_REPLAY}/decode" "${ROOT_INCLUDE_PATH}")
-export LD_LIBRARY_PATH=$(add_path_to_list "${PATH_APEX_REPLAY}/decode/build" "${LD_LIBRARY_PATH}")
+# add our two user libraries
+
+# first, add the 'decode' and 'replay' libraries' include directories to ROOT's list, so it can find the headers. 
+export ROOT_INCLUDE_PATH=$(add_path_to_list "${PATH_APEX_REPLAY}/decode/include" "${ROOT_INCLUDE_PATH}")
+export ROOT_INCLUDE_PATH=$(add_path_to_list "${PATH_APEX_REPLAY}/replay/include" "${ROOT_INCLUDE_PATH}")
+
+# now, add the build directory to the library, so it can find the shared libraries 
+export LD_LIBRARY_PATH=$(add_path_to_list "${PATH_APEX_REPLAY}/build" "${LD_LIBRARY_PATH}")
+
+
 
 
