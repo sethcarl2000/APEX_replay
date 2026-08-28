@@ -1,11 +1,11 @@
 
 // APEX headers
-#include "APEX_replay_helpers.h"
-#include <ApexVDCHit.h> 
-#include <ApexVDCHitGroup.h> 
-#include <TapexEventHandler.h> 
-#include <run_parameters.h>
-#include "units.h"
+#include <APEX/replay/helpers.h>
+#include <APEX/VDC/Hit.h> 
+#include <APEX/VDC/HitGroup.h> 
+#include <APEX/EventHandler.h> 
+#include <APEX/run_parameters.h>
+#include <APEX/units.h>
 // ROOT headers
 #include <ROOT/RVec.hxx>
 #include <ROOT/RDataFrame.hxx> 
@@ -22,14 +22,14 @@ namespace helpers
 
 //#define DEBUG_GROUP
 
-/// @brief Form 'ApexVDC::HitGroup's from groups of VDC hits
+/// @brief Form 'VDC::HitGroup's from groups of VDC hits
 /// @param evt Apex event handler
 /// @param p the VDC plane in question, [0,..,3].
 /// @param h_rawtime a collection of all VDC wire rawtimes 
 /// @param h_wire a collection of all VDC wire numbers
 /// @return a vector of all valid VDC hit groups  
-ROOT::RVec<ApexVDC::HitGroup> group_vdc_hits ( 
-                                            const TapexEventHandler& evt, 
+ROOT::RVec<VDC::HitGroup> group_vdc_hits ( 
+                                            const EventHandler& evt, 
                                             int   p, 
                                             const ROOT::RVec<double>& h_wire,
                                             const ROOT::RVec<double>& h_rawtime 
@@ -50,10 +50,10 @@ ROOT::RVec<ApexVDC::HitGroup> group_vdc_hits (
 
   int n_hits = h_rawtime.size(); 
   
-  ROOT::RVec<ApexVDC::HitGroup> group_vec{}; 
+  ROOT::RVec<VDC::HitGroup> group_vec{}; 
 
   //cBeg->push_back((int)wire[0]);   
-  ApexVDC::HitGroup group(p); 
+  VDC::HitGroup group(p); 
 
   int w_prev = -1; 
   
@@ -62,7 +62,7 @@ ROOT::RVec<ApexVDC::HitGroup> group_vdc_hits (
   // the [1] element is the T_TDC (corrected tdc time of that hit)
   for (int h=0; h<n_hits; h++) { 
     
-    ApexVDC::Hit hit( p, (int)std::round(h_wire[h]), h_rawtime[h], &evt );  
+    VDC::Hit hit( p, (int)std::round(h_wire[h]), h_rawtime[h], &evt );  
 
 #ifdef DEBUG_GROUP 
     printf(
