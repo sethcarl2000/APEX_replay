@@ -1,13 +1,17 @@
 
-#include "APEX_replay_helpers.h"
-#include <TapexEventHandler.h>
-#include <ApexPidManager.h>
-#include <ApexPidDetector.h>
-#include "RDFNodeAccumulator.h"
-#include <TapexS2Hit.h>
-#include <PmtData.h>
+
+// APEX
+#include <APEX/replay/helpers.h>
+#include <APEX/EventHandler.h>
+#include <APEX/PidManager.h>
+#include <APEX/PidDetector.h>
+#include <RDFNodeAccumulator.h>
+#include <APEX/S2Hit.h>
+#include <APEX/PmtData.h>
+// ROOT 
 #include <ROOT/RVec.hxx>
-#include <math.h>
+// stdlib
+#include <cmath>
 #include <string> 
 
 namespace APEX
@@ -23,7 +27,7 @@ namespace {
   
 }; 
 
-void gen_pid_data(const bool is_RHRS, RDFNodeAccumulator& rna, const ApexPidManager* pid_manager)
+void gen_pid_data(const bool is_RHRS, RDFNodeAccumulator& rna, const PidManager* pid_manager)
 {
   const std::string arm = is_RHRS ? "R" : "L"; 
   
