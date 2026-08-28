@@ -1,7 +1,10 @@
-#ifndef units_H
-#define units_H
+#ifndef APEX_units_H
+#define APEX_units_H
 
-namespace units {
+namespace APEX
+{
+namespace units 
+{
 
     //length
     constexpr double m   = 1.; 
@@ -20,6 +23,8 @@ namespace units {
     constexpr double rad = 1.;
     constexpr double mrad = rad/1000.; 
     constexpr double deg  = rad * (2 * 3.14159265359 / 360.); 
-};
+
+}
+}
 
 #endif 
