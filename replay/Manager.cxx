@@ -228,7 +228,7 @@ int Manager::Process(const std::string& path_input, const std::string& stem_outp
       {
           return helpers::generate_S2_hits(kRHRS, R_pmt, L_pmt); 
       }, {"R.s2.rt", "R.s2.lt"});
-    rna.Filter(vector_isnt_empty<S2Hit>, {"R_S2_hits"});
+    rna.Filter(vector_isnt_empty<S2Hit>(), {"R_S2_hits"});
   }
   
   if (is_LHRS_active) {
@@ -236,7 +236,7 @@ int Manager::Process(const std::string& path_input, const std::string& stem_outp
       {
           return helpers::generate_S2_hits(kLHRS, R_pmt, L_pmt); 
       }, {"L.s2.rt", "L.s2.lt"}); 
-    rna.Filter(vector_isnt_empty<S2Hit>, {"L_S2_hits"}); 
+    rna.Filter(vector_isnt_empty<S2Hit>(), {"L_S2_hits"}); 
   }
   //add logic here to process both S2 hits
   
@@ -311,7 +311,7 @@ int Manager::Process(const std::string& path_input, const std::string& stem_outp
         }, {"hac_bcm_average","fEvtHdr.fRun","R_S2_hits","L_S2_hits"}) 
         
         //make a cut on events with at least 1 coincidence event
-        .Filter(vector_isnt_empty<EventHandler>, {"coinc_events"}); 
+        .Filter(vector_isnt_empty<EventHandler>(), {"coinc_events"}); 
       
       break; 
 
