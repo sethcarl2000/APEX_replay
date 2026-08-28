@@ -1,17 +1,20 @@
-#include <ApexPidManager.h> 
-#include <ApexPidDetector.h> 
+#include <APEX/PidManager.h> 
+#include <APEX/PidDetector.h> 
+
+namespace APEX
+{
 
 //_____________________________________________________________________________________________________________________
 //_____________________________________________________________________________________________________________________
 //_____________________________________________________________________________________________________________________
-ApexPidManager::ApexPidManager()
+PidManager::PidManager()
 {
     //construct all the 
-    fDet_LHRS_prl1 = std::unique_ptr<ApexPidDetector>{new ApexPidDetector}; 
-    fDet_LHRS_prl2 = std::unique_ptr<ApexPidDetector>{new ApexPidDetector}; 
+    fDet_LHRS_prl1 = std::unique_ptr<PidDetector>{new PidDetector}; 
+    fDet_LHRS_prl2 = std::unique_ptr<PidDetector>{new PidDetector}; 
 
-    fDet_RHRS_ps = std::unique_ptr<ApexPidDetector>{new ApexPidDetector}; 
-    fDet_RHRS_sh = std::unique_ptr<ApexPidDetector>{new ApexPidDetector}; 
+    fDet_RHRS_ps = std::unique_ptr<PidDetector>{new PidDetector}; 
+    fDet_RHRS_sh = std::unique_ptr<PidDetector>{new PidDetector}; 
 
     //let's set up each PID detector.
 
@@ -59,3 +62,5 @@ ApexPidManager::ApexPidManager()
     fDet_RHRS_sh->fCell_width_y = +0.180; 
     fDet_RHRS_sh->fCell_y0 = +0.37;
 } 
+
+}
