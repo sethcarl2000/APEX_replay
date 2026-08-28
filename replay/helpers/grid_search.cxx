@@ -1,12 +1,14 @@
 
-#include "APEX_replay_helpers.h"
-#include <EventCounter.h>
-#include <ApexVDCHitGroup.h> 
-#include <TapexEventHandler.h> 
-#include <ApexUtils.h> 
-#include <math.h> 
-#include <run_parameters.h>
-#include <stdio.h> 
+// APEX 
+#include <APEX/replay/helpers.h>
+#include <APEX/EventCounter.h>
+#include <APEX/VDC/HitGroup.h> 
+#include <APEX/EventHandler.h> 
+#include <APEX/Utils.h> 
+#include <APEX/run_parameters.h>
+// stdlib
+#include <cmath> 
+#include <cstdio> 
 
 namespace APEX
 {
@@ -19,8 +21,8 @@ namespace helpers
 
 /////////////////////////////////////////////////////////////////////////////
 double grid_search( 
-    const TapexEventHandler& evt, 
-    ApexVDC::HitGroup& group, 
+    const EventHandler& evt, 
+    VDC::HitGroup& group, 
     double m1, //slope 
     double m2, 
     double x_Lo,
