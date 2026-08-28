@@ -4,7 +4,7 @@
 #include <APEX/EventCounter.h>
 #include <APEX/VDC/HitGroup.h> 
 #include <APEX/EventHandler.h> 
-#include <APEX/Utils.h> 
+#include <APEX/utils.h> 
 #include <APEX/run_parameters.h>
 // stdlib
 #include <cmath> 
@@ -30,7 +30,6 @@ double grid_search(
     double TAU_sigma, 
     double TAU_buffer) 
 {
-    using APEX::square;
 
 #ifdef DEBUG_GRID
     printf("<%s> in body\n", __func__); 
@@ -88,7 +87,7 @@ double grid_search(
         
         //tau is below lowest guess
         if (tau < tau_Lo) { 
-            eta += std::exp( -0.5*square((tau-tau_Lo)/TAU_sigma) ); 
+            eta += std::exp( -0.5*utils::intpow<2>((tau-tau_Lo)/TAU_sigma) ); 
             continue; 
         }
 
@@ -99,7 +98,7 @@ double grid_search(
         }
         
         //tau is above highest guess
-        eta += std::exp( -0.5*square((tau-tau_Hi)/TAU_sigma) ); 
+        eta += std::exp( -0.5*utils::intpow<2>((tau-tau_Hi)/TAU_sigma) ); 
 
     }//for (int h=0; h<group->Nhits(); 
 

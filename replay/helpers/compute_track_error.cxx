@@ -2,7 +2,7 @@
 #include <APEX/replay/helpers.h>
 #include <APEX/run_parameters.h>
 #include <APEX/VDC/Track.h> 
-#include <APEX/Utils.h> 
+#include <APEX/utils.h> 
 #include <math.h> 
 #include <Math/QuantFuncMathCore.h> 
 
@@ -35,7 +35,7 @@ void Compute_trackError(VDC::Track& trk)
 
             total_pts++; 
             
-            S0 += square( trk.Get_T_model(p,group->WirePos(h),1) );
+            S0 += utils::intpow<2>( trk.Get_T_model(p,group->WirePos(h),1) );
 
             S1 += trk.Get_T_model(p, group->WirePos(h), 1) * trk.Get_T_model(p, group->WirePos(h), 2); 
         }
@@ -52,7 +52,7 @@ void Compute_trackError(VDC::Track& trk)
 
             double v2 = ERR_tau_sigma*zi*S0 / ( ERR_tau_sigma*zi*S1/S0 + S0*S0 ); 
 
-            v_square += square( v2/trk.Slope(p) ) * dp ; 
+            v_square += utils::intpow<2>( v2/trk.Slope(p) ) * dp ; 
         }
         
         param_error[p] = std::sqrt(v_square); 

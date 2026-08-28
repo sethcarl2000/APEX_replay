@@ -2,7 +2,7 @@
 #include <APEX/replay/helpers.h>
 #include <APEX/VDC/Track.h> 
 #include <math.h> 
-#include <APEX/Utils.h> 
+#include <APEX/utils.h> 
 
 
 namespace APEX
@@ -15,7 +15,7 @@ namespace helpers
 double Phi_model(const VDC::Track& track) { 
     
     return 
-    -0.231*APEX::square(track.S2_y()) 
+    -0.231*utils::intpow<2>(track.S2_y()) 
     +0.2532*track.S2_y() 
     +0.539e-3; 
 };

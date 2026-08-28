@@ -5,7 +5,7 @@
 #include <APEX/EventHandler.h>
 #include <APEX/VDC/Track.h> 
 #include <APEX/VDC/ChamberPair.h> 
-#include <APEX/Utils.h> 
+#include <APEX/utils.h> 
 //ROOT headers
 #include <ROOT/RVec.hxx>
 //stdlib headers
@@ -28,8 +28,6 @@ ROOT::RVec<VDC::Track> gen_rawtracks(
 #ifdef DEBUG_RAW_TRACK
     std::printf("<%s>: in body\n", __func__); 
 #endif
-
-    using APEX::square; 
 
     const bool is_RHRS = evt.ActiveArm(); 
     

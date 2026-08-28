@@ -45,6 +45,13 @@ void fit_gaus_to_hist(
     bool do_draw=false
 ); 
 
+/// @brief Raise value 'x' to integer power 'N'
+/// @tparam N power. only valid for N = 2,3,4.  
+/// @param x argument  
+/// @return x^N 
+template <int N> double intpow(double x); 
+
+
 constexpr double kNaN = std::numeric_limits<double>::quiet_NaN(); 
 
 

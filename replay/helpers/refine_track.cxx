@@ -2,7 +2,7 @@
 // APEX
 #include <APEX/replay/helpers.h>
 #include <APEX/VDC/Track.h>
-#include <APEX/Utils.h> 
+#include <APEX/utils.h> 
 // ROOT
 #include <ROOT/RVec.hxx>
 // stdlib
@@ -23,8 +23,6 @@ void refine_track(
     const int nCycles, 
     double sigma) 
 { 
-    using APEX::square; 
-
     /// @return 'true' if x is nan
     auto is_nan = [](double x) { return x != x; }; 
 
@@ -113,7 +111,7 @@ void refine_track(
                 
                 if ( std::fabs(Chi) > Chi_cutoff*sigma ) continue; 
                 
-                double Eta = TMath::Exp( -0.5*square(Chi/sigma) ); 
+                double Eta = TMath::Exp( -0.5*utils::intpow<2>(Chi/sigma) ); 
                 
                 double m = trk.Slope(p); 
                 
@@ -123,7 +121,7 @@ void refine_track(
 
                 J_ii[p] 
                 += (Chi * trk.Get_T_model(p,group->WirePos(h),2)  
-                + square(trk.Get_T_model(p,group->WirePos(h),1)))*m*m*Eta; 
+                + utils::intpow<2>(trk.Get_T_model(p,group->WirePos(h),1)))*m*m*Eta; 
                 
                 J_4i[p] 
                 +=  -Eta * m * trk.Get_T_model(p,group->WirePos(h),1); 
@@ -131,7 +129,7 @@ void refine_track(
                 J_44 += Eta; 
                 
                 objective_eta[p] 
-                += TMath::Exp( -0.5*square(Chi/measure_sigma) ); 
+                += TMath::Exp( -0.5*utils::intpow<2>(Chi/measure_sigma) ); 
                 
             }//for (uint h=0; h<trk->pGet_N(p); 
 
