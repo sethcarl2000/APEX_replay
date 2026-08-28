@@ -1,14 +1,14 @@
 
-#include <ApexVDCHitGroup.h> 
+#include <APEX/VDC/HitGroup.h> 
 #include <stdexcept> 
 #include <TString.h> 
-#include <ApexUtils.h> 
+#include <APEX/utils.h> 
 
-using APEX::kNaN_double;
-using APEX::kNull_int; 
-
-namespace ApexVDC
+namespace APEX
 {
+namespace VDC
+{
+
 
 void HitGroup::AddHit( double wire, double rawTime ) 
 {   
@@ -21,7 +21,7 @@ double HitGroup::WirePos( unsigned int h ) const
         kNamespaceName, __func__, 
         Nhits()-1, h
     ));
-    return kNaN_double; 
+    return utils::kNaN; 
   }
   return fHits[h].wPos();
 }
@@ -32,7 +32,7 @@ int    HitGroup::WireNum( unsigned int h ) const
         kNamespaceName, __func__, 
         Nhits()-1, h
     ));
-    return APEX::kNull_int; 
+    return -1; 
   }
   
   return fHits[h].wNum(); 
@@ -44,7 +44,7 @@ double HitGroup::Time( unsigned int h )    const
         kNamespaceName, __func__, 
         Nhits()-1, h
     ));
-    return kNaN_double; 
+    return utils::kNaN; 
   }
   
   return fHits[h].Time(); 
@@ -54,3 +54,4 @@ double HitGroup::LoEdge()    const { return fHits.back().wPos(); }
 double HitGroup::HiEdge()    const { return fHits.front().wPos(); }
 
 };
+}

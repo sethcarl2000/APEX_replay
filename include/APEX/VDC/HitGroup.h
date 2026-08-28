@@ -1,10 +1,12 @@
-#ifndef ApexVDCHitGroup_H
-#define ApexVDCHitGroup_H
+#ifndef APEX_VDC_HitGroup_H
+#define APEX_VDC_HitGroup_H
 
-#include <ApexVDC.h> 
-#include <ApexVDCHit.h> 
+#include <APEX/VDC.h> 
+#include <APEX/VDC/Hit.h> 
 
-namespace ApexVDC 
+namespace APEX 
+{
+namespace VDC
 {
 
 class HitGroup {
@@ -47,5 +49,7 @@ private:
 
 }; 
 
-}; 
+}
+}
+ 
 #endif 
