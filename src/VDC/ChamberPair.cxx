@@ -1,18 +1,20 @@
 
-#include <ApexVDCChamberPair.h>
-#include <ApexVDCTrack.h> 
+#include <APEX/VDC/ChamberPair.h>
+#include <APEX/VDC/Track.h> 
 #include <algorithm>
 #include <vector>  
 
-namespace ApexVDC
+namespace APEX
+{
+namespace VDC
 {
 
 ///////////////////////////////////////////////////////////////////////////////
 ChamberPair::ChamberPair( bool is_loChamber,
 			    double u,
 			    double v,
-			    ApexVDC::HitGroup *Group_U,
-			    ApexVDC::HitGroup *Group_V, 
+			    HitGroup *Group_U,
+			    HitGroup *Group_V, 
 			    int unique_id ) {
   
   f_isLoChamber = is_loChamber; 
@@ -23,6 +25,7 @@ ChamberPair::ChamberPair( bool is_loChamber,
   
   fUnique_ID = unique_id; 
 }
+///////////////////////////////////////////////////////////////////////////////
 ChamberPair::ChamberPair( bool is_loChamber, 
 			    HitCluster *clust_u,
 			    HitCluster *clust_v, 
@@ -38,6 +41,7 @@ ChamberPair::ChamberPair( bool is_loChamber,
   
   fUnique_ID = unique_id; 
 }
+///////////////////////////////////////////////////////////////////////////////
 void ChamberPair::Remove_track(int id)
 {
   fTrackIDs.erase(
@@ -47,4 +51,5 @@ void ChamberPair::Remove_track(int id)
 }
 
 
-}; 
+}
+}

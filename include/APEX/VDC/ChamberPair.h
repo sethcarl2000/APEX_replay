@@ -1,13 +1,15 @@
-#ifndef ApexVDCChamberPair_H 
-#define ApexVDCChamberPair_H 
+#ifndef APEX_VDC_ChamberPair_H 
+#define APEX_VDC_ChamberPair_H 
 
-#include <ApexVDC.h> 
-#include <ApexVDCHitGroup.h> 
-#include <ApexVDCHitCluster.h> 
+#include <APEX/VDC.h> 
+#include <APEX/VDC/HitGroup.h> 
+#include <APEX/VDC/HitCluster.h> 
 
-namespace ApexVDC
+namespace APEX
 {
-    
+namespace VDC 
+{
+
 class Track; 
 
 class ChamberPair { 
@@ -73,6 +75,7 @@ class ChamberPair {
 };
 
 }; 
+} 
 
 
 #endif 
