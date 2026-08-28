@@ -1,9 +1,9 @@
 
 // APEX headers
-#include "APEX_replay_helpers.h"
-#include <TapexS2Hit.h> 
-#include <TapexEventHandler.h>
-#include <run_parameters.h>
+#include <APEX/replay/helpers.h>
+#include <APEX/S2Hit.h> 
+#include <APEX/EventHandler.h>
+#include <APEX/run_parameters.h>
 // ROOT headers
 #include <ROOT/RVec.hxx>
 // stdlib headers
@@ -16,19 +16,19 @@ namespace replay
 namespace helpers
 {
 
-ROOT::VecOps::RVec<TapexS2Hit> generate_S2_hits(
+ROOT::VecOps::RVec<S2Hit> generate_S2_hits(
     const bool is_RHRS,
     const ROOT::RVec<double>& PMT_R, 
     const ROOT::RVec<double>& PMT_L )
 {
     //generate a vector of all coinc s2-paddle hits
-    ROOT::RVec<TapexS2Hit> coinc_hits{}; 
+    ROOT::RVec<S2Hit> coinc_hits{}; 
     
     int last_paddle(-999); 
     
-    for (int p=0; p<TapexS2Hit::N_paddles(); p++) { 
+    for (int p=0; p<S2Hit::N_paddles(); p++) { 
       
-        TapexS2Hit hit( is_RHRS, p, PMT_R[p], PMT_L[p] );
+        S2Hit hit( is_RHRS, p, PMT_R[p], PMT_L[p] );
         
         //check if it's a coinc-hit
         if ( !hit.IsCoinc() ) continue; 
