@@ -1,8 +1,8 @@
 
-#include "APEX_replay_helpers.h"
-#include <run_parameters.h>
-#include <ApexVDCTrack.h> 
-#include <ApexUtils.h> 
+#include <APEX/replay/helpers.h>
+#include <APEX/run_parameters.h>
+#include <APEX/VDC/Track.h> 
+#include <APEX/Utils.h> 
 #include <math.h> 
 #include <Math/QuantFuncMathCore.h> 
 
@@ -13,7 +13,7 @@ namespace replay
 namespace helpers
 {
 
-void Compute_trackError(ApexVDC::Track& trk) 
+void Compute_trackError(VDC::Track& trk) 
 {
     using namespace APEX; 
 
@@ -25,7 +25,7 @@ void Compute_trackError(ApexVDC::Track& trk)
         
         double S0(0.), S1(0.); 
 
-        ApexVDC::HitGroup* group = trk.GetGroup(p); 
+        VDC::HitGroup* group = trk.GetGroup(p); 
         
         for (int h=0; h<group->Nhits(); h++) { 
                 
