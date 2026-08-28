@@ -2,6 +2,7 @@
 #define APEX_replay_helpers_h
 
 // APEX headers
+#include <APEX/replay/EventCounter.h> 
 #include <APEX/EventHandler.h>
 #include <APEX/ReactVertex.h>
 #include <APEX/S2Hit.h>

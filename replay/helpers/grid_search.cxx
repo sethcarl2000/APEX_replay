@@ -1,7 +1,6 @@
 
 // APEX 
 #include <APEX/replay/helpers.h>
-#include <APEX/EventCounter.h>
 #include <APEX/VDC/HitGroup.h> 
 #include <APEX/EventHandler.h> 
 #include <APEX/utils.h> 

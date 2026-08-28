@@ -1,7 +1,6 @@
 
 // APEX headers
 #include <APEX/run_parameters.h>
-#include <APEX/EventCounter.h> 
 #include <APEX/EventHandler.h> 
 #include <APEX/VDC/HitGroup.h> 
 #include <APEX/VDC/Track.h>

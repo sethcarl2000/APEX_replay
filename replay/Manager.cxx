@@ -9,6 +9,8 @@
 #include <APEX/S2Hit.h>
 #include <APEX/EventHandler.h>
 #include <APEX/PidManager.h>
+#include <APEX/replay/EventCounter.h> 
+#include <APEX/replay/UniqueIDGenerator.h> 
 // ROOT headers 
 #include <ROOT/RVec.hxx>
 #include <TStopwatch.h>
@@ -369,7 +371,7 @@ int Manager::Process(const std::string& path_input, const std::string& stem_outp
   rptr_nPass_1event = rna.Count(); 
 
   //add a unique event id to each event that passes our S2-hit cuts
-  utils::UniqueIDGenerator unique_id_generator;
+  UniqueIDGenerator unique_id_generator;
 
   rna.DefineOutput("event_id",   [&unique_id_generator](){
     return unique_id_generator.GetID();

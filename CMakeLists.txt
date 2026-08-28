@@ -11,12 +11,35 @@ find_package(Podd 1.7 REQUIRED)
 
 #-------------------------------------------------------------------------------------------
 #
+#   First, let's build the 'utils' library
+#
+set(src_utils
+    utils/fit_gaus_to_hist.cxx
+    utils/get_available_cpus.cxx
+    utils/get_env_variable_int.cxx
+    utils/get_env_variable_string.cxx
+    utils/intpow.cxx
+)
+
+set(headers_utils
+    utils/include/APEX/utils.h
+)
+
+add_library(APEX_utils SHARED ${src_utils})
+
+target_include_directories(APEX_utils PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}/utils/include")
+
+target_link_libraries(APEX_utils PUBLIC ROOT::Core ROOT::RIO)
+
+
+#-------------------------------------------------------------------------------------------
+#
 #   First, we're going to add the 'decode' libaray, which handles operations with CODA files
 #
 set(src_decode
     decode/count_physics_events.cxx
     decode/init_decoders.cxx
-    decode/process_coda_file.cxx
+    decode/process_coda_file.cxx 
 )
 
 set(headers_decode
@@ -25,9 +48,10 @@ set(headers_decode
 
 add_library(APEX_decode SHARED ${src_decode})
 
-target_include_directories(APEX_decode PUBLIC "decode/include")
+target_include_directories(APEX_decode PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}/decode/include")
 
-target_link_libraries(APEX_decode PUBLIC Podd::Podd Podd::HallA)
+# link it with Podd
+target_link_libraries(APEX_decode PUBLIC Podd::Podd Podd::HallA APEX_utils)
 
 
 #-------------------------------------------------------------------------------------------
@@ -65,12 +89,6 @@ set(src_replay
     replay/helpers/gen_pid_data.cxx
     replay/helpers/gen_pairs.cxx
     replay/helpers/gen_react_vertex.cxx
-# ---   Misc. utility classes 
-    replay/utils/get_env_variable_int.cxx
-    replay/utils/get_env_variable_string.cxx
-    replay/utils/get_available_cpus.cxx
-    replay/utils/intpow.cxx
-    replay/utils/fit_gaus_to_hist.cxx
 )
 
 set(headers_replay
@@ -78,14 +96,15 @@ set(headers_replay
     replay/include/APEX/replay/Manager.h
 # ---   replay header
     replay/include/APEX/replay.h
-# ---   utility header
-    replay/include/APEX/utils.h
 # ---   run parameters 
     replay/include/APEX/run_parameters.h
 # ---   some unit definitions
     replay/include/APEX/units.h
 # ---   replay helpers
     replay/include/APEX/replay/helpers.h
+# --    misc. replay helpers
+    replay/include/APEX/replay/EventCounter.h
+    replay/include/APEX/replay/UniqueIDGenerator.h
 # ---   user analysis classes 
     replay/include/APEX/PmtData.h
     replay/include/APEX/EventCounter.h
@@ -109,7 +128,7 @@ set(headers_replay
 add_library(APEX_replay SHARED ${src_replay})
 
 # add the include dir
-target_include_directories(APEX_replay PUBLIC "replay/include")
+target_include_directories(APEX_replay PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}/replay/include")
 
 # link against ROOT
-target_link_libraries(APEX_replay PUBLIC ROOT::Core ROOT::RIO ROOT::ROOTDataFrame ROOT::MathCore ROOT::Physics)
+target_link_libraries(APEX_replay PUBLIC ROOT::Core ROOT::RIO ROOT::ROOTDataFrame ROOT::MathCore ROOT::Physics APEX_utils)
