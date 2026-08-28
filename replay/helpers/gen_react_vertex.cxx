@@ -17,7 +17,7 @@ namespace helpers
 
 /// @brief Generates react vertex
 /// @param rna RDFNodeAccumulator to add branches to 
-/// @param vtx const ptr to TapexReactVertex obj (arm specific!)
+/// @param vtx const ptr to ReactVertex obj (arm specific!)
 void gen_react_vertex(RDFNodeAccumulator& rna, ReactVertex* vtx)
 {
     const bool is_RHRS = vtx->IsRHRS(); 
