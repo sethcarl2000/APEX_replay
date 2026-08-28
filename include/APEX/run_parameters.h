@@ -1,8 +1,10 @@
-#ifndef run_parameters_H
-#define run_parameters_H
+#ifndef APEX_run_parameters_H
+#define APEX_run_parameters_H
 
-#include <ApexVDC.h> 
+#include <APEX/VDC.h> 
 
+namespace APEX
+{
 
 /// @brief a basic namespace of constant parameters which effect the function of the VDC track reconstruction algorithm 
 namespace run_parameters {
@@ -69,5 +71,7 @@ namespace run_parameters {
     constexpr double min_tr_tl = 10e-9; 
     constexpr double max_tr_tl = 60e-9; 
 };
+
+}
 
 #endif
