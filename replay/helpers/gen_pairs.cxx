@@ -1,13 +1,16 @@
 
-#include "APEX_replay_helpers.h"
-#include "run_parameters.h"
-#include <ApexVDCHitGroup.h>
-#include <ApexVDCHitCluster.h>
-#include <ApexVDCChamberPair.h> 
-#include <ApexVDCTrack.h> 
-#include <math.h> 
+// APEX
+#include <APEX/replay/helpers.h>
+#include <APEX/run_parameters.h>
+#include <APEX/VDC/HitGroup.h>
+#include <APEX/VDC/HitCluster.h>
+#include <APEX/VDC/ChamberPair.h> 
+#include <APEX/VDC/Track.h> 
+// ROOT
 #include <TVector3.h> 
-#include <stdio.h> 
+// stdlib 
+#include <cmath> 
+#include <cstdio> 
 
 namespace APEX
 {
@@ -18,10 +21,10 @@ namespace helpers
 
 //#define DEBUG_PAIR
 
-ROOT::RVec<ApexVDC::ChamberPair> gen_pairs( 
-    const TapexEventHandler& evt, 
-    ROOT::RVec<ApexVDC::HitGroup>& gVec_U, 
-    ROOT::RVec<ApexVDC::HitGroup>& gVec_V, 
+ROOT::RVec<VDC::ChamberPair> gen_pairs( 
+    const EventHandler& evt, 
+    ROOT::RVec<VDC::HitGroup>& gVec_U, 
+    ROOT::RVec<VDC::HitGroup>& gVec_V, 
     bool is_LoChamber ) 
 { 
 #ifdef DEBUG_PAIR
@@ -63,10 +66,10 @@ ROOT::RVec<ApexVDC::ChamberPair> gen_pairs(
                     double &slope_u, 
                     double &slope_v ) { 
         TVector3 r_xyz 
-        = ApexVDC::Track::Rotate_uvw_to_xyz( TVector3( u-uFix, v, wVDC ) ); 
+        = VDC::Track::Rotate_uvw_to_xyz( TVector3( u-uFix, v, wVDC ) ); 
         
         TVector3 S_uvw 
-        = ApexVDC::Track::Rotate_xyz_to_uvw( TVector3( r_xyz[0]/(r_xyz[2]-Z_fPoint_Theta), 
+        = VDC::Track::Rotate_xyz_to_uvw( TVector3( r_xyz[0]/(r_xyz[2]-Z_fPoint_Theta), 
                             r_xyz[1]/(r_xyz[2]-Z_fPoint_Phi),
                             1.) );       
         slope_u = S_uvw.Z() / S_uvw.X(); 
@@ -78,7 +81,7 @@ ROOT::RVec<ApexVDC::ChamberPair> gen_pairs(
     //____________________________________________________________________________________________________________________    
     auto Guess_s2x = [evt, uFix, wVDC, Z_fPoint_Theta, is_RHRS]( const double u, const double v ) 
     { 
-        TVector3 r_xyz = ApexVDC::Track::Rotate_uvw_to_xyz( TVector3( u-uFix, v, wVDC ) ); 
+        TVector3 r_xyz = VDC::Track::Rotate_uvw_to_xyz( TVector3( u-uFix, v, wVDC ) ); 
         return r_xyz.x()*(evt.GetS2Hit(is_RHRS)->Z() - Z_fPoint_Theta)/(r_xyz.Z() - Z_fPoint_Theta); 		 
     }; 
     //____________________________________________________________________________________________________________________
@@ -94,7 +97,7 @@ ROOT::RVec<ApexVDC::ChamberPair> gen_pairs(
     //____________________________________________________________________________________________________________________
     auto Find_clusters = [&evt, &Guess_slopes, CUT_vu_diff_min, CUT_vu_diff_max] ( 
         bool is_Uplane, 
-        ROOT::RVec<ApexVDC::HitGroup>& groups 
+        ROOT::RVec<VDC::HitGroup>& groups 
     ) { 
     
         //how many wires over are we gonna look for tracks?
@@ -103,7 +106,7 @@ ROOT::RVec<ApexVDC::ChamberPair> gen_pairs(
         //if clusters are closer than this, then join them together
         const int min_cluster_gap = 30; 
         
-        ROOT::RVec<ApexVDC::HitCluster> clust_all; 
+        ROOT::RVec<VDC::HitCluster> clust_all; 
         
         
         for (int g=groups.size()-1; g>=0; g+=-1) { 
@@ -141,7 +144,7 @@ ROOT::RVec<ApexVDC::ChamberPair> gen_pairs(
                                 20e-9 ); 
                 
                 if (Eta > run_parameters::kCUT_minEta) 
-                    clust_all.push_back( ApexVDC::HitCluster( &group, x, Eta ) ); 
+                    clust_all.push_back( VDC::HitCluster( &group, x, Eta ) ); 
                 
             }//for (int ix=0; ix<span; ix++) 
         }//for (int g=0; g<groups.size(); g++) 
@@ -151,7 +154,7 @@ ROOT::RVec<ApexVDC::ChamberPair> gen_pairs(
         if (clust_all.size()<1) return clust_all; 
         
         //now, make sure that that clusters aren't bunched up together
-        ROOT::RVec<ApexVDC::HitCluster> clust_keep; 
+        ROOT::RVec<VDC::HitCluster> clust_keep; 
         
         //now, prune the clusters to decide which hits to get rid of
         auto& bestClust = clust_all.front(); 
@@ -205,12 +208,12 @@ ROOT::RVec<ApexVDC::ChamberPair> gen_pairs(
     //____________________________________________________________________________________________________________________
     
     //for each possible pairing of groups, check to see if they
-    // might be allowed to form a ApexVDC::ChamberPair, and, if so, go ahead and generate it. 
-    ROOT::RVec<ApexVDC::ChamberPair> pairs; 
+    // might be allowed to form a VDC::ChamberPair, and, if so, go ahead and generate it. 
+    ROOT::RVec<VDC::ChamberPair> pairs; 
     
-    ROOT::RVec<ApexVDC::HitCluster> clusters_u = Find_clusters( false, gVec_V ); 
+    ROOT::RVec<VDC::HitCluster> clusters_u = Find_clusters( false, gVec_V ); 
     
-    ROOT::RVec<ApexVDC::HitCluster> clusters_v = Find_clusters( true, gVec_U ); 
+    ROOT::RVec<VDC::HitCluster> clusters_v = Find_clusters( true, gVec_U ); 
     
 #ifdef DEBUG_PAIR
     std::printf("<%s>: beginning to pair clusters\n", __func__); 
@@ -269,7 +272,7 @@ ROOT::RVec<ApexVDC::ChamberPair> gen_pairs(
 #ifdef DEBUG_PAIR
     std::printf("<%s>: keeping pair!\n", __func__); 
 #endif         
-            pairs.push_back( ApexVDC::ChamberPair(is_LoChamber, &clust_u, &clust_v, pair_unique_id++) ); 
+            pairs.push_back( VDC::ChamberPair(is_LoChamber, &clust_u, &clust_v, pair_unique_id++) ); 
 
         } //for (int cu=0; cu<clusters_u.size(); cu++) 
     } //for (int cv=0; cv<clusters_v.size(); cv++)
