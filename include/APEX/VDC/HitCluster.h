@@ -1,15 +1,17 @@
-#ifndef ApexVDCHitCluster_H 
-#define ApexVDCHitCluster_H 
+#ifndef APEX_VDC_HitCluster_H 
+#define APEX_VDC_HitCluster_H 
 
-#include <ApexVDC.h> 
-#include <ApexVDCHitGroup.h> 
+#include <APEX/VDC.h> 
+#include <APEX/VDC/HitGroup.h> 
 
-namespace ApexVDC
+namespace APEX
+{
+namespace VDC
 {
 
 class HitCluster {
 public: 
-  HitCluster(ApexVDC::HitGroup *group=nullptr, 
+  HitCluster(HitGroup *group=nullptr, 
 	      const double intercept=0, 
 	      const double eta=0); 
 
@@ -22,12 +24,13 @@ public:
   
  private: 
   //ptr to parent group 
-  ApexVDC::HitGroup *fGroup; 
+  APEX::VDC::HitGroup *fGroup; 
   double fIntercept; 
   double fEta_score; 
   
 };
 
-}; 
+}
+}
 
 #endif 

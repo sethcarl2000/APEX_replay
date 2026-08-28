@@ -1,12 +1,14 @@
 
-#include <ApexVDCHitCluster.h> 
+#include <APEX/VDC/HitCluster.h> 
 #include <stdexcept> 
 
-namespace ApexVDC
+namespace APEX
+{
+namespace VDC
 {
 
 ////////////////////////////////////////////////////////////////////////////////  
-HitCluster::HitCluster( ApexVDC::HitGroup *group, 
+HitCluster::HitCluster( HitGroup *group, 
 			  const double intercept, 
 			  const double eta ) { 
   fGroup     =group; 
@@ -18,11 +20,12 @@ HitGroup* HitCluster::GetGroup()
 {
   if (fGroup) return fGroup; 
 
-  throw std::logic_error("<ApexVDC::HitGroup::GetGroup>: requested ptr for group which was null."); 
+  throw std::logic_error("<APEX::VDC::HitGroup::GetGroup>: requested ptr for group which was null."); 
   return nullptr; 
 }
 //________________________________________________________________________________________________
 //________________________________________________________________________________________________
 //________________________________________________________________________________________________
-}; 
 
+}; 
+}
