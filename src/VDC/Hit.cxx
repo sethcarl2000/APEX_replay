@@ -1,13 +1,15 @@
-#include <ApexVDCHit.h> 
-#include <stdexcept> 
-#include <TString.h> 
+#include <APEX/VDC/Hit.h> 
 
-namespace ApexVDC {
+namespace APEX
+{
+namespace VDC 
+{
 
+////////////////////////////////////////////////////////////////////////////////  
 Hit::Hit( int plane, 
 		  double wire, 
 		  double rawTime, 
-		  const TapexEventHandler *event ) { 
+		  const EventHandler *event ) { 
   
   fEvent = event; 
   
@@ -16,16 +18,18 @@ Hit::Hit( int plane,
   fPlane    = plane; 
   fRawTime  = rawTime; 
   fWireNum  = (int)wire; 
-  fWirePos  = ApexVDC::WirePos( f_isRightArm, fPlane, fWireNum );
-  fRealTime = ApexVDC::RealTime( f_isRightArm, fPlane, fWireNum, fRawTime ); 
+  fWirePos  = VDC::WirePos( f_isRightArm, fPlane, fWireNum );
+  fRealTime = VDC::RealTime( f_isRightArm, fPlane, fWireNum, fRawTime ); 
     
-  fW = ApexVDC::w(f_isRightArm, fPlane);
+  fW = VDC::w(f_isRightArm, fPlane);
 }
+////////////////////////////////////////////////////////////////////////////////  
 void   Hit::SetRawTime(const double rawTime)  { 
   
   fRawTime  = rawTime; 
-  fRealTime = ApexVDC::RealTime( f_isRightArm, fPlane, fWireNum, fRawTime ) - fEvent->GetS2Hit(f_isRightArm)->Time(); 
+  fRealTime = VDC::RealTime( f_isRightArm, fPlane, fWireNum, fRawTime ) - fEvent->GetS2Hit(f_isRightArm)->Time(); 
 } 
 
-}; 
+} 
+}
 ////////////////////////////////////////////////////////////////////////////////  

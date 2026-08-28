@@ -1,10 +1,12 @@
-#ifndef ApexVDCHit_H
-#define ApexVDCHit_H
+#ifndef APEX_VDC_Hit_h
+#define APEX_VDC_Hit_h
 
-#include <TapexEventHandler.h> 
-#include <ApexVDC.h> 
+#include <APEX/EventHandler.h> 
+#include <APEX/VDC.h> 
 
-namespace ApexVDC 
+namespace APEX 
+{
+namespace VDC
 {
 
 /////////////////////////////////////////////////////////////////////////////////
@@ -15,7 +17,7 @@ class Hit {
   Hit( int plane=-999, 
 	   double wire=-1e30, 
 	   double rawTime=-1e30, 
-	   const TapexEventHandler *event=0 );
+	   const EventHandler *event=0 );
     
   virtual ~Hit() {}; 
 
@@ -37,7 +39,7 @@ class Hit {
   
 
  private: 
-  const TapexEventHandler *fEvent; 
+  const EventHandler *fEvent; 
   int    fPlane;
   double fRawTime; 
   int    fWireNum; 
@@ -49,6 +51,7 @@ class Hit {
   
 }; 
 
-};
+}
+}
 
 #endif
