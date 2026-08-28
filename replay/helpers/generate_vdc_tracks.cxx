@@ -1,10 +1,10 @@
 
 // APEX headers
-#include <run_parameters.h>
-#include <EventCounter.h> 
-#include <TapexEventHandler.h> 
-#include <ApexVDCHitGroup.h> 
-#include <ApexVDCTrack.h>
+#include <APEX/run_parameters.h>
+#include <APEX/EventCounter.h> 
+#include <APEX/EventHandler.h> 
+#include <APEX/VDC/HitGroup.h> 
+#include <APEX/VDC/Track.h>
 //
 //functions 
 #ifdef DEBUG_TRACK
@@ -15,7 +15,7 @@
 #define DEBUG_RAW_TRACK
 #endif
 //
-#include "APEX_replay_helpers.h"
+#include <APEX/replay/helpers.h>
 //
 // ROOT headers
 #include <ROOT/RVec.hxx>
@@ -95,9 +95,9 @@ void generate_vdc_tracks(
     //pick the first event manager
 
     //first, make sure there is at least 1 event for this event (this cut should have already been made, but its good to be safe).
-    rna.Filter(RVec_not_empty<TapexEventHandler>, {branch_event_vec}); 
+    rna.Filter(RVec_not_empty<EventHandler>, {branch_event_vec}); 
 
-    rna.DefineIfMissing(branch_event, [is_RHRS](RVec<TapexEventHandler>& events)
+    rna.DefineIfMissing(branch_event, [is_RHRS](RVec<EventHandler>& events)
     {
         auto& event = events.front();  
         event.SetActiveArm(is_RHRS); 
@@ -113,14 +113,14 @@ void generate_vdc_tracks(
         branch_group.push_back( (string)arm+"_groups_"+plane_name[p] ); 
         
         //form the groups
-        rna.Define(branch_group[p], [p](const TapexEventHandler& evt, const RVecD& wire, const RVecD& time)
+        rna.Define(branch_group[p], [p](const EventHandler& evt, const RVecD& wire, const RVecD& time)
             { 
                 return group_vdc_hits(evt,p,wire,time); 
             },
             {branch_event, branch_wire[p], branch_rawtime[p]});
         
         //require that at least 1 group was successfully formed 
-        rna.Filter( RVec_not_empty<ApexVDC::HitGroup>, {branch_group[p]} );
+        rna.Filter( RVec_not_empty<VDC::HitGroup>, {branch_group[p]} );
     } 
 
     //record the number of events that form at least 1 group 
@@ -129,24 +129,24 @@ void generate_vdc_tracks(
     //create lo-chamber pairs
     string br_pairs_lo = arm+"_pairs_LoChamber";
     rna.Define(br_pairs_lo, [](
-        const TapexEventHandler& evt, 
-        RVec<ApexVDC::HitGroup>& vec_gU, 
-        RVec<ApexVDC::HitGroup>& vec_gV) { 
+        const EventHandler& evt, 
+        RVec<VDC::HitGroup>& vec_gU, 
+        RVec<VDC::HitGroup>& vec_gV) { 
             return gen_pairs(evt, vec_gU,vec_gV, true); 
         }, { branch_event, branch_group[0], branch_group[1] });
         
-    rna.Filter( RVec_not_empty<ApexVDC::ChamberPair>, {br_pairs_lo}); 
+    rna.Filter( RVec_not_empty<VDC::ChamberPair>, {br_pairs_lo}); 
         
     //create hi-chamber pairs
     string br_pairs_hi = arm+"_pairs_HiChamber";
     rna.Define(arm+"_pairs_HiChamber", [](
-        const TapexEventHandler& evt, 
-        RVec<ApexVDC::HitGroup>& vec_gU, 
-        RVec<ApexVDC::HitGroup>& vec_gV) { 
+        const EventHandler& evt, 
+        RVec<VDC::HitGroup>& vec_gU, 
+        RVec<VDC::HitGroup>& vec_gV) { 
             return gen_pairs(evt, vec_gU,vec_gV, false);
         }, {branch_event, branch_group[2], branch_group[3] });
         
-    rna.Filter( RVec_not_empty<ApexVDC::ChamberPair>, {br_pairs_hi}); 
+    rna.Filter( RVec_not_empty<VDC::ChamberPair>, {br_pairs_hi}); 
     
     nPass_1pair = rna.Count(); 
 
@@ -157,7 +157,7 @@ void generate_vdc_tracks(
         gen_rawtracks, 
         {branch_event, arm+"_pairs_LoChamber", arm+"_pairs_HiChamber"}); 
         
-    rna.Filter(RVec_not_empty<ApexVDC::Track>, {br_tracks_raw}); 
+    rna.Filter(RVec_not_empty<VDC::Track>, {br_tracks_raw}); 
     
     nPass_1rawTrack = rna.Count(); 
 
@@ -178,9 +178,9 @@ void generate_vdc_tracks(
 
     //refine track candidates
     string br_refined = arm+"_tracks_refined"; 
-    rna.Define(br_refined, [CUT_th_min, CUT_th_max, CUT_ph_min, CUT_ph_max, x_param_offset, dt_offset,dt_cut] ( ROOT::RVec<ApexVDC::Track>& tracks ) 
+    rna.Define(br_refined, [CUT_th_min, CUT_th_max, CUT_ph_min, CUT_ph_max, x_param_offset, dt_offset,dt_cut] ( ROOT::RVec<VDC::Track>& tracks ) 
         { 
-            RVec<ApexVDC::Track> refined_tracks; refined_tracks.reserve(tracks.size());
+            RVec<VDC::Track> refined_tracks; refined_tracks.reserve(tracks.size());
                 
             const double tau_sigma = tracks.at(0).GetEvent()->Get_tauSigma(); 
             
@@ -231,9 +231,9 @@ void generate_vdc_tracks(
             return refined_tracks; 
         }, {arm+"_tracks_raw"});
         
-    rna.Filter(RVec_not_empty<ApexVDC::Track>, {br_refined}); 
+    rna.Filter(RVec_not_empty<VDC::Track>, {br_refined}); 
 
-    rna.DefineOutput(arm+"_tracks_S2time", [is_RHRS]( ROOT::RVec<ApexVDC::Track>& tracks )
+    rna.DefineOutput(arm+"_tracks_S2time", [is_RHRS]( ROOT::RVec<VDC::Track>& tracks )
     {
       ROOT::RVec<double> time; time.reserve( tracks.size() ); 
       for (auto& trk : tracks) {
