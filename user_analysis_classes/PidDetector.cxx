@@ -4,7 +4,7 @@
 #include <limits> 
 #include <stdexcept> 
 #include <sstream> 
-#include <APEX/Utils.h> 
+#include <APEX/utils.h> 
 
 namespace APEX
 {
@@ -30,7 +30,7 @@ double PidDetector::GetVal(int row, int col, const ROOT::RVec<double>& data) con
         std::ostringstream oss; 
         oss << "in <PidDetector::"<<__func__<<"> size of data input ("<<data.size()<<") does not match number of cells ("<<fN_cols*fN_rows<<")"; 
         throw std::logic_error(oss.str());  
-        return kNaN_double; 
+        return utils::kNaN; 
     }
     if (cell) { return data[cell->id]; } else { return 0.; }
 }

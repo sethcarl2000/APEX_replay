@@ -2,7 +2,7 @@
 //APEX/ headers
 #include <APEX/VDC/Track.h>
 #include <APEX/VDC.h> 
-#include <APEX/Utils.h> 
+#include <APEX/utils.h> 
 //ROOT headers
 #include <TString.h> 
 #include <TMatrixD.h> 
@@ -12,8 +12,7 @@
 #include <limits> 
 #include <stdexcept> 
 
-using APEX::kNaN_double;
-using APEX::kNull_int; 
+
 
 namespace {
     
@@ -308,14 +307,14 @@ int    Track::Nhits(int plane) const {
         "this track does not have vdc data, illegal call", 
         report_prefix,__func__
     ));
-    return kNull_int; 
+    return utils::kNaN_int; 
   }
   if (!f_hasVDCdata || !fGroup[plane]) { 
     throw std::logic_error(Form("<%s::%s> "
         "pointer for APEX::VDC::HitGroup for plane %i invalid", 
         report_prefix,__func__, plane
     ));
-    return kNull_int; 
+    return utils::kNaN_int; 
   }
   
   return fGroup[plane]->Nhits(); 
@@ -328,21 +327,21 @@ double Track::Tau(int plane, int h) const
             "this track does not have vdc data, illegal call", 
             report_prefix,__func__
         ));
-        return kNaN_double; 
+        return utils::kNaN; 
     }
     if (!fGroup[plane]) { 
         throw std::logic_error(Form("<%s::%s> "
             "pointer for APEX::VDC::HitGroup for plane %i invalid", 
             report_prefix,__func__, plane
         ));
-        return kNaN_double; 
+        return utils::kNaN; 
     }
     if (h >= Nhits(plane) || h<0 ) { 
         throw std::logic_error(Form("<%s::%s> "
             "hit index %i is invalid. range is [0, %i]", 
             report_prefix,__func__, h, Nhits(plane)-1
         ));
-        return kNaN_double; 
+        return utils::kNaN; 
     }
     
     return fGroup[plane]->Time(h); 
@@ -355,21 +354,21 @@ double Track::WirePos(int plane, int h) const
             "this track does not have vdc data, illegal call", 
             report_prefix,__func__
         ));
-        return kNaN_double; 
+        return utils::kNaN; 
     }
     if (!fGroup[plane]) { 
         throw std::logic_error(Form("<%s::%s> "
             "pointer for APEX::VDC::HitGroup for plane %i invalid", 
             report_prefix,__func__, plane
         ));
-        return kNaN_double; 
+        return utils::kNaN; 
     }
     if (h >= Nhits(plane) || h<0 ) { 
         throw std::logic_error(Form("<%s::%s> "
             "hit index %i is invalid. range is [0, %i]", 
             report_prefix,__func__, h, Nhits(plane)-1
         ));
-        return kNaN_double; 
+        return utils::kNaN; 
     }
     
     return fGroup[plane]->WirePos(h); 
@@ -384,7 +383,7 @@ double Track::Slope(int plane) const {
         "invalid plane index: %i", 
         report_prefix,__func__, plane
     ));
-    return kNaN_double; 
+    return utils::kNaN; 
 }
 //______________________________________________________________________________________________________________
 TVector3  Track::Rotate_uvw_to_xyz( const TVector3& v ) 
