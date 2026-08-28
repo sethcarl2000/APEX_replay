@@ -1,8 +1,8 @@
 
-//APEX headers
-#include <ApexVDCTrack.h>
-#include <ApexVDC.h> 
-#include <ApexUtils.h> 
+//APEX/ headers
+#include <APEX/VDC/Track.h>
+#include <APEX/VDC.h> 
+#include <APEX/Utils.h> 
 //ROOT headers
 #include <TString.h> 
 #include <TMatrixD.h> 
@@ -42,13 +42,15 @@ namespace {
         -0.707107,  0.000000,  0.707107 
     }; 
 
-    constexpr char report_prefix[] = "ApexVDC::Track"; 
+    constexpr char report_prefix[] = "APEX::VDC::Track"; 
 
     //speed of light
     constexpr double kC = 2.99e8; 
 }
 
-namespace ApexVDC
+namespace APEX
+{
+namespace VDC
 {
 
 //______________________________________________________________________________________________________________
@@ -111,14 +113,14 @@ void Track::UpdateTrackInfo() {
   fPhi   = std::atan( S_xyz.Y()/S_xyz.Z() ); 
 }
 //______________________________________________________________________________________________________________
-Track::Track( const TapexEventHandler *event, 
+Track::Track( const EventHandler *event, 
 		      ChamberPair *pLo, 
 		      ChamberPair *pHi,
           int unique_id ) : fID{unique_id} 
 { 
   
     if (!event) {
-      throw std::logic_error("<ApexVDC::Track::Track> event handler ptr is null"); 
+      throw std::logic_error("<APEX::VDC::Track::Track> event handler ptr is null"); 
       return; 
     }
 
@@ -126,7 +128,7 @@ Track::Track( const TapexEventHandler *event,
             
     f_isRightArm = fEvent->ActiveArm(); 
     
-    fW = f_isRightArm ? ApexVDC::kW_RHRS : ApexVDC::kW_LHRS; 
+    fW = f_isRightArm ? APEX::VDC::kW_RHRS : APEX::VDC::kW_LHRS; 
     
     //if we're making a new monte-carlo track, skip this step. 
     if ( !pLo || !pHi ) { f_hasVDCdata=false; } else { f_hasVDCdata=true; }
@@ -136,11 +138,11 @@ Track::Track( const TapexEventHandler *event,
         fPair_Lo = pLo;   fPair_Lo->Add_track(GetID());
         fPair_Hi = pHi;   fPair_Hi->Add_track(GetID()); 
         
-        fGroup[0] = (ApexVDC::HitGroup*)fPair_Lo->GetGroup_U(); 
-        fGroup[1] = (ApexVDC::HitGroup*)fPair_Lo->GetGroup_V();
+        fGroup[0] = (APEX::VDC::HitGroup*)fPair_Lo->GetGroup_U(); 
+        fGroup[1] = (APEX::VDC::HitGroup*)fPair_Lo->GetGroup_V();
         
-        fGroup[2] = (ApexVDC::HitGroup*)fPair_Hi->GetGroup_U(); 
-        fGroup[3] = (ApexVDC::HitGroup*)fPair_Hi->GetGroup_V(); 
+        fGroup[2] = (APEX::VDC::HitGroup*)fPair_Hi->GetGroup_U(); 
+        fGroup[3] = (APEX::VDC::HitGroup*)fPair_Hi->GetGroup_V(); 
     
         UpdateTrackInfo(); 
     }
@@ -310,7 +312,7 @@ int    Track::Nhits(int plane) const {
   }
   if (!f_hasVDCdata || !fGroup[plane]) { 
     throw std::logic_error(Form("<%s::%s> "
-        "pointer for ApexVDC::HitGroup for plane %i invalid", 
+        "pointer for APEX::VDC::HitGroup for plane %i invalid", 
         report_prefix,__func__, plane
     ));
     return kNull_int; 
@@ -330,7 +332,7 @@ double Track::Tau(int plane, int h) const
     }
     if (!fGroup[plane]) { 
         throw std::logic_error(Form("<%s::%s> "
-            "pointer for ApexVDC::HitGroup for plane %i invalid", 
+            "pointer for APEX::VDC::HitGroup for plane %i invalid", 
             report_prefix,__func__, plane
         ));
         return kNaN_double; 
@@ -357,7 +359,7 @@ double Track::WirePos(int plane, int h) const
     }
     if (!fGroup[plane]) { 
         throw std::logic_error(Form("<%s::%s> "
-            "pointer for ApexVDC::HitGroup for plane %i invalid", 
+            "pointer for APEX::VDC::HitGroup for plane %i invalid", 
             report_prefix,__func__, plane
         ));
         return kNaN_double; 
@@ -416,7 +418,7 @@ void Track::Compute_Theta_Phi(
     double &Phi ) 
 { //static method
 
-  double wSep = ApexVDC::w( is_RHRS, 2 ) - ApexVDC::w( is_RHRS, 0 );
+  double wSep = APEX::VDC::w( is_RHRS, 2 ) - APEX::VDC::w( is_RHRS, 0 );
   
   //compute slopes
   double m_v = wSep/(intercepts[2]-intercepts[0]); 
@@ -570,4 +572,5 @@ double Track::Phi()   const { return fPhi; }
 ////////////////////////////////////////////////////////////////////////////////////
 
 
-};
+}
+}

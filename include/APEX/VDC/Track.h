@@ -1,15 +1,17 @@
-#ifndef ApexVDCTrack_H
-#define ApexVDCTrack_H 
+#ifndef APEX_VDC_Track_H
+#define APEX_VDC_Track_H 
 
 //APEX headers 
-#include <ApexVDC.h> 
-#include <ApexVDCChamberPair.h> 
-#include <TapexEventHandler.h> 
+#include <APEX/VDC.h> 
+#include <APEX/VDC/ChamberPair.h> 
+#include <APEX/EventHandler.h> 
 #include <math.h> 
 //ROOT headers
 #include <TVector3.h>
 
-namespace ApexVDC 
+namespace APEX 
+{
+namespace VDC
 {
     
 class Track { 
@@ -18,7 +20,7 @@ class Track {
   // This is the track object, which handles self-refinement, 
   // as well as acting as a container for its constituent points. 
   Track( 
-    const TapexEventHandler *event=nullptr, 
+    const EventHandler *event=nullptr, 
     ChamberPair *pLo=0, 
     ChamberPair *pHi=0,
     int unique_id=-1
@@ -37,8 +39,8 @@ class Track {
   inline ChamberPair* GetPair_Hi() { return fPair_Hi; }
   inline ChamberPair* GetPair_Lo() { return fPair_Lo; }
   
-  inline void SetEvent( TapexEventHandler *evt ) { fEvent=evt; }
-  inline const TapexEventHandler *GetEvent() const { return fEvent; }
+  inline void SetEvent( EventHandler *evt ) { fEvent=evt; }
+  inline const EventHandler *GetEvent() const { return fEvent; }
   
   inline bool IsRightArm() const { return f_isRightArm; }
   
@@ -64,7 +66,7 @@ class Track {
   
   void Set_params( const double params[5] ); 
   
-  inline ApexVDC::HitGroup *GetGroup(int plane) { return fGroup[plane]; }
+  inline APEX::VDC::HitGroup *GetGroup(int plane) { return fGroup[plane]; }
     
   double Slope_u(); 
   double Slope_v(); 
@@ -158,11 +160,11 @@ class Track {
   
   
   //
-  inline void Set_goodPointGroup( int plane, ApexVDC::HitGroup *goodPointGroup ) {
+  inline void Set_goodPointGroup( int plane, APEX::VDC::HitGroup *goodPointGroup ) {
     f_goodPointGroup[plane] = goodPointGroup; 
   }
   
-  inline ApexVDC::HitGroup *Get_goodPointGroup( int plane ) { 
+  inline APEX::VDC::HitGroup *Get_goodPointGroup( int plane ) { 
     return f_goodPointGroup[plane]; 
   }
   
@@ -199,7 +201,7 @@ class Track {
   TVector3 ComputeIntercept_z(const double z) const;   
 
   //use the uniqueness of each track's memory address to define a unique instance of a track
-  inline bool operator==(const ApexVDC::Track& rhs) { return (this)==(&rhs); }
+  inline bool operator==(const APEX::VDC::Track& rhs) { return (this)==(&rhs); }
   
   /// @return unique ID of this track 
   int GetID() const { return fID; }
@@ -207,7 +209,7 @@ class Track {
   inline bool operator==(const Track& rhs) const { return (rhs.IsRightArm()==IsRightArm()) && (rhs.GetID()==GetID()); }
 
  private: 
-  const TapexEventHandler *fEvent;
+  const EventHandler *fEvent;
   bool f_isRightArm; 
     
   //unique id assigned to this track. 
@@ -265,10 +267,10 @@ class Track {
   
   double fT0=0.; 
   
-  ApexVDC::HitGroup *fGroup[4]; 
+  APEX::VDC::HitGroup *fGroup[4]; 
   
   //this tracks the 'good points' which agree well enough with the final track
-  ApexVDC::HitGroup *f_goodPointGroup[4]; 
+  APEX::VDC::HitGroup *f_goodPointGroup[4]; 
   
   double fSlope_u; 
   double fSlope_v; 
@@ -277,6 +279,7 @@ class Track {
   
 }; 
 
-};
+}
+}
 
 #endif
