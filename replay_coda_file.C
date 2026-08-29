@@ -10,6 +10,8 @@
 #include <stdexcept> 
 #include <iostream> 
 #include <cstdio> 
+#include <string>
+#include <sstream>
 
 namespace 
 {
@@ -20,7 +22,7 @@ namespace
     constexpr Long64_t max_chunk_size = 250e3;
 }
 
-void replay_coda_file(const std::string& path_coda_file, int rawfile_number, const std::string& output_directory)
+void replay_coda_file(int run_number, int rawfile_number, const std::string& output_directory)
 {
     using namespace APEX; 
 
@@ -29,10 +31,20 @@ void replay_coda_file(const std::string& path_coda_file, int rawfile_number, con
     //connect our custom error handler to ROOT's error handler interface 
     utils::ErrorHandler::Connect(); 
 
-    Info(__func__, "in body. checking if path '%s' is regular file...\n", path_coda_file.c_str()); 
+    Info(__func__, "in body. attempting replay of run %i, rawfile number %i.", run_number, rawfile_number);
 
+    const std::string path_cache = utils::get_env_variable_string("PATH_APEX_CACHE").value_or("null"); 
+    
+    std::ostringstream oss;
+
+    oss << path_cache << "/apex_" << run_number << ".dat." << rawfile_number;
+    const std::string path_coda_file = oss.str(); 
+    
+    
     //first, let's check the path of the file. 
     auto result = utils::is_path_regular_file(path_coda_file); 
+
+    Info(__func__, "checking if path '%s' is regular file...\n", path_coda_file.c_str()); 
 
     if (!result) {
         Error(__func__, "coda file's path is not regular file: %s\n"
@@ -72,15 +84,28 @@ void replay_coda_file(const std::string& path_coda_file, int rawfile_number, con
 
     //initialize the repaly manager
     replay::Manager replay_mgr; 
+    
+    replay_mgr.SetRunNumber(run_number); 
 
+    replay_mgr.SetMaxNThreads(4); 
+    
     //now, let's process these raw events. 
     Long64_t n_CODA_events_processed =0;
     int segment_number =0; 
 
 
     //get the decode file name
-    std::string path_decode = utils::get_slurm_scratch_directory() + "decode.root"; 
+    std::string path_decode;
+    try {
+      path_decode = utils::get_slurm_scratch_directory(); 
+    } catch (const std::exception& e) {
+      
+      Error(__func__, "We must not be in a slurm job! exception caught: %s", e.what());
+      path_decode = "data/test_slurm_dir"; 
+    }
 
+    path_decode = path_decode + "/decode.root"; 
+    
     //now, let's loop over all 'event chunks' 
     while (n_CODA_events_processed < n_CODA_events) {
 
@@ -116,7 +141,7 @@ void replay_coda_file(const std::string& path_coda_file, int rawfile_number, con
         Info(__func__, "Done with decode phase. initializing replay..."); 
 
 
-        auto replay_stem = output_directory + "replay"; 
+        auto replay_stem = output_directory + "/replay"; 
 
         //so, if all is well, then we just need to replay the file. 
         try {

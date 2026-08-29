@@ -53,6 +53,10 @@ public:
     /// @brief Set the 'arm mode' to use. 
     /// @param mode valid options are 'RHRS', 'LHRS', and 'both' 
     void SetArmMode(const std::string& mode); 
+
+  
+    /// @brief Set run number 
+    void SetRunNumber(int run_number) { fRunNumber=run_number; }
 }; 
 
 }

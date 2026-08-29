@@ -13,8 +13,10 @@
 #include <THaRasteredBeam.h>
 #include <THaRaster.h>
 #include <THaBPM.h>
-#include <THaGlobals.h> 
-// stdlib headers
+#include <THaGlobals.h>
+// ROOT headers
+#include <TList.h> 
+// stdlib headers 
 #include <string> 
 #include <cstdio>
 

@@ -166,7 +166,7 @@ int Manager::Process(const std::string& path_input, const std::string& stem_outp
   ReactVertex *R_react_vertex, *L_react_vertex;
   
 
-  const bool single_threadding = fMaxEventsToProcess > 0 || (!run_parameters::kEnableMT);
+  const bool single_threadding = !run_parameters::kEnableMT;
 
   //check status of multithreadding d
   if (!single_threadding) {
