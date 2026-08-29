@@ -46,10 +46,12 @@ set(src_decode
     decode/count_physics_events.cxx
     decode/init_decoders.cxx
     decode/process_coda_file.cxx 
+    decode/Shower.cxx
 )
 
 set(headers_decode
     decode/include/APEX/decode.h
+    decode/include/APEX/decode/Shower.h
 )
 
 add_library(APEX_decode SHARED ${src_decode})
@@ -59,6 +61,22 @@ target_include_directories(APEX_decode PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}/decod
 # link it with Podd
 target_link_libraries(APEX_decode PUBLIC Podd::Podd Podd::HallA APEX_utils)
 
+#include(GNUInstallDirs)
+#[[
+set(PACKAGE APEX_decode)
+install(TARGETS ${PACKAGE}
+  LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
+  ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}
+  RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}
+)
+
+install(FILES ${headers_decode} DESTINATION ${CMAKE_INSTALL_INCLUDEDIR})
+
+build_root_dictionary(G__APEX_decode ${headers_decode} ${src_decode}
+    MODULE APEX_decode 
+    LINKDEF decode/LinkDef.h
+)
+]]
 
 #-------------------------------------------------------------------------------------------
 #
