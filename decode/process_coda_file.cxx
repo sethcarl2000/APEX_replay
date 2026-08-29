@@ -30,17 +30,16 @@ namespace decode
 
 void process_coda_file(const std::string& path_infile,
 			   const std::string& path_outfile,
-			   ULong64_t first_event =0, 
-			   ULong64_t last_event  =1e7, 
-			   const std::string& path_odef ="outDefs/optics.odef" )
+			   Long64_t first_event, 
+			   Long64_t last_event, 
+			   const std::string& path_odef)
 {  
-  std::printf("in <%s>: starting decode:\n"
+  Info(__func__, "starting decode:\n"
     "  input file:   %s\n"
     "  output file:  %s\n"
     "  odef:         %s\n"
-    "  first event:  %ull\n"
-    "  last event:   %ull\n",
-    __func__,
+    "  first event:  %lli\n"
+    "  last event:   %lli\n",
     path_infile.c_str(),
     path_outfile.c_str(),
     path_odef.c_str(),
@@ -75,7 +74,7 @@ void process_coda_file(const std::string& path_infile,
   
   analyzer->Process( run.get() );
 
-  std::printf("in <%s>: done\n", __func__); 
+  std::printf(__func__, "done\n"); 
 }
 
 }
