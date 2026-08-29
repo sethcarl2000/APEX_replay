@@ -42,6 +42,10 @@ PathCheckStatus is_path_regular_file(const std::string& path);
 /// @brief Check if the given path 1.) exists and 2.) is a directory 
 PathCheckStatus is_path_directory(const std::string& path); 
 
+/// @brief Remove a file from disk. throws exception if it doesn't succeed
+/// @param path path to file to be removed
+void remove_file_from_disk(const std::string& path);
+
 /// @brief Attempts to fit a gaussian to a histogram, with a constant background
 /// @param hist histogram to fit
 /// @param radius radius of fit
