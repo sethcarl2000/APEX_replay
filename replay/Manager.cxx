@@ -14,6 +14,7 @@
 // ROOT headers 
 #include <ROOT/RVec.hxx>
 #include <TStopwatch.h>
+#include <TError.h>
 // stdlib headers
 #include <stdexcept> 
 #include <cstdio> 
@@ -112,13 +113,12 @@ int Manager::Process(const std::string& path_input, const std::string& stem_outp
 
     const std::string path_output = oss.str(); 
 
-    std::printf("<%s> " 
+    Info(__func__, 
     "In funciton call body.\n"
     "--input file      %s\n"
     "--output file     %s\n"
     "--run nubmer      %i\n"
     "--event cap       %s\n",
-    here(__func__).c_str(),
     path_input.data(), 
     path_output.data(), 
     fRunNumber, 
@@ -218,7 +218,7 @@ int Manager::Process(const std::string& path_input, const std::string& stem_outp
   //max number of events to run 
   const EventCounter total_events = (fMaxEventsToProcess > 0) ? std::min( fMaxEventsToProcess, (Long64_t)total_events_in_file ) : total_events_in_file; 
 
-  std::printf("Processing %lli events.\n", total_events); 
+  Info(__func__, "Processing %lli events.\n", total_events); 
 
   if (single_threadding) {
     rna = rna.Get().Range(0, total_events);
@@ -628,14 +628,14 @@ int Manager::Process(const std::string& path_input, const std::string& stem_outp
     "---------------------------------------------------------------------\n"
   );
 
-  std::printf(
+  Info(__func__,
     "Real time: %.3f s  ( %.6f ms/raw event )\n"
-    "Cpu time:  %.3f s  ( %.6f ms/raw event )\n",
+    "Cpu time:  %.3f s  ( %.6f ms/raw event )\n"
+    "exiting...",
     elapsed, 1000.*elapsed/((double)total_events),
     cpu_time, 1000.*cpu_time/((double)total_events)
   ); 
 
-  std::cout << "exiting..." << std::endl;
   return 0; 
 }
 //______________________________________________________________________________________________________________
