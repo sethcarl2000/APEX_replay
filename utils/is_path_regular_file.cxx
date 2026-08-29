@@ -43,6 +43,12 @@ PathCheckStatus is_path_regular_file(const std::string& path_str)
     }
 
     //check if its a regular file 
+    if (fs::is_directory(status)) {
+        result.message = "path is a directory, not a file"; 
+        return result; 
+    }
+
+    //check if its a regular file 
     if (!fs::is_regular_file(status)) {
         result.message = "path is not a regular file"; 
         return result; 
