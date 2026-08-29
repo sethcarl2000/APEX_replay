@@ -1,0 +1,145 @@
+// APEX specific headers
+#include <APEX/utils.h>
+#include <APEX/utils/ErrorHandler.h>
+#include <APEX/decode.h>
+#include <APEX/replay/Manager.h>
+// ROOT
+#include <TStopwatch.h> 
+#include <TError.h> 
+// stdlib
+#include <stdexcept> 
+#include <iostream> 
+#include <cstdio> 
+
+namespace 
+{
+    // preferred size of decode 'chunks'. large CODA files's decoded output will be split into .root files with this many events.  
+    constexpr Long64_t event_chunk_size = 200e3;
+
+    // the maximum number of events to permit in one CODA file. this is to prevent a CODA file with 201k events from being split into two files with 200k and 1k events, respectively. 
+    constexpr Long64_t max_chunk_size = 250e3;
+}
+
+void replay_coda_file(const std::string& path_coda_file, int rawfile_number, const std::string& output_directory)
+{
+    using namespace APEX; 
+
+    //so, we're going to try and replay the given file. 
+
+    //connect our custom error handler to ROOT's error handler interface 
+    utils::ErrorHandler::Connect(); 
+
+    Info(__func__, "in body. checking if path '%s' is regular file...\n", path_coda_file.c_str()); 
+
+    //first, let's check the path of the file. 
+    auto result = utils::is_path_regular_file(path_coda_file); 
+
+    if (!result) {
+        Error(__func__, "coda file's path is not regular file: %s\n"
+            "   message: %s", 
+            path_coda_file.c_str(),
+            result.message.c_str()
+        ); 
+        return; 
+    }
+
+    //now, let's count the number of physics CODA events to process. 
+    Long64_t n_CODA_events; 
+
+    Info(__func__, "Counting physics events..."); 
+    try {
+
+        n_CODA_events = decode::count_physics_events(path_coda_file); 
+        
+    } catch (const std::exception& e) {
+
+        Error(__func__, "Error caught trying to count physics events.\n"
+            "   CODA path:  %s\n"
+            "   what:       %s",
+            path_coda_file.c_str(),
+            e.what()
+        );
+        return; 
+
+        //tyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyy
+        // - muon's comment 29 aug 26
+    }
+    Info(__func__, "Counted %lli physics events.", n_CODA_events); 
+
+
+    //initialize the decoders
+    decode::init_decoders(); 
+
+    //initialize the repaly manager
+    replay::Manager replay_mgr; 
+
+    //now, let's process these raw events. 
+    Long64_t n_CODA_events_processed =0;
+    int segment_number =0; 
+
+
+    //get the decode file name
+    std::string path_decode = utils::get_slurm_scratch_directory() + "decode.root"; 
+
+    //now, let's loop over all 'event chunks' 
+    while (n_CODA_events_processed < n_CODA_events) {
+
+        Long64_t first_event = n_CODA_events_processed; 
+        Long64_t last_event  = n_CODA_events_processed + event_chunk_size; 
+
+        //if there's only a few events left, let's just process all remaining events. 
+        if (n_CODA_events - first_event <= max_chunk_size) {
+            last_event = first_event + max_chunk_size; 
+        }
+
+        Info(__func__, "Processing decode.\n"
+            "   input path:     %s\n"
+            "   output path:    %s\n"
+            "   event range:    [%lli, %lli]",
+            path_coda_file.c_str(),
+            path_decode.c_str(),
+            first_event, last_event
+        );
+
+        //now, process the decode. 
+        try {
+
+            decode::process_coda_file(path_coda_file, path_decode, first_event, last_event); 
+        
+        } catch (const std::exception& e) {
+
+            Error(__func__, "Error processing decode of coda file.\n"
+                "   what: %s", e.what()
+            );
+            return; 
+        }
+        Info(__func__, "Done with decode phase. initializing replay..."); 
+
+
+        auto replay_stem = output_directory + "replay"; 
+
+        //so, if all is well, then we just need to replay the file. 
+        try {
+
+            replay_mgr.Process(path_decode, replay_stem, rawfile_number, segment_number); 
+        
+        } catch (const std::exception& e) {
+
+            Error(__func__, "Error replaying decoded file.\n"
+                "   what: %s", e.what()
+            );
+            return; 
+        }
+        Info(__func__, "Done with replay phase. trying to delete the 'decode.root' file..."); 
+
+        //try to delete decode file 
+        utils::remove_file_from_disk(path_decode); 
+
+        //iterate segment number / event range 
+
+        n_CODA_events_processed += event_chunk_size; 
+        ++segment_number; 
+    }
+
+    Info(__func__, "Done with replay."); 
+}
