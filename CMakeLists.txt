@@ -19,13 +19,16 @@ set(src_utils
     utils/get_env_variable_int.cxx
     utils/get_env_variable_string.cxx
     utils/get_slurm_scratch_directory.cxx
+    utils/ErrorHandler.cxx
     utils/intpow.cxx
     utils/is_path_directory.cxx
     utils/is_path_regular_file.cxx
+    utils/remove_file_from_disk.cxx
 )
 
 set(headers_utils
     utils/include/APEX/utils.h
+    utils/include/APEX/utils/ErrorHandler.h
 )
 
 add_library(APEX_utils SHARED ${src_utils})
