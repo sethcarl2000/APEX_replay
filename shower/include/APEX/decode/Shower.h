@@ -42,6 +42,9 @@ public:
           Float_t    GetX() const      { return fX; }
           Float_t    GetY() const      { return fY; }
 
+  // getters for Podd to use
+  double GetNHits() const { return fNhits; }
+  
 protected:
 
   // Mapping (see also fDetMap)
@@ -82,12 +85,14 @@ protected:
   Int_t  ReadDatabase( const TDatime& date ) override;
   Int_t  DefineVariables( EMode mode = kDefine ) override;
 
-  //ClassDefOverride(Shower,1); 
+  // I only got the symbols to be defined properly when I changed this from
+  // 'ClassDefOverride' to 'ClassDefInlineOverride', which I don't understand.
+  ClassDefInlineOverride(Shower,0); 
   
 };
 
 }
-}
+} 
 
 ////////////////////////////////////////////////////////////////////////////////
 

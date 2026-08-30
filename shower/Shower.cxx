@@ -232,7 +232,7 @@ Int_t Shower::DefineVariables( EMode mode )
   // Register variables in global list
 
   RVarDef vars[] = {
-    { "nhit",   "Number of hits",                     "fNhits" },
+    { "nhit",   "Number of hits",                     "GetNHits()"},//"fNhits" },
     { "a",      "Raw ADC amplitudes",                 "fA" },
     { "a_p",    "Ped-subtracted ADC amplitudes",      "fA_p" },
     { "a_c",    "Calibrated ADC amplitudes",          "fA_c" },
@@ -251,6 +251,7 @@ Int_t Shower::DefineVariables( EMode mode )
     { 0 }
   };
   return DefineVarsFromList( vars, mode );
+
 }
 
 //_____________________________________________________________________________
@@ -493,8 +494,6 @@ Int_t Shower::FineProcess( TClonesArray& tracks )
   return 0;
 }
 //_____________________________________________________________________________
-
-//ClassImp(Shower); 
 
 }
 }
