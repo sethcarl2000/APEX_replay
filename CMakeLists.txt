@@ -24,7 +24,8 @@ set(src_utils
     utils/is_path_directory.cxx
     utils/is_path_regular_file.cxx
     utils/remove_file_from_disk.cxx
-)
+    utils/get_file_size_KB.cxx
+  )
 
 set(headers_utils
     utils/include/APEX/utils.h
@@ -37,9 +38,6 @@ target_include_directories(APEX_utils PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}/utils/
 
 target_link_libraries(APEX_utils PUBLIC ROOT::Core ROOT::RIO)
 
-
-# compile the 'Shower' library 
-add_subdirectory(shower) 
 
 #-------------------------------------------------------------------------------------------
 #
@@ -62,7 +60,7 @@ add_library(APEX_decode SHARED ${src_decode})
 target_include_directories(APEX_decode PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}/decode/include")
 
 # link it with Podd
-target_link_libraries(APEX_decode PUBLIC Podd::Podd Podd::HallA APEX_utils APEX_shower)
+target_link_libraries(APEX_decode PUBLIC Podd::Podd Podd::HallA APEX_utils)
 
 #-------------------------------------------------------------------------------------------
 #
