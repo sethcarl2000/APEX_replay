@@ -23,9 +23,10 @@ void init_decoders();
 void process_coda_file(const std::string& path_input, const std::string& path_output, Long64_t first_event=0, Long64_t last_event=1e7, const std::string& path_odef="outDefs/full_replay.odef");
 
 /// @brief Count the number of physics events in a CODA file 
-/// @param path_coda absolute path to CODA file 
+/// @param path_coda absolute path to CODA file
+/// @param path_output_dump path to put the (temporary!) output .root file, which will be deleted upon successful exit. if no path is specified, defaults to /scratch/slurm/${SLURM_JOB_ID}/dump.root
 /// @return number of physics triggers counted in CODA file. If there was a processing error, '0' is returned (and a std::runtime_exception is thrown). 
-Long64_t count_physics_events(const std::string& path_coda); 
+Long64_t count_physics_events(const std::string& path_coda, std::string path_output_dump=""); 
 
 }
 }

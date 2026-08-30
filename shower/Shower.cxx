@@ -1,6 +1,6 @@
 ///////////////////////////////////////////////////////////////////////////////
 //                                                                           //
-// Shower                                                                 //
+// THaApexShower                                                                 //
 //                                                                           //
 // Shower counter class, describing a generic segmented shower detector      //
 // (preshower or shower).                                                    //
@@ -10,33 +10,54 @@
 //                                                                           //
 ///////////////////////////////////////////////////////////////////////////////
 
-// APEX 
-#include <APEX/decode/Shower.h>
-// Podd 
+#include "THaApexShower.h"
 #include "THaGlobals.h"
 #include "THaEvData.h"
 #include "THaDetMap.h"
 #include "VarDef.h"
 #include "VarType.h"
 #include "THaTrack.h"
-// ROOT
 #include "TClonesArray.h"
 #include "TDatime.h"
 #include "TMath.h"
-// stdlib
+
 #include <cstring>
 #include <iostream>
 #include <iomanip>
 #include <cassert>
-#include <sstream>
+#ifdef HAS_SSTREAM
+ #include <sstream>
+ #define OSSTREAM ostringstream
+#else
+ #include <strstream>
+ #define OSSTREAM ostrstream
+#endif
 
-namespace APEX
-{
-namespace decode
-{
+using namespace std;
 
 //_____________________________________________________________________________
-Int_t Shower::ReadDatabase( const TDatime& date )
+THaApexShower::THaApexShower( const char* name, const char* description,
+		      THaApparatus* apparatus ) :
+  THaPidDetector(name,description,apparatus),
+  fNclublk(0), fNrows(0), fBlockX(0), fBlockY(0), fPed(0), fGain(0), fEmin(0),
+  fNhits(0), fA(0), fA_p(0), fA_c(0), fAsum_p(kBig), fAsum_c(kBig),
+  fNclust(0), fE(kBig), fX(kBig), fY(kBig), fMult(0), fNblk(0), fEblk(0)
+{
+  // Constructor
+}
+
+//_____________________________________________________________________________
+THaApexShower::THaApexShower() :
+  THaPidDetector(),
+  fNclublk(0), fNrows(0), fBlockX(0), fBlockY(0), fPed(0), fGain(0), fEmin(0),
+  fNhits(0), fA(0), fA_p(0), fA_c(0), fAsum_p(kBig), fAsum_c(kBig),
+  fNclust(0), fE(kBig), fX(kBig), fY(kBig), fMult(0), fNblk(0), fEblk(0)
+{
+  // Default constructor (for ROOT I/O)
+}
+
+//_____________________________________________________________________________
+Int_t THaApexShower::ReadDatabase( const TDatime& date )
 {
   // Read parameters from the database.
   // 'date' contains the date/time of the run being analyzed.
@@ -55,8 +76,8 @@ Int_t Shower::ReadDatabase( const TDatime& date )
     return err;
   }
 
-  std::vector<Int_t> detmap, chanmap;
-  std::vector<Double_t> xy, dxy;
+  vector<Int_t> detmap, chanmap;
+  vector<Double_t> xy, dxy;
   Int_t ncols, nrows;
 
   // Read mapping/geometry/configuration parameters
@@ -222,7 +243,7 @@ Int_t Shower::ReadDatabase( const TDatime& date )
 }
 
 //_____________________________________________________________________________
-Int_t Shower::DefineVariables( EMode mode )
+Int_t THaApexShower::DefineVariables( EMode mode )
 {
   // Initialize global variables
 
@@ -232,7 +253,7 @@ Int_t Shower::DefineVariables( EMode mode )
   // Register variables in global list
 
   RVarDef vars[] = {
-    { "nhit",   "Number of hits",                     "GetNHits()"},//"fNhits" },
+    { "nhit",   "Number of hits",                     "fNhits" },
     { "a",      "Raw ADC amplitudes",                 "fA" },
     { "a_p",    "Ped-subtracted ADC amplitudes",      "fA_p" },
     { "a_c",    "Calibrated ADC amplitudes",          "fA_c" },
@@ -251,11 +272,10 @@ Int_t Shower::DefineVariables( EMode mode )
     { 0 }
   };
   return DefineVarsFromList( vars, mode );
-
 }
 
 //_____________________________________________________________________________
-Shower::~Shower()
+THaApexShower::~THaApexShower()
 {
   // Destructor. Removes internal arrays and global variables.
 
@@ -266,7 +286,7 @@ Shower::~Shower()
 }
 
 //_____________________________________________________________________________
-void Shower::DeleteArrays()
+void THaApexShower::DeleteArrays()
 {
   // Delete member arrays. Internal function used by destructor.
 
@@ -283,7 +303,7 @@ void Shower::DeleteArrays()
 }
 
 //_____________________________________________________________________________
-void Shower::Clear( Option_t* opt )
+void THaApexShower::Clear( Option_t* opt )
 {
   // Clear event data
 
@@ -302,7 +322,7 @@ void Shower::Clear( Option_t* opt )
 }
 
 //_____________________________________________________________________________
-Int_t Shower::Decode( const THaEvData& evdata )
+Int_t THaApexShower::Decode( const THaEvData& evdata )
 {
   // Decode shower data, scale the data to energy deposition
   // ( in MeV ), and copy the data into the following local data structure:
@@ -330,7 +350,7 @@ Int_t Shower::Decode( const THaEvData& evdata )
 
       Int_t nhit = evdata.GetNumHits(d->crate, d->slot, chan);
       if( nhit > 1 || nhit == 0 ) {
-	std::ostringstream msg;
+	OSSTREAM msg;
 	msg << nhit << " hits on " << "ADC channel "
 	    << d->crate << "/" << d->slot << "/" << chan;
 	++fMessages[msg.str()];
@@ -382,7 +402,7 @@ Int_t Shower::Decode( const THaEvData& evdata )
   if( has_warning )
     ++fNEventsWithWarnings;
 
-#if 0 //#ifdef WITH_DEBUG
+#ifdef WITH_DEBUG
   if ( fDebug > 3 ) {
     cout << endl << "Shower Detector " << GetPrefix() << ":" << endl;
     int ncol=3;
@@ -413,7 +433,7 @@ Int_t Shower::Decode( const THaEvData& evdata )
 }
 
 //_____________________________________________________________________________
-Int_t Shower::CoarseProcess( TClonesArray& tracks )
+Int_t THaApexShower::CoarseProcess( TClonesArray& tracks )
 {
   // Reconstruct Clusters in shower detector and copy the data
   // into the following local data structure:
@@ -482,7 +502,7 @@ Int_t Shower::CoarseProcess( TClonesArray& tracks )
 }
 
 //_____________________________________________________________________________
-Int_t Shower::FineProcess( TClonesArray& tracks )
+Int_t THaApexShower::FineProcess( TClonesArray& tracks )
 {
   // Fine Shower processing.
 
@@ -493,7 +513,6 @@ Int_t Shower::FineProcess( TClonesArray& tracks )
 
   return 0;
 }
-//_____________________________________________________________________________
 
-}
-}
+//_____________________________________________________________________________
+ClassImp(THaApexShower)
