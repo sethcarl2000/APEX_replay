@@ -1,15 +1,18 @@
 #ifndef RDFNodeAccumulator_h_
 #define RDFNodeAccumulator_h_
 
+// ROOT headers
+#include <TError.h> 
+#include <ROOT/RDataFrame.hxx>
+#include <ROOT/RResultPtr.hxx>
+#include <ROOT/RSnapshotOptions.hxx> 
+// stdlib headers
 #include <vector>
 #include <string> 
 #include <stdexcept> 
 #include <sstream>
 #include <cstdlib> 
 #include <iostream> 
-#include <ROOT/RDataFrame.hxx>
-#include <ROOT/RResultPtr.hxx>
-#include <ROOT/RSnapshotOptions.hxx> 
 
 //A small helper class which is meant to avoid some of the awkward syntax assocaited with RDataFrame creation. 
 class RDFNodeAccumulator {
@@ -31,16 +34,15 @@ private:
     std::vector<std::string> fOutputBranches; 
 
 public: 
-    inline RDFNodeAccumulator(ROOT::RDF::RNode start) : fNode{ start } {/* noop */};
+
+    RDFNodeAccumulator(ROOT::RDF::RNode start) : fNode{ start } {/* noop */};
 
     //__________________________________________________________________________________________________________________________________
     //constructor that seeks to construct RDataFrame object (without one needing to be manually constructed and passed)
-    inline RDFNodeAccumulator(const char* tree_name, const char* path_infile)
+    RDFNodeAccumulator(const char* tree_name, const char* path_infile)
         : fNode{ROOT::RDataFrame(tree_name, path_infile)}
     {};
-
-    inline ~RDFNodeAccumulator() {/* noop */}; 
-    
+  
     //__________________________________________________________________________________________________________________________________
     template<typename F> inline void Define(const char* new_branch, F expression, const std::vector<std::string>& inputs) 
     {
@@ -142,47 +144,48 @@ public:
     }
 
     //__________________________________________________________________________________________________________________________________
-    template<typename F> inline void Overwrite(std::string new_branch, F expression, const std::vector<std::string>& inputs)
+    template<typename F>  void Overwrite(std::string new_branch, F expression, const std::vector<std::string>& inputs)
     {
         DefineIfMissing(new_branch.c_str(), expression, inputs); 
     }
     
 
     //__________________________________________________________________________________________________________________________________
-    inline ROOT::RDF::RNode& Get() { return fNode; }
+    ROOT::RDF::RNode& Get() { return fNode; }
 
     //__________________________________________________________________________________________________________________________________
-    inline EStatus GetStatus() const { return fStatus; }
+    EStatus GetStatus() const { return fStatus; }
     
     //__________________________________________________________________________________________________________________________________
-    inline std::string GetErrorMsg() const { return fErrorMsg.str(); }
+    std::string GetErrorMsg() const { return fErrorMsg.str(); }
 
     //__________________________________________________________________________________________________________________________________
     //called when we want to print the stored error message and abort. 
-    inline void PrintMsgAndAbort() {
-        if (fAbortOnError) {
-            std::cerr << "<RDFNodeAccumulator>: Aborted execution. Error message: " << GetErrorMsg() << std::endl; 
-            std::abort(); 
-        } else {
-            throw std::logic_error(GetErrorMsg()); 
-            return; 
-        }
+    void PrintMsgAndAbort()
+    {
+      if (fAbortOnError) {
+	Error("RDFNodeAccumulator", GetErrorMsg().c_str()); 
+	std::exit(1); 
+      } else {
+	throw std::logic_error("in <RDFNodeAccumulator>: " + GetErrorMsg()); 
+	return; 
+      }
     }
 
     //__________________________________________________________________________________________________________________________________
     //add a pre-existing branch to the output
-    inline void AddBranchToOutput(std::string branch) { fOutputBranches.push_back(branch); }
+    void AddBranchToOutput(std::string branch) { fOutputBranches.push_back(branch); }
 
     //__________________________________________________________________________________________________________________________________
     //define a branch specifically for the output. 
-    template<typename F> inline void DefineOutput(std::string new_branch, F expression, const std::vector<std::string>& inputs)
+    template<typename F>  void DefineOutput(std::string new_branch, F expression, const std::vector<std::string>& inputs)
     {
         fOutputBranches.push_back(new_branch); 
         Define(new_branch, expression, inputs);  
     }
   
     //__________________________________________________________________________________________________________________________________
-    inline void Snapshot(std::string tree_name, std::string path_outfile, ROOT::RDF::RSnapshotOptions* opts=nullptr)
+    void Snapshot(std::string tree_name, std::string path_outfile, ROOT::RDF::RSnapshotOptions* opts=nullptr)
     {
         if (fOutputBranches.empty()) {
             fErrorMsg << "\n - <Snapshot>: no output branches! you may define them using 'DefineOutput' or 'AddBranchToOutput'.\n";
@@ -230,13 +233,13 @@ public:
     
     //__________________________________________________________________________________________________________________________________
     //set whether an abort should be called when an error is encountered. 
-    inline void SetAbortOnError(bool _val) { fAbortOnError=_val; }
+    void SetAbortOnError(bool _val) { fAbortOnError=_val; }
 
-    inline std::vector<std::string> GetOutputBranches() const { return fOutputBranches; }
+    std::vector<std::string> GetOutputBranches() const { return fOutputBranches; }
 
     //__________________________________________________________________________________________________________________________________
     //assignment operator 
-    inline ROOT::RDF::RNode& operator=(const ROOT::RDF::RNode& node) {
+    ROOT::RDF::RNode& operator=(const ROOT::RDF::RNode& node) {
         fNode = node; 
         return fNode; 
     }
