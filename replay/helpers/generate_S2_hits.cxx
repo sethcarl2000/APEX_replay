@@ -17,10 +17,12 @@ namespace helpers
 {
 
 ROOT::VecOps::RVec<S2Hit> generate_S2_hits(
-    const bool is_RHRS,
+    EArmMode arm_mode,
     const ROOT::RVec<double>& PMT_R, 
     const ROOT::RVec<double>& PMT_L )
 {
+  const bool is_RHRS = (arm_mode == kRHRS); 
+  
     //generate a vector of all coinc s2-paddle hits
     ROOT::RVec<S2Hit> coinc_hits{}; 
     

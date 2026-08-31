@@ -32,7 +32,7 @@ ROOT::RVec<EventHandler> gen_coinc_events(
             double dt = R_hit.Time() - L_hit.Time(); 
 
             if ( std::fabs(dt - dt_center) < dt_cut ) 
-                coinc_events.push_back(EventHandler(false, beam_current, run_number, &R_hit, &L_hit)); 
+                coinc_events.push_back(EventHandler(kLHRS, beam_current, run_number, &R_hit, &L_hit)); 
         }
     }
 

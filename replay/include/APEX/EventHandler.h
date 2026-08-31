@@ -1,7 +1,9 @@
 #ifndef APEX_EventHandler_H 
 #define APEX_EventHandler_H 
 
+#include <APEX/replay.h>
 #include <APEX/S2Hit.h>
+// ROOT headers
 #include <ROOT/RVec.hxx>
 
 namespace APEX
@@ -15,13 +17,11 @@ class EventHandler {
    * 
    ***/ 
   
-  EventHandler( bool arm=true, 
+  EventHandler( replay::EArmMode arm_mode =replay::kRHRS, 
 		 double beamCurrent=0.,
 		 int runNumber=-1, 
 		 const S2Hit *fHit_R=0, 
 		 const S2Hit *fHit_L=0  ); 
-  
-  virtual ~EventHandler() {}; 
   
   void SetActiveArm(bool arm) { f_activeArm=arm; }
   

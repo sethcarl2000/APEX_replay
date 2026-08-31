@@ -87,12 +87,12 @@ namespace {
 namespace APEX
 {
 
-EventHandler::EventHandler( bool arm, 
+  EventHandler::EventHandler( replay::EArmMode arm_mode, 
 			      double beamCurrent,
 			      int runNumber, 
 			      const S2Hit *fHit_R, 
 			      const S2Hit *fHit_L ) { 
-  f_activeArm  =arm; 
+    f_activeArm  = (arm_mode == replay::kRHRS); 
   
   fRunNumber = runNumber; 
   

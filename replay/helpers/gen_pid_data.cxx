@@ -26,9 +26,11 @@ namespace {
   constexpr int n_cerenkov_paddles = 10; 
   
 }; 
-
-void gen_pid_data(const bool is_RHRS, RDFNodeAccumulator& rna, const PidManager* pid_manager)
+  
+void gen_pid_data(EArmMode arm_mode, RDFNodeAccumulator& rna, const PidManager* pid_manager)
 {
+  const bool is_RHRS = (arm_mode == kRHRS); 
+  
   const std::string arm = is_RHRS ? "R" : "L"; 
   
   using rvecd = ROOT::VecOps::RVec<double>; 

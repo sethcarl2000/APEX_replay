@@ -8,13 +8,16 @@
 //
 //////////////////////////////////////////////////////////////////////////
 
-//#include "THaPhysicsModule.h"
+
+#include <APEX/replay.h> 
+// ROOT headers
 #include "TObject.h"
 #include "TVector3.h"
 #include "TVector2.h"
 #include "RMatrixD.h"
 #include "TString.h" 
 #include <ROOT/RDataFrame.hxx>
+// stdlib headers
 #include <vector> 
 #include <map> 
 #include <functional> 
@@ -28,16 +31,14 @@ class ReactVertex {
 
 public:
   
-  ReactVertex() {};
+  ReactVertex() = default;
   
   enum EOpticsTarget { kNone=0, kV1,kV2,kV3, kH1,kH2,kH3,kH4 }; 
   
-  ReactVertex(bool isRHRS,
+  ReactVertex(replay::EArmMode arm_mode,
 	       TString path_decode_epics,
          ROOT::RDF::RNode df,
 	       TString target="");
-
-  virtual ~ReactVertex() {}; 
 
   /// @brief computes react vertex x & y 
   /// @param current_x raw current from Raster2 (x): [R/L]rb.Raster2.rawcur.x 

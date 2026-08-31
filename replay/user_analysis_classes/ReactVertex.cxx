@@ -49,19 +49,19 @@ namespace APEX
 
 //_____________________________________________________________________________
 ReactVertex::ReactVertex(
-  bool is_RHRS,
+			 replay::EArmMode arm_mode,
   TString path_decode_epics,
   ROOT::RDF::RNode dT, 
   TString target)
-  : fis_RHRS{is_RHRS},
+  : fis_RHRS{(arm_mode == replay::kRHRS)},
     fTargetName(target),
     f_isWireMode(false),
     f_hasData(false), 
     fRaster_amplitude(TVector2(0,0))
-{
+{ 
   //these constants are hard-coded for now... it's probably better to have them loaded in from a file...
   //the 'df' expects a node of type '
-
+  
   //initialize the wire as null, unless its specified otherwise
   fWire = OpticsWire_t({.name="null",.isVertical=false,.x=0,.y=0,.z=0}); 
   
@@ -84,7 +84,7 @@ ReactVertex::ReactVertex(
   }
 
   //raster matrices 
-  if (is_RHRS) { //RHRS 
+  if (fis_RHRS) { //RHRS 
     fMatrix_rast = RMatrixD(2,2,{
        0.,         0.,
       -2.418e-8, -3.234e-7
@@ -186,7 +186,7 @@ ReactVertex::ReactVertex(
     return;    
   } 
   
-  const string arm = is_RHRS ? "R" : "L";
+  const string arm = fis_RHRS ? "R" : "L";
   const string raster_name = arm+"rb.Raster2";
   const string name_bpma = arm+"rb.BPMA"; 
   const string name_bpmb = arm+"rb.BPMB"; 
@@ -247,7 +247,7 @@ ReactVertex::ReactVertex(
   //
   //      |----------------------------------------| <= total raster amplitude
   //  
-  const double y_hcs_phase_correction = y_hcs_amplitude * (is_RHRS ? 0.0684620982311 : 0.070302882883) / 2.; 
+  const double y_hcs_phase_correction = y_hcs_amplitude * (fis_RHRS ? 0.0684620982311 : 0.070302882883) / 2.; 
   
   //____________________________________________________________________________________________
   fRasterPhaseCorrection = 

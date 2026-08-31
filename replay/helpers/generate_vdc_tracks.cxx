@@ -1,5 +1,6 @@
 
 // APEX headers
+#include <APEX/replay.h> 
 #include <APEX/run_parameters.h>
 #include <APEX/EventHandler.h> 
 #include <APEX/VDC/HitGroup.h> 
@@ -52,7 +53,7 @@ namespace {
 /// @param node_in input RDF node
 /// @param n_pass_1group EventCounter representing the number of events which reconstructed at least 1 group 
 void generate_vdc_tracks( 
-    const bool is_RHRS, 
+    EArmMode arm_mode, 
     RDFNodeAccumulator& rna, 
     EventCounter_RPtr &nPass_1group, 
     EventCounter_RPtr &nPass_1pair, 
@@ -60,6 +61,8 @@ void generate_vdc_tracks(
     EventCounter_RPtr &nPass_1refinedTrack
 ) 
 {
+  const bool is_RHRS = (arm_mode == kRHRS); 
+  
     using namespace std;            
 
     using RVecD = ROOT::RVec<double>; 

@@ -107,6 +107,9 @@ int Manager::Process(const std::string& path_input, const std::string& stem_outp
   using ROOT::VecOps::RVec; 
   using RVecD = ROOT::VecOps::RVec<double>; 
 
+  const bool kRHRS_bool = true;
+  const bool kLHRS_bool = false; 
+  
     //assemble the output file path
     std::ostringstream oss; 
     oss << stem_output << "." << fRunNumber << ".rawfile-" << rawfile_number << ".segment-" << segment_number << ".root"; 

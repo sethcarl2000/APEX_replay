@@ -2,6 +2,7 @@
 #define APEX_replay_helpers_h
 
 // APEX headers
+#include <APEX/replay.h> 
 #include <APEX/replay/EventCounter.h> 
 #include <APEX/EventHandler.h>
 #include <APEX/ReactVertex.h>
@@ -66,7 +67,7 @@ ROOT::RVec<VDC::ChamberPair> gen_pairs(
 );
 
 
-void gen_pid_data(const bool is_RHRS, RDFNodeAccumulator& rna, const PidManager* pid_manager);
+void gen_pid_data(EArmMode is_RHRS, RDFNodeAccumulator& rna, const PidManager* pid_manager);
 
 ROOT::RVec<VDC::Track> gen_rawtracks( 
     EventHandler& evt, 
@@ -80,7 +81,7 @@ ROOT::RVec<VDC::Track> gen_rawtracks(
 void gen_react_vertex(RDFNodeAccumulator& rna, ReactVertex* vtx);
 
 ROOT::VecOps::RVec<S2Hit> generate_S2_hits(
-    const bool is_RHRS,
+    EArmMode arm_mode,
     const ROOT::RVec<double>& PMT_R, 
     const ROOT::RVec<double>& PMT_L 
 );
@@ -90,7 +91,7 @@ ROOT::VecOps::RVec<S2Hit> generate_S2_hits(
 /// @param node_in input RDF node
 /// @param n_pass_1group EventCounter representing the number of events which reconstructed at least 1 group 
 void generate_vdc_tracks( 
-    const bool is_RHRS, 
+    EArmMode arm_mode, 
     RDFNodeAccumulator& rna, 
     EventCounter_RPtr &nPass_1group, 
     EventCounter_RPtr &nPass_1pair, 

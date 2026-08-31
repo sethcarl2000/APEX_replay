@@ -32,7 +32,7 @@ ROOT::RVec<EventHandler> gen_coinc_window_events(
             double dt = R_hit.Time() - L_hit.Time(); 
 
             if ( dt_min < dt && dt < dt_max ) 
-                coinc_events.push_back(EventHandler(false, beam_current, run_number, &R_hit, &L_hit)); 
+                coinc_events.push_back(EventHandler(kLHRS, beam_current, run_number, &R_hit, &L_hit)); 
         }
     }
 
