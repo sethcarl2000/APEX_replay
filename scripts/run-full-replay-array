@@ -43,14 +43,19 @@ echo "<${0}>: pwd: '$(pwd)'"
 OUTPUT_DIR="${PATH_APEX_VOLATILE}/production" 
 
 # load the proper version of the analyzer
-module unload analyzer 
-module load analyzer/1.7.15 
+#module unload analyzer 
+#module load analyzer/1.7.15 
 
 echo "<${0}>: analyzer version:" 
 analyzer --version
 
 echo "<${0}>: root version:" 
 root --version
+
+echo "<${0}>: uname -a (OS info):"
+uname -a
+
+
 
 # check to make sure we have an 'array tasks' file 
 
