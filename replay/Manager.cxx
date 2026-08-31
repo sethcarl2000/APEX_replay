@@ -605,13 +605,32 @@ int Manager::Process(const std::string& path_input, const std::string& stem_outp
   std::printf(
     "---------------------------------------------------------------------\n"
   );
-  
-  Info(__func__,
-    "Acceptable replay completed for file: %s\n"
-    "Real time: %.3f s  ( %.6f ms/raw event )\n"
+
+  //check to make sure we've kept at least 1 event
+  if (n_pass_1ref_L > 0) {
+
+    Info(__func__, "Acceptable replay completed for file: %s", path_output.c_str());
+    
+  } else {
+
+    Info(__func__, "No events kept in replay file: %s", path_output.c_str());
+
+    utils::PathCheckStatus status;
+
+    utils::remove_file_from_disk(path_output, &status);
+
+    if (!status) {
+
+      Error(__func__, "Something went wrong trying to delete replay file. message: %s", status.message.c_str());
+      return -1; 
+      
+    }
+
+  }
+
+  std::printf(
     "Cpu time:  %.3f s  ( %.6f ms/raw event )\n"
     "exiting...",
-    path_output.c_str(),
     elapsed, 1000.*elapsed/((double)total_events),
     cpu_time, 1000.*cpu_time/((double)total_events)
   ); 
