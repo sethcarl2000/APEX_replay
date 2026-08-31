@@ -226,12 +226,13 @@ int Manager::Process(const std::string& path_input, const std::string& stem_outp
   //add logic here to process both S2 hits
   
   EventCounter_RPtr rptr_nPass_coinc = rna.Count(); 
+  
+  EventCounter_RPtr rptr_nPass_1event; 
 
+  /*
   //now, we will generate the coinc-time.
   //this histogram will be the 'subtraction' of all coinc-times  
   double dt_sigma, dt_center; 
-
-  EventCounter_RPtr rptr_nPass_1event; 
 
   if (are_both_arms_active) {
 
@@ -270,7 +271,7 @@ int Manager::Process(const std::string& path_input, const std::string& stem_outp
       dt_sigma/ns, run_parameters::kS2_coinc_sigma_cut
     );  
 
-  }
+    }*/
   
   //create TeventHandler objets 
   switch (fArmMode) {
@@ -279,7 +280,7 @@ int Manager::Process(const std::string& path_input, const std::string& stem_outp
     case kBothArms : { //_________________________________________________________________________ 
 
       rna = rna.Get()
-        .Define("coinc_events", [dt_center, dt_sigma](
+        .Define("coinc_events", [/*dt_center, dt_sigma*/](
           double beam_current, 
           unsigned int fRunNumber, 
           const RVec<S2Hit>& R_hits, 
