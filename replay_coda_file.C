@@ -154,7 +154,7 @@ void replay_coda_file(int run_number, int rawfile_number, const std::string& out
 	double decode_size_MB = utils::get_file_size_KB(path_decode, &status) / (1024.);
 
 	if (!status || !decode_size_MB) {
-	  Error(__func__, "Something went wrong checking size of decode file: '%s', size: %.1 MB. message: %s",
+	  Error(__func__, "Something went wrong checking size of decode file: '%s', size: %.2f MB. message: %s",
 		path_decode.c_str(),
 		decode_size_MB,
 		status.message.c_str()
