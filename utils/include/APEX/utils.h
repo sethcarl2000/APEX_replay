@@ -45,7 +45,7 @@ PathCheckStatus is_path_directory(const std::string& path);
 
 /// @brief Remove a file from disk. throws exception if it doesn't succeed (unless non-null status is passed, then error message is given to 'status' and no expcetion is thrown). 
 /// @param path path to file to be removed
-  void remove_file_from_disk(const std::string& path, PathCheckStatus* status=nullptr);
+void remove_file_from_disk(const std::string& path, PathCheckStatus* status=nullptr);
 
 /// @brief Based on ifarm's slurm configuration
 /// @return path to the root directory of this slurm job's /scratch disk allocation. if it detects we are **not** in a slurm job / array, or the directory is missing, then throws a std::runtime_exception. 
