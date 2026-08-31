@@ -43,6 +43,9 @@ int create_task_csv(
 
     Run* current_run=nullptr;
 
+    //strip header
+    std::getline(infile, line);
+    
     while (std::getline(infile, line)) {
 
         //try to parse line 
@@ -100,10 +103,10 @@ int create_task_csv(
     };
 
     for (const auto& run : runs) {
-
-        if (run.run_number < first_run) continue; 
-
-        if (run.run_number > last_run) { outfile.close(); return 0; } 
+      
+      if (run.run_number < first_run) continue; 
+      
+        if (run.run_number > last_run) break;  
 
         if (n_events_in_task + run.n_events > max_events_per_task) { 
         
