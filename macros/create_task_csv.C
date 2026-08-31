@@ -57,7 +57,7 @@ int create_task_csv(
         if (!current_run || (current_run->run_number != run_number)) {
 
             Run new_run; 
-            new_run.rawfiles.emplace_back(rawfile_number,n_events); 
+            new_run.rawfiles.emplace_back(Rawfile{rawfile_number, n_events}); 
             new_run.run_number = run_number; 
             new_run.n_events = n_events; 
 
@@ -67,9 +67,9 @@ int create_task_csv(
 
         } else {
 
-            current_run->rawfiles.emplace_back(rawfile_number, n_events); 
-
-            current_run->n_events += n_events; 
+ 	    current_run->rawfiles.emplace_back(Rawfile{rawfile_number, n_events}); 
+	  
+	    current_run->n_events += n_events; 
         }
     } 
 
