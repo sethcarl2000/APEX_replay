@@ -27,19 +27,22 @@ std::vector<Rawfile> get_task_rawfile_list(const std::string& path, unsigned int
     }
 
     std::vector<Rawfile> rawfiles{}; 
-
+    
     std::string line; 
 
+    //strip the header off of the csv
+    std::getline(infile, line); 
+    
     while (std::getline(infile, line)) {
-
+      
         std::istringstream iss(line); 
-
+	
         unsigned int task, run_number, rawfile_number; 
 
         iss >> task >> run_number >> rawfile_number; 
 
         // add all rawfiles given to this task 
-        if (task == task_id) { rawfiles.emplace_back(run_number, rawfile_number); } 
+        if (task == task_id) { rawfiles.emplace_back(Rawfile{run_number, rawfile_number}); } 
     }
 
     return rawfiles; 
