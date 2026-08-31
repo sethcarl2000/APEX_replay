@@ -1,0 +1,90 @@
+
+
+// APEX
+#include <APEX/replay/helpers.h>
+#include <APEX/EventHandler.h>
+#include <APEX/PidManager.h>
+#include <APEX/PidDetector.h>
+#include <RDFNodeAccumulator.h>
+#include <APEX/S2Hit.h>
+#include <APEX/PmtData.h>
+// ROOT 
+#include <ROOT/RVec.hxx>
+// stdlib
+#include <cmath>
+#include <string> 
+
+namespace APEX
+{
+namespace replay
+{
+namespace helpers
+{
+
+namespace {
+
+  constexpr int n_cerenkov_paddles = 10; 
+  
+}; 
+  
+void gen_pid_data(EArmMode arm_mode, RDFNodeAccumulator& rna, const PidManager* pid_manager)
+{
+  const bool is_RHRS = (arm_mode == kRHRS); 
+  
+  const std::string arm = is_RHRS ? "R" : "L"; 
+  
+  using rvecd = ROOT::VecOps::RVec<double>; 
+
+  rna.Define(arm+"_cerenkov_paddles", [](const rvecd& adc, const rvecd& tdc) {
+      
+      //add only the hits that have non-null TDC times
+      ROOT::RVec<PmtData> paddles; paddles.reserve(adc.size()); 
+
+      for (int i=0; i<n_cerenkov_paddles; i++) {
+
+        double t = tdc.at(i); 
+        
+        if ( std::fabs(t) > 1. ) continue;
+
+        paddles.push_back({ i, adc.at(i), tdc.at(i) });
+      }
+      
+      return paddles;
+      
+    }, {arm+".cer.a_c", arm+".cer.t_c"});
+
+  rna.DefineOutput(arm+"_cer_paddle", [](const ROOT::RVec<PmtData>& hits) {
+    
+    ROOT::RVec<int> v; v.reserve(hits.size());
+    for (const auto& hit : hits) { v.push_back(hit.index); }
+    return v; 
+  }, {arm+"_cerenkov_paddles"}); 
+  
+  
+  rna.DefineOutput(arm+"_cer_time", [](const ROOT::RVec<PmtData>& hits) {
+    
+    rvecd v; v.reserve(hits.size());
+    for (const auto& hit : hits) { v.push_back(hit.tdc); }
+    return v; 
+  }, {arm+"_cerenkov_paddles"}); 
+  
+  
+  rna.DefineOutput(arm+"_cer_adc", [](const ROOT::RVec<PmtData>& hits) {
+      
+    rvecd v; v.reserve(hits.size());
+    for (const auto& hit : hits) { v.push_back(hit.adc); }
+    return v; 
+  }, {arm+"_cerenkov_paddles"}); 
+
+  //now, lets define the pre-shower & shower
+  rna.DefineOutput(arm+"_ps_adc", [](const rvecd& v){ return v; },
+		   {is_RHRS ? "R.ps.a_c" : "L.prl1.a_c"}); 
+  
+  rna.DefineOutput(arm+"_sh_adc", [](const rvecd& v){ return v; },
+		   {is_RHRS ? "R.sh.a_c" : "L.prl2.a_c"}); 
+  
+}   
+
+}
+}
+}
