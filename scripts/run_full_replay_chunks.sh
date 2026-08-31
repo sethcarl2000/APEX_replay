@@ -27,7 +27,10 @@ then
 	mkdir "$(pwd)/slurm_payloads"
 fi
 
-path_tarball="${PATH_APEX_REPLAY}/slurm_payloads/payload__$(date +'%Y.%m.%d_%H.%M.%S')__run-range_${run0}-${run1}.tar.gz" 
+timestamp="$(date +'%Y-%b-%d_%H.%M.%S')"
+slurm_timestamp="$(date +'%Y-%m-%dT%H:%M:%S')"
+
+path_tarball="${PATH_APEX_REPLAY}/slurm_payloads/payload__${timestamp}__run-range_${run0}-${run1}.tar.gz" 
 
 tar -czf "${path_tarball}" build utils decode replay DB outDefs array-tasks.csv execute_array_task.C set_apex_replay_env.sh
 
@@ -45,4 +48,37 @@ echo "last array id: ${last_array_id}"
 cmd_string="sbatch --job-name=apex_replay_${run0}_${run1} --array=0-${last_array_id} scripts/run-full-replay-array ${path_tarball}" 
 echo "${cmd_string}" 
 
-eval ${cmd_string}
+logfile="logs/replay_submit_${run0}_${run1}_${timestamp}.log"
+errfile="logs/replay_submit_${run0}_${run1}_${timestamp}.log"
+
+# jobstr=$(eval ${cmd_string} 2> ${errfile})
+jobstr="Submitted batch job 9960067"
+echo "" > ${errfile}
+
+if [[ ! -z "$(cat ${errfile})" ]] 
+then
+    echo "Caught error trying to submit slurm job:"
+    cat ${errfile}
+fi
+
+
+
+# get the job ID
+if [[ "${jobstr}" =~ ([0-9]+) && -n "${BASH_REMATCH[0]}" ]]
+then
+    slurm_job_id="${BASH_REMATCH[0]}"
+else
+    slurm_job_id="null"
+fi
+
+echo "" > "${logfile}"
+
+echo "# submitted full replay at: ${slurm_timestamp}" >> "${logfile}" 
+echo "# run-range: [${run0}, ${run1}]" >> "${logfile}"
+echo "# tarball: ${path_tarball}" >> "${logfile}"
+echo "# slurm job id: ${slurm_job_id}" >> "${logfile}"
+echo "# n. array tasks: $(( ${last_array_id} + 1 ))" >> "${logfile}"
+echo "# array task assignments: " >> "${logfile}"
+cat ${array_file} >> "${logfile}"
+
+
