@@ -22,10 +22,14 @@ array_file="${PATH_APEX_REPLAY}/array-tasks.csv"
 # make an array file for the csv 
 root -l -b -q "macros/create_task_csv.C(\"${path_coda_events_CSV}\", \"${array_file}\", ${run0}, ${run1}, ${max_events_per_task})" 
 
+if [[ ! -d "$(pwd)/slurm_payloads" ]]
+then
+	mkdir "$(pwd)/slurm_payload"
+fi
 
-path_tarball="${PATH_APEX_REPLAY}/slurm_payloads/payload__$(date +%Y.%m.%d_%H.%M)__run-${run0}_run-${run1}.tar.gz" 
+path_tarball="${PATH_APEX_REPLAY}/slurm_payloads/payload__$(date +%Y.%m.%d_%H:%M:%S)__run-range_${run0}.${run1}.tar.gz" 
 
-tar -czf "${path_tarball}" build utils decode replay array-tasks.csv execute_array_task.C 
+tar -czf "${path_tarball}" build utils decode replay array-tasks.csv execute_array_task.C set_apex_replay_env.sh
 
 # find the last array in the csv 
 last_array_id=0
@@ -38,7 +42,7 @@ done < <(cat ${array_file})
 
 echo "last array id: ${last_array_id}"
 
-cmd_string="sbatch --job-name=apex_replay_${run0}_${run1} --array=0-${last_array_id} scripts/run-full-replay-array ${array_file}" 
+cmd_string="sbatch --job-name=apex_replay_${run0}_${run1} --array=0-${last_array_id} scripts/run-full-replay-array ${path_tarball}" 
 echo "${cmd_string}" 
 
 eval ${cmd_string}

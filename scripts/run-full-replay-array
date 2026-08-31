@@ -5,114 +5,72 @@
 #SBATCH --account halla
 #SBATCH --ntasks 1
 #SBATCH --cpus-per-task=4
-#SBATCH --mem=4G
-#SBATCH --gres=disk:3G
+#SBATCH --mem=3G
+#SBATCH --gres=disk:2G
 #SBATCH --time 600
 #SBATCH --output=/volatile/halla/apex/full_replay/slurm/full-replay/%x.%a.%A.out
 #SBATCH --error=/volatile/halla/apex/full_replay/slurm/full-replay/%x.%a.%A.err
 
+# move to the scratch dir 
+PATH_SCRATCH="/scratch/slurm/${SLURM_JOB_ID}" 
+
+# check to make sure this directory exists
+if [[ ! -d "${PATH_SCRATCH}" ]]
+then
+    echo "scratch directory does not exist! path: ${PATH_SCRATCH}" >&2 
+    exit 1 
+fi
+
+cd ${PATH_SCRATCH}
+
+path_tarball=${1}
+
+echo "<${0}>: unpacking tarball: ${path_tarball}" 
+
+# unpack the tarball of data / executables
+tar -xzf ${path_tarball}
+
+
+echo "<${0}>: done. directory contents:" 
+ls -1 * 
 
 # set up APEX env
+echo "<${0}>: setting env"
+
 source set_apex_replay_env.sh
-cd ${PATH_APEX_REPLAY}
 echo "<${0}>: pwd: '$(pwd)'" 
 
+OUTPUT_DIR="${PATH_APEX_VOLATILE}/production" 
 
-#first task is to parse the data which is relevant to this slurm array
-array_id=${SLURM_ARRAY_TASK_ID}
+# load the proper version of the analyzer
+module unload analyzer 
+module load analyzer/1.7.15 
 
-PATH_SCRATCH="/scratch/slurm/${SLURM_JOB_ID}"
+echo "<${0}>: analyzer version:" 
+analyzer --version
 
-stem_replay_output="${VOLATILE_DIR}/production/replay"
+echo "<${0}>: root version:" 
+root --version
 
-slurm_array_file_stem=${1}
+# check to make sure we have an 'array tasks' file 
 
-#if there is no slurm_array_task_id
-if [[ -z "${array_id}" ]]
-then
-    echo "no slurm array task id. taking argument 3; array_id='${2}'" >&2
-    array_id=${2}
-    PATH_SCRATCH="misc/scratch"
+PATH_TASK_LIST="array-tasks.csv"
+
+if [[ ! -f "${PATH_TASK_LIST}" ]]
+then    
+    echo "Task file does not exist! expected rel. path: ${PATH_TASK_LIST}; directory contents: " >&2 
+    ls -1 * >&2 
+    exit 1 
 fi
 
-slurm_array_file="${slurm_array_file_stem}_${array_id}.list"
-stem_decode_output="${PATH_SCRATCH}/decode"
+echo "<${0}>: Starting timestamp: $(date +'%Y.%m.%d %H:%M:%S')" 
 
+# now, execute all tasks: 
+echo "<${0}>: Executing task macro:"
 
-#check if the slurm array file exists
-if ! [[ -f "${slurm_array_file}" ]]
-then
-    echo "<${0}>: slurm array file does not exist (arg 1): '${slurm_array_file}'" >&2
-    exit 1
-fi
+analyzer -l -b -q "execute_array_task.C(\"${PATH_TASK_LIST}\", \"${OUTPUT_DIR}\")" 
 
-path_odef="outDefs/full_replay.odef"
+echo "<${0}>: Done." 
 
-min_events=1000
+echo "<${0}>: Ending timestamp: $(date +'%Y.%m.%d %H:%M:%S')" 
 
-n_cpus=${SLURM_CPUS_PER_TASK}
-if [[ -z "${SLURM_CPUS_PER_TASK}" ]]
-then
-    n_cpus=$(nproc)
-fi
-
-echo "<${0}> array file: ${slurm_array_file}"
-echo "<${0}> total files to read: $(cat ${slurm_array_file} | wc -l)" 
-
-while read -r line;
-do
-    # now, split the line into an array
-    IFS='|' read -ra line_array <<< "${line}"
-    
-    run="${line_array[0]}"
-        
-    rawfile_num="${line_array[1]}"
-    decode_start_event="${line_array[2]}"
-    decode_end_event="${line_array[3]}"
-    path_decode_input="${line_array[4]}"
-      
-    echo "<${0}>: run/rawfile ${run}/${rawfile_num} ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~" 
-    echo "<${0}>: event-range ${decode_start_event}-${decode_end_event} (n. events: $(( $decode_end_event - $decode_start_event ))"
-
-    n_raw_events=$(( ${decode_end_event} - ${decode_start_event} ))
-    echo "<${0}>: PROCESSING decode ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~" 
-    echo "<${0}>: event range: ${decode_start_event}-${decode_end_event} (total: ${n_raw_events})"
-    echo "<${0}>: input:  $path_decode_input"
-    echo "<${0}>: output: $path_decode_output"
-    echo "<${0}>: ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~"
-
-    
-    cmd_string="decode/decode_run.C(\"${path_decode_input}\", \"${stem_decode_output}.root\", \"${path_odef}\")"
-    echo "command string: ${cmd_string}"
-    
-    time analyzer -l -b -q "${cmd_string}"
-    #cat "data data data" > "${stem_decode_output}.root" 
-    
-    echo "<${0}>: done with decoding. ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~"
-    echo "<${0}>: scratch disk usage: $(du -sh ${PATH_SCRATCH}/*)"    
-
-    # now, execute the replay on this file
-    segment_num=0
-    
-    while read -r path_replay_input;
-    do
-	
-	echo "<${0}>: PROCESSING replay ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~" 
-	echo "<${0}>: input:  ${path_replay_input}"
-	echo "<${0}>: output: ${stem_replay_output}.${run}.raw-num-${rawfile_num}.seg-${segment_num}.root"
-	echo "<${0}>: ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~"
-	
-	cmd_string="./build/vdc_track_replay --n-threads ${n_cpus} --arm-mode \"both\" --run-number ${run} --segment-number ${segment_num} --rawfile-number ${rawfile_num} \"${stem_replay_output}\" \"${path_replay_input}\""
-
-	echo "command string: ${cmd_string}" 
-	time eval ${cmd_string}
-	#cat "data data data" > "${stem_replay_output}.${run}.rawfile-num-${rawfile_num}.seg-${segment_num}.root" 
-
-	rm ${path_replay_input}
-	
-	# now, remove the decode file we don't need anymore
-	segment_num=$(( $segment_num + 1 ))
-	
-    done < <(ls -1 "${stem_decode_output}"*)
-    
-done < <(cat "${slurm_array_file}")
