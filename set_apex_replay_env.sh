@@ -41,7 +41,7 @@ export ROOT_INCLUDE_PATH=$(add_path_to_list "${PATH_APEX_REPLAY}/decode/include"
 export ROOT_INCLUDE_PATH=$(add_path_to_list "${PATH_APEX_REPLAY}/replay/include" "${ROOT_INCLUDE_PATH}")
 export ROOT_INCLUDE_PATH=$(add_path_to_list "${PATH_APEX_REPLAY}/utils/include" "${ROOT_INCLUDE_PATH}")
 
-# now, add the build directory to the library, so it can find the shared libraries 
+# now, add the build/lib directory to the library, so it can find the shared libraries 
 export LD_LIBRARY_PATH=$(add_path_to_list "${PATH_APEX_REPLAY}/build/lib" "${LD_LIBRARY_PATH}")
 
 
