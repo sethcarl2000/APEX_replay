@@ -137,7 +137,7 @@ void replay_coda_file(int run_number, int rawfile_number, const std::string& out
         //now, process the decode. 
         try {
 
-            decode::process_coda_file(path_coda_file, path_decode, first_event, last_event); 
+            decode::decode_coda_file(path_coda_file, path_decode, first_event, last_event); 
         
         } catch (const std::exception& e) {
 
