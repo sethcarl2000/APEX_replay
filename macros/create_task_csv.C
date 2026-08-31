@@ -62,8 +62,8 @@ int create_task_csv(
             Run new_run; 
             new_run.rawfiles.emplace_back(Rawfile{rawfile_number, n_events}); 
             new_run.run_number = run_number; 
-            new_run.n_events = n_events; 
-
+            new_run.n_events   = n_events; 
+	    
             runs.emplace_back(new_run); 
 
             current_run = &runs.back(); 
@@ -99,29 +99,25 @@ int create_task_csv(
 
         task_runs.clear(); 
         ++task_id; 
-        n_events_in_task =0; 
+        n_events_in_task =0; 	
     };
 
     for (const auto& run : runs) {
       
       if (run.run_number < first_run) continue; 
       
-        if (run.run_number > last_run) break;  
+      if (run.run_number > last_run) break;  
+      
+      if (n_events_in_task + run.n_events > max_events_per_task) new_task();
+	      
+      task_runs.emplace_back(run); 
+      n_events_in_task += run.n_events; 
 
-        if (n_events_in_task + run.n_events > max_events_per_task) { 
-        
-            new_task(); 
-        
-        } else {
-            
-            n_events_in_task += run.n_events; 
-
-            task_runs.emplace_back(run); 
-        }
     }
-
+        
+    
     if (!task_runs.empty()) new_task(); 
-
+    
     outfile.close(); 
     return 0; 
 }
