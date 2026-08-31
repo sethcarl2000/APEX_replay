@@ -15,8 +15,8 @@ then
     exit
 fi
 
-path_output="logs/replay_status_$(date +'%Y-%b-%d_%H.%M.%S').csv"
+path_output="logs/sacct/replay_status_$(date +'%Y-%b-%d_%H.%M.%S').csv"
 
-sacct --user=$(whoami) --starttime=${start_time} --parsable --noheader --format=JobName,JobID,Start,Elapsed,State,MaxRSS,TotalCPU > "${path_output}"
+sacct --user=$(whoami) --starttime=${start_time} --parsable --format=JobName,JobID,Start,Elapsed,State,MaxRSS,TotalCPU >> "${path_output}"
 
 echo "created output csv under path: ${path_output}" 
