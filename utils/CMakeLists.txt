@@ -15,6 +15,7 @@ set(src_utils
     is_path_regular_file.cxx
     remove_file_from_disk.cxx
     get_file_size_KB.cxx
+    get_task_rawfile_list.cxx
   )
 
 set(headers_utils

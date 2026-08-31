@@ -7,6 +7,7 @@
 #include <string> 
 #include <optional> 
 #include <limits> 
+#include <vector> 
 
 class TH1; 
 
@@ -54,6 +55,12 @@ std::string get_slurm_scratch_directory(PathCheckStatus* status=nullptr);
 /// @param path path to file
 /// @param status status object. if the status object is not null, and the size check fails, then the status will be populated with the error message. If the check fails, and the status is null, then an exception is thrown 
 double get_file_size_KB(const std::string& path, PathCheckStatus* status=nullptr);
+
+struct Rawfile { unsigned int run_number, rawfile_number; };
+
+/// @brief Get a list of all rawfiles tasked to this array. see 'macros/create_task_csv.C' for formatting. 
+std::vector<Rawfile> get_task_rawfile_list(const std::string& path, unsigned int task_id); 
+
   
 /// @brief Attempts to fit a gaussian to a histogram, with a constant background
 /// @param hist histogram to fit
