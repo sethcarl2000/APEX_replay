@@ -94,7 +94,7 @@ void execute_array_task(const std::string& path_task_list, const std::string& ou
                 path_coda_file.c_str(),
                 result.message.c_str()
             ); 
-            return; 
+            continue; 
         }
 
         //now, let's count the number of physics CODA events to process. 
@@ -108,12 +108,12 @@ void execute_array_task(const std::string& path_task_list, const std::string& ou
         } catch (const std::exception& e) {
 
             Error(__func__, "Error caught trying to count physics events.\n"
-                "   CODA path:  %s\n"
-                "   what:       %s",
-                path_coda_file.c_str(),
-                e.what()
-            );
-        return; 
+		  "   CODA path:  %s\n"
+		  "   what:       %s",
+		  path_coda_file.c_str(),
+		  e.what()
+		  );
+	    continue; 
 
         //tyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyy
         // - muon's comment 29 aug 26
@@ -145,33 +145,44 @@ void execute_array_task(const std::string& path_task_list, const std::string& ou
 
         if (!status) {
         
-        Error(__func__, "We must not be in a slurm job! exception caught: %s", status.message.c_str());
-        path_decode = "data/test_slurm_dir"; 
-
+	  Error(__func__, "We must not be in a slurm job! exception caught: %s", status.message.c_str());
+	  path_decode = "data/test_slurm_dir"; 
+	  
         }
         
         path_decode = path_decode + "/decode.root"; 
         
         //now, let's loop over all 'event chunks' 
-        while (n_CODA_events_processed < n_CODA_events) {
+	while (n_CODA_events_processed < n_CODA_events) {
+
+	    //if the decode file exsits, delete it 	    
+	    if (utils::is_path_regular_file(path_decode)) {
+	      Info(__func__, "Deleting 'decode.root'"); 
+	      status.message = "";
+	      utils::remove_file_from_disk(path_decode, &status);
+	      if (!status) {
+		Error(__func__, "Some sort of error deleting decode file. message: %s", status.message.c_str());
+	      }
+	    }
 
             Long64_t first_event = n_CODA_events_processed; 
             Long64_t last_event  = n_CODA_events_processed + event_chunk_size; 
-
+	      
+	    
             //if there's only a few events left, let's just process all remaining events. 
             if (n_CODA_events - first_event <= max_chunk_size) {
                 last_event = first_event + max_chunk_size; 
             }
 
             Info(__func__, "Processing decode.\n"
-                "   input path:     %s\n"
-                "   output path:    %s\n"
-                "   event range:    [%lli, %lli]",
-                path_coda_file.c_str(),
-                path_decode.c_str(),
-                first_event, last_event
-            );
-
+		 "   input path:     %s\n"
+		 "   output path:    %s\n"
+		 "   event range:    [%lli, %lli]",
+		 path_coda_file.c_str(),
+		 path_decode.c_str(),
+		 first_event, last_event
+	    );
+	    
             //now, process the decode. 
             try {
 
@@ -179,63 +190,52 @@ void execute_array_task(const std::string& path_task_list, const std::string& ou
             
             } catch (const std::exception& e) {
 
-                Error(__func__, "Error processing decode of coda file.\n"
-                    "   what: %s", e.what()
-                );
-                return; 
+                Error(__func__, "Error processing decode of coda file. skipping this one...\n"
+		      "   what: %s", e.what()
+		      );
+		
+                continue; 
             }
             Info(__func__, "Done with decode phase."); 
 
-        //let's try to check how big the 'decode' file is (and that is exists)...
-        utils::PathCheckStatus status; 
-
-        double decode_size_MB = utils::get_file_size_KB(path_decode, &status) / (1024.);
-
-        if (!status || !decode_size_MB) {
-        Error(__func__, "Something went wrong checking size of decode file: '%s', size: %.2f MB. message: %s",
-            path_decode.c_str(),
-            decode_size_MB,
-            status.message.c_str()
-            );
-        return;
-        }
-
-        Info(__func__, "decode file is %.2f MB", decode_size_MB); 
-        
-
+	    //let's try to check how big the 'decode' file is (and that is exists)...
+	    utils::PathCheckStatus status; 
+	    
+	    double decode_size_MB = utils::get_file_size_KB(path_decode, &status) / (1024.);
+	    
+	    if (!status || !decode_size_MB) {
+	      Error(__func__, "Something went wrong checking size of decode file: '%s', size: %.2f MB. message: %s",
+		    path_decode.c_str(),
+		    decode_size_MB,
+		    status.message.c_str()
+		    );
+	      
+	    } else {
+	    
+	      Info(__func__, "decode file is %.2f MB", decode_size_MB); 
+	    }
+	    
             auto replay_stem = output_directory + "/replay"; 
-
+	    
             //so, if all is well, then we just need to replay the file. 
             try {
-
-                replay_mgr.Process(path_decode, replay_stem, rawfile_number, segment_number); 
-            
+	      
+	      replay_mgr.Process(path_decode, replay_stem, rawfile_number, segment_number); 
+	      
             } catch (const std::exception& e) {
-
-                Error(__func__, "Error replaying decoded file.\n"
+	      
+	      Error(__func__, "Error replaying decoded file. skipping this one...\n"
                     "   what: %s", e.what()
-                );
-                return; 
+		    );
+	      continue; 
             }
-
-        Info(__func__, "Done with replay phase. trying to delete the 'decode.root' file..."); 
-
-        status.message = "";
-            //try to delete decode file 
-            utils::remove_file_from_disk(path_decode, &status);
-
-        if (!status) {
-        Error(__func__, "Something went wrong trying to delete decode file.\n"
-            "   message: %s", status.message.c_str()
-            );
-        return; 
+	    
+	    //iterate segment number / event range 
+	    
+	    n_CODA_events_processed += event_chunk_size; 
+	    ++segment_number; 
         }
-            //iterate segment number / event range 
-
-            n_CODA_events_processed += event_chunk_size; 
-            ++segment_number; 
-        }
-
+	
         Info(__func__, "Done processing rawfile: %u/%u ", run_number, rawfile_number); 
     }
 
