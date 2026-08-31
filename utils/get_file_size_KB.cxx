@@ -37,7 +37,7 @@ double get_file_size_KB(const std::string& path_str, PathCheckStatus* status)
   std::error_code error_code; 
   
   //try to remove the file 
-  std::uintmax_t KB = fs::file_size(path, error_code);
+  std::uintmax_t bytes = fs::file_size(path, error_code);
   
   //check if there's an error code
   if (error_code) {
@@ -50,7 +50,7 @@ double get_file_size_KB(const std::string& path_str, PathCheckStatus* status)
   }
   if (status) status->message = "success";
   
-  return (double)KB; 
+  return ((double)bytes)/1024.; 
 }
 
 }
