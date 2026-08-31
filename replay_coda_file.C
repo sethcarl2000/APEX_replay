@@ -58,11 +58,12 @@ void replay_coda_file(int run_number, int rawfile_number, const std::string& out
     //now, let's count the number of physics CODA events to process. 
     Long64_t n_CODA_events; 
 
+         
     Info(__func__, "Counting physics events..."); 
     try {
 
-        n_CODA_events = decode::count_physics_events(path_coda_file); 
-        
+      n_CODA_events = decode::count_physics_events(path_coda_file); 
+      
     } catch (const std::exception& e) {
 
         Error(__func__, "Error caught trying to count physics events.\n"
@@ -86,24 +87,31 @@ void replay_coda_file(int run_number, int rawfile_number, const std::string& out
     replay::Manager replay_mgr; 
     
     replay_mgr.SetRunNumber(run_number); 
-
+    
     replay_mgr.SetMaxNThreads(4); 
+
+    replay_mgr.SetArmMode("both"); 
+
     
     //now, let's process these raw events. 
     Long64_t n_CODA_events_processed =0;
     int segment_number =0; 
-
-
+    
     //get the decode file name
     std::string path_decode;
-    try {
-      path_decode = utils::get_slurm_scratch_directory(); 
-    } catch (const std::exception& e) {
-      
-      Error(__func__, "We must not be in a slurm job! exception caught: %s", e.what());
-      path_decode = "data/test_slurm_dir"; 
-    }
+    
+    using Status = utils::PathCheckStatus; 
+    Status status; 
 
+    path_decode = utils::get_slurm_scratch_directory(&status); 
+
+    if (!status) {
+      
+      Error(__func__, "We must not be in a slurm job! exception caught: %s", status.message.c_str());
+      path_decode = "data/test_slurm_dir"; 
+
+    }
+      
     path_decode = path_decode + "/decode.root"; 
     
     //now, let's loop over all 'event chunks' 
@@ -138,8 +146,24 @@ void replay_coda_file(int run_number, int rawfile_number, const std::string& out
             );
             return; 
         }
-        Info(__func__, "Done with decode phase. initializing replay..."); 
+        Info(__func__, "Done with decode phase."); 
 
+	//let's try to check how big the 'decode' file is (and that is exists)...
+	utils::PathCheckStatus status; 
+
+	double decode_size_MB = utils::get_file_size_KB(path_decode, &status) / (1024.);
+
+	if (!status || !decode_size_MB) {
+	  Error(__func__, "Something went wrong checking size of decode file: '%s', size: %.1 MB. message: %s",
+		path_decode.c_str(),
+		decode_size_MB,
+		status.message.c_str()
+		);
+	  return;
+	}
+
+	Info(__func__, "decode file is %.2f MB", decode_size_MB); 
+	
 
         auto replay_stem = output_directory + "/replay"; 
 
@@ -155,11 +179,19 @@ void replay_coda_file(int run_number, int rawfile_number, const std::string& out
             );
             return; 
         }
-        Info(__func__, "Done with replay phase. trying to delete the 'decode.root' file..."); 
 
+	Info(__func__, "Done with replay phase. trying to delete the 'decode.root' file..."); 
+
+	status.message = "";
         //try to delete decode file 
-        utils::remove_file_from_disk(path_decode); 
+        utils::remove_file_from_disk(path_decode, &status);
 
+	if (!status) {
+	  Error(__func__, "Something went wrong trying to delete decode file.\n"
+		"   message: %s", status.message.c_str()
+		);
+	  return; 
+	}
         //iterate segment number / event range 
 
         n_CODA_events_processed += event_chunk_size; 
