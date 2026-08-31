@@ -134,45 +134,13 @@ int Manager::Process(const std::string& path_input, const std::string& stem_outp
   const bool are_both_arms_active = (fArmMode == kBothArms);
   
   //find the central-momentum of both arms using EPICS vars
-  ROOT::EnableImplicitMT(fN_threads); 
-
-  ROOT::RDataFrame d_E("E", path_input.data());
-
-  double momentum_RHRS{utils::kNaN}, momentum_LHRS{utils::kNaN};
-  
-  //check if epics tree 'E' is empty
-  if ((ULong64_t)*d_E.Count() < 1) {
-
-    Error(__func__,"Epics tree 'E' of path \"%s\" is empty!",path_input.data());
-    return -1; 
-
-  } else {
-    
-    momentum_RHRS = *d_E.Mean("HacR_D1_P0rb") * (GeV / MeV);  
-    momentum_LHRS = *d_E.Mean("HacL_D1_P0rb") * (GeV / MeV);
-
-    bool min_momentum_met=true; 
-    if (is_RHRS_active && (momentum_RHRS < run_parameters::min_momentum)) {
-      min_momentum_met=false; 
-    } 
-    if (is_LHRS_active && (momentum_LHRS < run_parameters::min_momentum)) {
-      min_momentum_met=false; 
-    } 
-    if (!min_momentum_met) 
-      Warning(__func__, "One or both arms failed to meet minimum spectrometer momentum threshold (%.1f MeV/c).", run_parameters::min_momentum); 
-
-  }
-  
-  Info(__func__, 
-    "Momentum reported by RHRS/LHRS: %.1f / %.1f (MeV)", momentum_RHRS, momentum_LHRS
-  ); 
+  ROOT::EnableImplicitMT(fN_threads);   
 
  
   //initialize the react vertex
   //create the 'TReactVertex' object, which computes the reaction vertex,
   // using raster information, and known v-wire positions. 
   ReactVertex *R_react_vertex, *L_react_vertex;
-  
 
   const bool single_threadding = !run_parameters::kEnableMT;
 
@@ -190,6 +158,8 @@ int Manager::Process(const std::string& path_input, const std::string& stem_outp
   
   RDFNodeAccumulator rna(ROOT::RDataFrame("T", path_input.data())); 
 
+  rna.SetAbortOnError(false); 
+  
   //try to construct the RHRS react vertex handler
   if (is_RHRS_active) {
     printf("<%s> generating RHRS react vertex handler...\n",__func__); std::cout << std::flush; 
@@ -573,7 +543,7 @@ int Manager::Process(const std::string& path_input, const std::string& stem_outp
   TStopwatch timer; 
 
   //turn this OFF; have it throw an exception instead. 
-  rna.SetAbortOnError(false);
+  //rna.SetAbortOnError(false);
 
   try {  
     rna.Snapshot("track_data", path_output); 
