@@ -20,31 +20,26 @@
 #include <cstdio>
 #include <memory>
 
-#define DECODE_ONLY true
-#define VERBOSITY 1
-
 namespace APEX
 {
 namespace decode
 {
 
-void process_coda_file(const std::string& path_infile,
-			   const std::string& path_outfile,
-			   Long64_t first_event, 
-			   Long64_t last_event, 
-			   const std::string& path_odef)
+void decode_coda_file(const std::string& path_infile,
+		      const std::string& path_outfile,
+		      Long64_t first_event, 
+		      Long64_t last_event, 
+		      const std::string& path_odef)
 {  
   Info(__func__, "starting decode:\n"
     "  input file:   %s\n"
     "  output file:  %s\n"
     "  odef:         %s\n"
-    "  first event:  %lli\n"
-    "  last event:   %lli\n",
+    "  event range:  [%lli, %lli]\n",
     path_infile.c_str(),
     path_outfile.c_str(),
     path_odef.c_str(),
-    first_event,
-    last_event
+    first_event, last_event
   ); 
 
   std::string path_cuts   = "coinc.cuts";
@@ -70,7 +65,7 @@ void process_coda_file(const std::string& path_infile,
   
   analyzer->SetOutFile( path_outfile.c_str() );
 
-  analyzer->SetVerbosity( VERBOSITY ); 
+  analyzer->SetVerbosity( 0 ); 
   
   analyzer->Process( run.get() );
 

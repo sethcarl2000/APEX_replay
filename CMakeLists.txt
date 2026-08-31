@@ -46,7 +46,7 @@ target_link_libraries(APEX_utils PUBLIC ROOT::Core ROOT::RIO)
 set(src_decode
     decode/count_physics_events.cxx
     decode/init_decoders.cxx
-    decode/process_coda_file.cxx 
+    decode/decode_coda_file.cxx 
 #    decode/Shower.cxx
 )
 
