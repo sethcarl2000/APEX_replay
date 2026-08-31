@@ -193,6 +193,11 @@ int Manager::Process(const std::string& path_input, const std::string& stem_outp
   //get the total number of events
   const EventCounter total_events_in_file = *rna.Get().Count(); 
 
+  if (total_events_in_file < 1) {
+    Warning(__func__, "No events found in decode file.");
+    return 0;
+  } 
+   
   //max number of events to run 
   const EventCounter total_events = (fMaxEventsToProcess > 0) ? std::min( fMaxEventsToProcess, (Long64_t)total_events_in_file ) : total_events_in_file; 
 
