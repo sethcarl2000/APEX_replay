@@ -24,7 +24,7 @@ root -l -b -q "macros/create_task_csv.C(\"${path_coda_events_CSV}\", \"${array_f
 
 if [[ ! -d "$(pwd)/slurm_payloads" ]]
 then
-	mkdir "$(pwd)/slurm_payloads"
+    mkdir "$(pwd)/slurm_payloads"
 fi
 
 timestamp="$(date +'%Y-%b-%d_%H.%M.%S')"
@@ -38,8 +38,8 @@ tar -czf "${path_tarball}" build utils decode replay DB outDefs array-tasks.csv 
 last_array_id=0
 while read -r line 
 do
-	IFS=' ' read -ra line_array <<< "${line}"
-	last_array_id="${line_array[0]}"
+    IFS=' ' read -ra line_array <<< "${line}"
+    last_array_id="${line_array[0]}"
 
 done < <(cat ${array_file})
 
