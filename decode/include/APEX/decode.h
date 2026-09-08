@@ -20,7 +20,7 @@ void init_decoders();
 /// @param first_event first physics event to process (0 is the first physics event in **this** CODA file, **not** the first physics event in the run!!!!) 
 /// @param last_event last physics event to process, indexed the same way as 'first_event' 
 /// @param path_odef path to output variable definitions
-void decode_coda_file(const std::string& path_input, const std::string& path_output, Long64_t first_event=0, Long64_t last_event=1e7, const std::string& path_odef="outDefs/full_replay.odef");
+  void decode_coda_file(const std::string& path_input, const std::string& path_output, Long64_t first_event=0, Long64_t last_event=1e7, const std::string& path_odef="outDefs/full_replay.odef", int verbosity=1);
 
 /// @brief Count the number of physics events in a CODA file 
 /// @param path_coda absolute path to CODA file

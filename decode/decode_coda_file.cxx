@@ -29,7 +29,8 @@ void decode_coda_file(const std::string& path_infile,
 		      const std::string& path_outfile,
 		      Long64_t first_event, 
 		      Long64_t last_event, 
-		      const std::string& path_odef)
+		      const std::string& path_odef,
+		      int verbosity)
 {  
   Info(__func__, "starting decode:\n"
     "  input file:   %s\n"
@@ -65,7 +66,7 @@ void decode_coda_file(const std::string& path_infile,
   
   analyzer->SetOutFile( path_outfile.c_str() );
 
-  analyzer->SetVerbosity( 0 ); 
+  analyzer->SetVerbosity( verbosity ); 
   
   analyzer->Process( run.get() );
 
