@@ -67,6 +67,8 @@ void decode_coda_file(const std::string& path_infile,
   analyzer->SetOutFile( path_outfile.c_str() );
 
   analyzer->SetVerbosity( verbosity ); 
+
+  analyzer->SetCountMode( THaAnalyzer::kCountPhysics );
   
   analyzer->Process( run.get() );
 
