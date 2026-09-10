@@ -5,8 +5,8 @@
 #SBATCH --account halla
 #SBATCH --ntasks 1
 #SBATCH --cpus-per-task=4
-#SBATCH --mem=4500M
-#SBATCH --gres=disk:2G
+#SBATCH --mem=5G
+#SBATCH --gres=disk:2500M
 #SBATCH --time 600
 #SBATCH --output=/volatile/halla/apex/full_replay/slurm/full-replay/%x.%a.%A.out
 #SBATCH --error=/volatile/halla/apex/full_replay/slurm/full-replay/%x.%a.%A.err
@@ -90,5 +90,7 @@ do
     echo "<${FUNC}> [$(date +'%y-%m-%dT%H:%M:%S')] executing run ${RUN}:" 
 
     analyzer -l -b -q "execute_specific_run.C(${RUN}, \"${PATH_TASK_LIST}\", \"${OUTPUT_DIR}\")"
+
+done 
     
 echo "<${FUNC}> [$(date +'%y-%m-%dT%H:%M:%S')]: Done." 
