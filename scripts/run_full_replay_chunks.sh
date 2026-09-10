@@ -32,7 +32,7 @@ slurm_timestamp="$(date +'%Y-%m-%dT%H:%M:%S')"
 
 path_tarball="${PATH_APEX_REPLAY}/slurm_payloads/payload__${timestamp}__run-range_${run0}-${run1}.tar.gz" 
 
-tar -czf "${path_tarball}" build utils decode scripts replay DB outDefs array-tasks.csv execute_array_task.C set_apex_replay_env.sh
+tar -czf "${path_tarball}" build utils decode scripts replay DB outDefs array-tasks.csv execute_specific_run.C set_apex_replay_env.sh
 
 # find the last array in the csv 
 last_array_id=0
