@@ -5,7 +5,7 @@
 #SBATCH --account halla
 #SBATCH --ntasks 1
 #SBATCH --cpus-per-task=4
-#SBATCH --mem=3G
+#SBATCH --mem=4500M
 #SBATCH --gres=disk:2G
 #SBATCH --time 600
 #SBATCH --output=/volatile/halla/apex/full_replay/slurm/full-replay/%x.%a.%A.out
@@ -13,6 +13,8 @@
 
 # move to the scratch dir 
 PATH_SCRATCH="/scratch/slurm/${SLURM_JOB_ID}" 
+
+FUNC="run-full-replay-array" 
 
 # check to make sure this directory exists
 if [[ ! -d "${PATH_SCRATCH}" ]]
@@ -24,21 +26,19 @@ fi
 cd ${PATH_SCRATCH}
 
 path_tarball=${1}
-
-echo "<${0}>: unpacking tarball: ${path_tarball}" 
+echo "<${FUNC}> [$(date +'%y-%m-%dT%H:%M:%S')]: In script." 
+echo "<${FUNC}>: unpacking tarball: ${path_tarball}" 
 
 # unpack the tarball of data / executables
 tar -xzf ${path_tarball}
 
-
-echo "<${0}>: done. directory contents:" 
-ls -1 * 
+echo "<${FUNC}>: done." 
 
 # set up APEX env
-echo "<${0}>: setting env"
+echo "<${FUNC}>: setting env"
 
 source set_apex_replay_env.sh
-echo "<${0}>: pwd: '$(pwd)'" 
+echo "<${FUNC}>: pwd: '$(pwd)'" 
 
 OUTPUT_DIR="${PATH_APEX_VOLATILE}/production" 
 
@@ -46,13 +46,13 @@ OUTPUT_DIR="${PATH_APEX_VOLATILE}/production"
 #module unload analyzer 
 #module load analyzer/1.7.15 
 
-echo "<${0}>: analyzer version:" 
+echo "<${FUNC}>: analyzer version:" 
 analyzer --version
 
-echo "<${0}>: root version:" 
+echo "<${FUNC}>: root version:" 
 root --version
 
-echo "<${0}>: uname -a (OS info):"
+echo "<${FUNC}>: uname -a (OS info):"
 uname -a
 
 
@@ -68,14 +68,27 @@ then
     exit 1 
 fi
 
-echo "<${0}>: Starting timestamp: $(date +'%Y.%m.%d %H:%M:%S')" 
+echo "<${FUNC}>: Starting timestamp: $(date +'%Y.%m.%d %H:%M:%S')" 
 
 # now, execute all tasks: 
-echo "<${0}>: Executing task macro:"
+echo "<${FUNC}>: Executing task macro:"
 
-analyzer -l -b -q "execute_array_task.C(\"${PATH_TASK_LIST}\", \"${OUTPUT_DIR}\")" 
+# get list of all runs
+runlist=$(./scripts/get_runs_in_task.sh "${PATH_TASK_LIST}" ${SLURM_ARRAY_TASK_ID})
 
-echo "<${0}>: Done." 
+if [[ -z "${runlist}" ]]
+then
+    echo "<${FUNC}>: no runs found for task: ${SLURM_ARRAY_TASK_ID}!!" >&2 
+    exit 
+fi
 
-echo "<${0}>: Ending timestamp: $(date +'%Y.%m.%d %H:%M:%S')" 
+echo "<${FUNC}>: runs: "
+echo "<${FUNC}>: ${runlist}" 
 
+for RUN in ${runlist}
+do
+    echo "<${FUNC}> [$(date +'%y-%m-%dT%H:%M:%S')] executing run ${RUN}:" 
+
+    analyzer -l -b -q "execute_specific_run.C(${RUN}, \"${PATH_TASK_LIST}\", \"${OUTPUT_DIR}\")"
+    
+echo "<${FUNC}> [$(date +'%y-%m-%dT%H:%M:%S')]: Done." 

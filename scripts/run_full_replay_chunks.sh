@@ -11,7 +11,7 @@ run0=${1}
 run1=${2}
 
 # max number of CODA events to shoot for. If adding one more run overflows this value, then skip it. 
-max_events_per_task=5000000
+max_events_per_task=4000000
 
 # this gives us the number of CODA events in each raw file 
 path_coda_events_CSV="logs/n-CODA-events-per-file.csv" 
@@ -32,7 +32,7 @@ slurm_timestamp="$(date +'%Y-%m-%dT%H:%M:%S')"
 
 path_tarball="${PATH_APEX_REPLAY}/slurm_payloads/payload__${timestamp}__run-range_${run0}-${run1}.tar.gz" 
 
-tar -czf "${path_tarball}" build utils decode replay DB outDefs array-tasks.csv execute_array_task.C set_apex_replay_env.sh
+tar -czf "${path_tarball}" build utils decode scripts replay DB outDefs array-tasks.csv execute_array_task.C set_apex_replay_env.sh
 
 # find the last array in the csv 
 last_array_id=0
@@ -51,8 +51,8 @@ echo "${cmd_string}"
 logfile="logs/replay_submit_${run0}_${run1}_${timestamp}.log"
 errfile="logs/replay_submit_${run0}_${run1}_${timestamp}.log"
 
-# jobstr=$(eval ${cmd_string} 2> ${errfile})
-jobstr="Submitted batch job 9960067"
+jobstr=$(eval ${cmd_string} 2> ${errfile})
+# jobstr="Submitted batch job 9960067"
 echo "" > ${errfile}
 
 if [[ ! -z "$(cat ${errfile})" ]] 
