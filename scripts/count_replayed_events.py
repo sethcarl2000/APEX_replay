@@ -20,19 +20,19 @@ from pathlib import Path
 # ---------------------------------------------------------------
 
 # Matches "--run nubmer 1234" (tolerates both 'nubmer' and 'number')
-RUN_RE = re.compile(r'^^\s*Processing run/rawfile/segment:\s+(\d+)')
+RUN_RE = re.compile(r'--run nubmer\s+(\d+)')
 
-EVENTS_RE = re.compile(r'^\s*Processing\s+(\d+)\s+events')
+EVENTS_RE = re.compile(r'^.*Processing\s+(\d+)\s+events') # Processing\s+(\d+)\s+events')
 
 # Ordered list of (csv_column_name, regex). The ORDER here must match
 # the order the lines appear within a block. Duplicate patterns are
 # fine: the first occurrence in the block fills the first entry with
 # that pattern, the second occurrence fills the next, etc.
 VAR_SPECS = [
-    ('one_s2_both_arms', re.compile(r'^\s*1 S2 hit in each arm:\s+(\d+)')),
-    ('s2_coinc', re.compile(r'^\s*1 coinc with LHRS & RHRS:\s+(\d+)')),
-    ('one_track_RHRS', re.compile(r'^\s*1 refined track\s+(\d+)')),
-    ('one_track_LHRS', re.compile(r'^\s*1 refined track\s+(\d+)')),  # same regex as var_pattern_2
+    ('one_s2_both_arms', re.compile(r'\s+1 S2 hit in each arm:\s+(\d+)')),
+    ('s2_coinc', re.compile(r'\s+1 coinc with LHRS & RHRS:\s+(\d+)')),
+    ('one_track_RHRS', re.compile(r'\s+1 refined track\s+(\d+)')),
+    ('one_track_LHRS', re.compile(r'\s+1 refined track\s+(\d+)')),  # same regex as var_pattern_2
 ]
 
 # ---------------------------------------------------------------
