@@ -14,8 +14,8 @@ BODY_PATTENS: dict[str, re.Pattern] = {
     "run_time_seconds" : re.compile(r"TIME\s*:\s*([0-9.]+)\s*mins"),
     "beam_energy_MeV" : re.compile(r"Tiefenbach\s*6GeV\s*Beam\s*energy\s*\(MeV\)\s*:\s*([0-9.]+)"),
     "beam_current_uA" : re.compile(r"Beam\s*Current\s*:\s*([0-9.]+)"),
-    "momentum_RHRS_MeV" : re.compile(r"Right\s*arm\s*momentum\s*:\s*([0-9.])"),
-    "momentum_LHRS_MeV" : re.compile(r"Left\s*arm\s*momentum\s*:\s*([0-9.])"),
+    "momentum_RHRS_MeV" : re.compile(r"Right\s*arm\s*momentum\s*:\s*([0-9.]+)"),
+    "momentum_LHRS_MeV" : re.compile(r"Left\s*arm\s*momentum\s*:\s*([0-9.]+)"),
 }
 
 
