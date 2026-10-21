@@ -9,5 +9,4 @@ Executable bash scripts in the `scripts` directory.
 
 In particular, see [run_full_replay.sh](./docs/scripts.md#run_full_replaysh) for the script responsible for automatically executing the full replay workflow from start to finish. 
 
-
-
+# Replay Workflow
