@@ -14,7 +14,7 @@
 # move to the scratch dir 
 PATH_SCRATCH="/scratch/slurm/${SLURM_JOB_ID}" 
 
-FUNC="run-full-replay-array" 
+FUNC="slurm-replay-task" 
 
 # check to make sure this directory exists
 if [[ ! -d "${PATH_SCRATCH}" ]]

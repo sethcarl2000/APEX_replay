@@ -45,7 +45,7 @@ done < <(cat ${array_file})
 
 echo "last array id: ${last_array_id}"
 
-cmd_string="sbatch --job-name=apex_replay_${run0}_${run1} --array=0-${last_array_id} scripts/run-full-replay-array ${path_tarball}" 
+cmd_string="sbatch --job-name=apex_replay_${run0}_${run1} --array=0-${last_array_id} scripts/slurm-replay-task ${path_tarball}" 
 echo "${cmd_string}" 
 
 logfile="logs/replay_submit_${run0}_${run1}_${timestamp}.log"
