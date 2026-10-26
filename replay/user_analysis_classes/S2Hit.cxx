@@ -27,7 +27,7 @@ namespace APEX
 {
 
 ////////////////////////////////////////////////////////////////////////////////////
-S2Hit::S2Hit( bool arm, int paddle, double T_pmtL, double T_pmtR ) {
+S2Hit::S2Hit( bool arm, int paddle, double T_pmtR, double T_pmtL ) {
   
   f_isRightArm =arm; 
   fPaddle      =paddle; 

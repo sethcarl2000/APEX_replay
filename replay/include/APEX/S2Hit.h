@@ -12,7 +12,7 @@ class S2Hit {
    *      Tracks information for S2m hits of either arm, including the ability 
    *      to convert between raw/realtime. 
    ***/
-  S2Hit( bool arm=true, int paddle=-1, double T_pmtL=-1e30, double T_pmtR=-1e30 ); 
+  S2Hit( bool arm=true, int paddle=-1, double T_pmtR=-1e30, double T_pmtL=-1e30 ); 
   
   virtual ~S2Hit() {/*noop*/}; 
   
