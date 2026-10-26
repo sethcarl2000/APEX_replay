@@ -68,8 +68,20 @@ namespace run_parameters {
     constexpr double min_momentum = 800.; 
 
     // Range of S2 T_RHRS - T_LHRS to keep 
-    constexpr double min_tr_tl = 10e-9; 
-    constexpr double max_tr_tl = 60e-9; 
+    constexpr double min_tr_tl = -200e-9; 
+    constexpr double max_tr_tl = +200e-9; 
+
+    // reasonable 'default' dummy-times for S2 hits
+    constexpr double RHRS_S2_reftime = 28e-9; //ns
+    constexpr double LHRS_S2_reftime = 15e-9; //ns
+
+    // maximum / minimum reasonable VDC real-times (rel. to above R/LHRS_S2_reftime)
+    constexpr double RHRS_VDC_min_realtime = -1; 
+    constexpr double RHRS_VDC_max_realtime = +1; 
+    
+    constexpr double LHRS_VDC_min_realtime = -1; 
+    constexpr double LHRS_VDC_max_realtime = +1; 
+    
 };
 
 }

@@ -30,7 +30,7 @@ namespace helpers
 /// @return a vector of all valid VDC hit groups  
 ROOT::RVec<VDC::HitGroup> group_vdc_hits ( 
                                             const EventHandler& evt, 
-                                            int   p, 
+                                            int   plane, 
                                             const ROOT::RVec<double>& h_wire,
                                             const ROOT::RVec<double>& h_rawtime 
                                             ) 
@@ -49,11 +49,14 @@ ROOT::RVec<VDC::HitGroup> group_vdc_hits (
   if (h_rawtime.size() < run_parameters::kGroup_min_hits) return {};
 
   int n_hits = h_rawtime.size(); 
+
+  const bool is_RHRS = evt.ActiveArm();  
+  const double T_offset = evt.GetS2Hit(is_RHRS)->Time(); 
   
   ROOT::RVec<VDC::HitGroup> group_vec{}; 
 
   //cBeg->push_back((int)wire[0]);   
-  VDC::HitGroup group(p); 
+  VDC::HitGroup group(is_RHRS, plane); 
 
   int w_prev = -1; 
   
@@ -62,7 +65,7 @@ ROOT::RVec<VDC::HitGroup> group_vdc_hits (
   // the [1] element is the T_TDC (corrected tdc time of that hit)
   for (int h=0; h<n_hits; h++) { 
     
-    VDC::Hit hit( p, (int)std::round(h_wire[h]), h_rawtime[h], &evt );  
+    VDC::Hit hit( is_RHRS, plane, static_cast<int>(h_wire[h]), h_rawtime[h], T_offset );  
 
 #ifdef DEBUG_GROUP 
     printf(
@@ -91,7 +94,7 @@ ROOT::RVec<VDC::HitGroup> group_vdc_hits (
     n_validHits++; 
 #endif       
     //if wPrev =-1, then no wires have yet been added
-    int gap = w_prev<0 ? 0 : hit.wNum() - w_prev  -1; 
+    int gap = w_prev<0 ? 0 : hit.WireNum() - w_prev  -1; 
 
     if (gap > run_parameters::kGroup_max_gap) { // for adjacent wires, 
 
@@ -109,7 +112,7 @@ ROOT::RVec<VDC::HitGroup> group_vdc_hits (
     //if span is NOT too big, then add this hit to the current cluster
 
     group.AddHit( hit );   
-    w_prev = hit.wNum(); 
+    w_prev = hit.WireNum(); 
     
   }//for (int i=0; h<nHtis; h++) 
 

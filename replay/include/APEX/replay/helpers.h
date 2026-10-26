@@ -26,7 +26,6 @@ namespace replay
 namespace helpers
 {
 
-
 double grid_search( 
     const EventHandler& evt, 
     VDC::HitGroup& group, 
@@ -35,7 +34,8 @@ double grid_search(
     double x_Lo,
     double x_Hi, 
     double TAU_sigma  =9e-9, 
-    double TAU_buffer =20e-9 );
+    double TAU_buffer =20e-9 
+);
 
 void Compute_trackError(VDC::Track& trk);
 
@@ -85,6 +85,19 @@ ROOT::VecOps::RVec<S2Hit> generate_S2_hits(
     const ROOT::RVec<double>& PMT_R, 
     const ROOT::RVec<double>& PMT_L 
 );
+
+/// @brief generate a list of all VDC hits for a given arm & plane
+/// @param arm_mode which arm is currently in use
+/// @param p VDC plane index [0-3]
+/// @param h_wire list of VDC wire indices [0-367]
+/// @param h_rawtime raw TDC time for each wire
+/// @return an RVec<VDC::Hit> of all hits with reasonable times. Sorted by ascending wire-number. 
+ROOT::VecOps::RVec<VDC::Hit> generate_VDC_hits(
+    EArmMode arm_mode,
+    int   p, 
+    const ROOT::RVec<double>& h_wire,
+    const ROOT::RVec<double>& h_rawtime 
+); 
 
 /// @brief Generates VDC tracks for RHRS / LHRS
 /// @param is_RHRS

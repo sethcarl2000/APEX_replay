@@ -10,16 +10,21 @@ namespace VDC
 {
 
 class HitGroup {
+private: 
+  bool fis_RHRS; 
+  std::vector<Hit> fHits; 
+  int fPlane; 
 
- public:   
-  
-  HitGroup(int plane=-1) : fPlane{plane} {}; 
-  
-  virtual ~HitGroup() {}; 
 
+public:   
+  
+  HitGroup(bool is_RHRS, int plane) : fis_RHRS{is_RHRS}, fPlane{plane} {}; 
+  
   void AddHit( const Hit& hit ) { fHits.push_back(hit); } 
   
-  void AddHit( double wire, double rawTime ); 
+  void AddHit( int wire, double rawtime, double T_offset=0.) {
+    fHits.emplace_back(fis_RHRS, fPlane, wire, rawtime, T_offset);  
+  }; 
   
   int Nhits() const { return fHits.size(); }
     
@@ -36,7 +41,7 @@ class HitGroup {
   
   double Span()     const { return HiEdge()-LoEdge(); }
   
-  bool IsRightArm() const { return fHits.front().IsRightArm(); }
+  bool IsRightArm() const { return fHits.front().Is_RHRS(); }
   
   double W()        const { return fHits.front().W(); }
 
@@ -44,9 +49,7 @@ class HitGroup {
   void Clear() { fHits.clear(); }
   
 private: 
-  std::vector<Hit> fHits; 
-  int fPlane; 
-
+  
 }; 
 
 }
