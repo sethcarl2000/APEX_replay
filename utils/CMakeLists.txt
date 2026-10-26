@@ -1,4 +1,6 @@
 
+find_package(ROOT 6.26 REQUIRED COMPONENTS Core RIO)
+
 #-------------------------------------------------------------------------------------------
 #
 #   First, let's build the 'utils' library

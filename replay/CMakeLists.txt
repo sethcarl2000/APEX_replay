@@ -1,4 +1,6 @@
 
+find_package(ROOT 6.36 REQUIRED COMPONENTS Core RIO Physics)
+
 #-------------------------------------------------------------------------------------------
 #
 #   Next, we're going to add the 'decode' libaray, which handles operations with CODA files
@@ -17,11 +19,11 @@ set(src_replay
     user_analysis_classes/VDC/VDC.cxx
     user_analysis_classes/VDC/HitCluster.cxx
     user_analysis_classes/VDC/Track.cxx
-    user_analysis_classes/VDC/Hit.cxx
     user_analysis_classes/VDC/HitGroup.cxx
 # ---   Replay helper classes
     helpers/grid_search.cxx
     helpers/generate_S2_hits.cxx
+    helpers/generate_VDC_hits.cxx
     helpers/gen_coinc_events.cxx
     helpers/compute_trackdata.cxx
     helpers/gen_coinc_window_events.cxx
@@ -69,11 +71,17 @@ set(headers_replay
     include/RMatrixD.h
 )
 
+include(GNUInstallDirs)
+include(PoddCMakeEnv)
+
 # add the shared library 
 add_library(APEX_replay SHARED ${src_replay})
 
 # add the include dir
-target_include_directories(APEX_replay PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}/include")
-
+target_include_directories(APEX_replay 
+    PUBLIC 
+    "${CMAKE_CURRENT_SOURCE_DIR}/include"
+)
 # link against ROOT
 target_link_libraries(APEX_replay PUBLIC ROOT::Core ROOT::RIO ROOT::ROOTDataFrame ROOT::MathCore ROOT::Physics APEX_utils)
+

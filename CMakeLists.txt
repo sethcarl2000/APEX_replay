@@ -11,7 +11,7 @@ find_package(Podd 1.7 REQUIRED)
 # see the repective CMakeLists.txt in each subdirectory for details
 
 # tell all shared libraries to put their shared-libray files in one place 
-set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/lib)
+set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${PROJECT_BINARY_DIR}/lib)
 
 # 'utils' shared library
 add_subdirectory(utils)

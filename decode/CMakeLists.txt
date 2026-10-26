@@ -1,4 +1,6 @@
 
+find_package(Podd 1.7 REQUIRED COMPONENTS Podd HallA)
+
 #-------------------------------------------------------------------------------------------
 #
 #   First, we're going to add the 'decode' libaray, which handles operations with CODA files
@@ -14,6 +16,7 @@ set(headers_decode
     include/APEX/decode.h
 #    include/APEX/decode/Shower.h
 )
+
 
 add_library(APEX_decode SHARED ${src_decode})
 
