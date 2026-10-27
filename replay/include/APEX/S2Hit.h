@@ -16,11 +16,15 @@ class S2Hit {
   
   virtual ~S2Hit() {/*noop*/}; 
   
+  
   bool   IsCoinc()      const { return fIsCoinc; }
   bool   Is_RightArm()  const { return f_isRightArm; } 
   double Time()         const { return fTime; }
   int    Paddle()       const { return fPaddle; }
-  
+
+  double Time_PMT_R() const { return fRealTime_pmtR; }
+  double Time_PMT_L() const { return fRealTime_pmtL; }
+
   double DeltaT_raw()   const;
   
   double X()            const { return fX; }
