@@ -2,6 +2,7 @@
 #define APEX_run_parameters_H
 
 #include <APEX/VDC.h> 
+#include <APEX/units.h>
 
 namespace APEX
 {
@@ -14,11 +15,11 @@ namespace run_parameters {
     constexpr unsigned int kGroup_min_hits=2; ///minimum number of hits in a VDC group
     constexpr int kGroup_max_gap = 4;         ///maximum empty wire-gap in a VDC group
 
-    constexpr double kVDC_max_realTime = 400e-9; ///maximum real-time for VDC hit, rel. to S2 hit
-    constexpr double kVDC_min_realTime = -40e-9; ///minimum real-time for VDC hit, rel. to S2 hit
+    constexpr double kVDC_max_realTime = 380.*units::ns; ///maximum real-time for VDC hit, rel. to S2 hit
+    constexpr double kVDC_min_realTime = -50.*units::ns; ///minimum real-time for VDC hit, rel. to S2 hit
 
     /// this cut is how we determine if two adjacent S2 hits are 'twin' hits (likely caused by the same particle)
-    constexpr double kCUT_S2_twinHit_timeErr =5e-9; 
+    constexpr double kCUT_S2_twinHit_timeErr =5.*units::ns; 
 
     // spacing between coarse-grained grid-search 
     constexpr double kGridSpacing = VDC::kWireSpacing/10.; 
@@ -28,15 +29,15 @@ namespace run_parameters {
     constexpr double kCUT_minEta = 1.950; 
 
     //track cuts
-    constexpr double TRK_R_CUT_Dt     = 12e-9; 
-    constexpr double TRK_L_CUT_Dt     = 20e-9; 
-    constexpr double TRK_R_Dt_offset = +28e-9; 
-    constexpr double TRK_L_Dt_offset = -15e-9;   
+    constexpr double TRK_R_CUT_Dt     = 12.*units::ns; 
+    constexpr double TRK_L_CUT_Dt     = 20.*units::ns; 
+    constexpr double TRK_R_Dt_offset = +28.*units::ns; 
+    constexpr double TRK_L_Dt_offset = -15.*units::ns;   
     constexpr double TRK_CUT_xParam = 0.60; 
     constexpr double TRK_R_xParam_offset = 0.10; 
     constexpr double TRK_L_xParam_offset = 0.00; 
     constexpr double TRK_CUT_Eta    = 6.; 
-    constexpr double TRK_measureSigma = 5e-9; 
+    constexpr double TRK_measureSigma = 5*units::ns; 
     constexpr int    TRK_CUT_nGoodPts_min_perPlane = 2; //good points per plane
     constexpr int    TRK_CUT_nGoodPts_min          = 10;   
 
@@ -53,7 +54,7 @@ namespace run_parameters {
     constexpr double CUT_xParam = 2.00; 
 
     //window to cut on S2 coincidence hits 
-    constexpr double CUT_twinHit_timeErr =5e-9; 
+    constexpr double CUT_twinHit_timeErr = 5.*units::ns; 
     
     // when there is a RHRS - LHRS S2 time conincidence, how many stddev's away from the center should we cut events? 
     constexpr double kS2_coinc_sigma_cut = 6.; 
@@ -64,24 +65,14 @@ namespace run_parameters {
     // if 'true' then events with multiple coincidences will not be considered.
     constexpr bool kKillMultiCoincEvents{true}; 
 
-    // minimum momentum to consider replaying a run (in MeV/c)
-    constexpr double min_momentum = 800.; 
-
     // Range of S2 T_RHRS - T_LHRS to keep 
-    constexpr double min_tr_tl = -200e-9; 
-    constexpr double max_tr_tl = +200e-9; 
+    constexpr double min_tr_tl = -200*units::ns; 
+    constexpr double max_tr_tl = +200*units::ns; 
 
     // reasonable 'default' dummy-times for S2 hits
-    constexpr double RHRS_S2_reftime = 28e-9; //ns
-    constexpr double LHRS_S2_reftime = 15e-9; //ns
+    constexpr double RHRS_S2_reftime = 28.*units::ns; 
+    constexpr double LHRS_S2_reftime = 15.*units::ns; 
 
-    // maximum / minimum reasonable VDC real-times (rel. to above R/LHRS_S2_reftime)
-    constexpr double RHRS_VDC_min_realtime = -1; 
-    constexpr double RHRS_VDC_max_realtime = +1; 
-    
-    constexpr double LHRS_VDC_min_realtime = -1; 
-    constexpr double LHRS_VDC_max_realtime = +1; 
-    
 };
 
 }

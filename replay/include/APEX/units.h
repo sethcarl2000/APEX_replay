@@ -17,12 +17,12 @@ namespace units
 
     //time 
     constexpr double s   = 1.;
-    constexpr double ns  = s/1e9; 
+    constexpr double ns  = s/1.e9; 
 
     //angles 
-    constexpr double rad = 1.;
+    constexpr double rad  = 1.;
     constexpr double mrad = rad/1000.; 
-    constexpr double deg  = rad * (2 * 3.14159265359 / 360.); 
+    constexpr double deg  = rad * (3.14159265359 / 180.); 
 
 }
 }

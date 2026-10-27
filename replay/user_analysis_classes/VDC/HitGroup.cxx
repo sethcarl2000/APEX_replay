@@ -9,11 +9,6 @@ namespace APEX
 namespace VDC
 {
 
-
-void HitGroup::AddHit( double wire, double rawTime ) 
-{   
-  fHits.push_back(Hit(fPlane,wire,rawTime)); 
-}
 double HitGroup::WirePos( unsigned int h ) const 
 {   
   if (h>=Nhits()) {
@@ -23,7 +18,7 @@ double HitGroup::WirePos( unsigned int h ) const
     ));
     return utils::kNaN; 
   }
-  return fHits[h].wPos();
+  return fHits[h].WirePos();
 }
 int    HitGroup::WireNum( unsigned int h ) const 
 { 
@@ -35,7 +30,7 @@ int    HitGroup::WireNum( unsigned int h ) const
     return -1; 
   }
   
-  return fHits[h].wNum(); 
+  return fHits[h].WireNum(); 
 }
 double HitGroup::Time( unsigned int h )    const 
 { 
@@ -49,9 +44,9 @@ double HitGroup::Time( unsigned int h )    const
   
   return fHits[h].Time(); 
 }
-int    HitGroup::FirstWire() const { return fHits.front().wNum(); }
-double HitGroup::LoEdge()    const { return fHits.back().wPos(); }
-double HitGroup::HiEdge()    const { return fHits.front().wPos(); }
+int    HitGroup::FirstWire() const { return fHits.front().WireNum(); }
+double HitGroup::LoEdge()    const { return fHits.back().WirePos(); }
+double HitGroup::HiEdge()    const { return fHits.front().WirePos(); }
 
 };
 }
