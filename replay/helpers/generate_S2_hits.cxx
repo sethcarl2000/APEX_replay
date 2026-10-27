@@ -8,6 +8,7 @@
 #include <ROOT/RVec.hxx>
 // stdlib headers
 #include <cmath> 
+#include <stdexcept> 
 
 namespace APEX
 {
@@ -21,7 +22,13 @@ ROOT::VecOps::RVec<S2Hit> generate_S2_hits(
     const ROOT::RVec<double>& PMT_R, 
     const ROOT::RVec<double>& PMT_L )
 {
-  const bool is_RHRS = (arm_mode == kRHRS); 
+    if (arm_mode == kBothArms) {
+        throw std::invalid_argument(
+            "in <"+std::string{__func__}+">: called with arm_mode=kBothArms, not valid (must be kRHRS or kLHRS)" 
+        ); 
+        return {}; 
+    }
+    const bool is_RHRS = (arm_mode == kRHRS); 
   
     //generate a vector of all coinc s2-paddle hits
     ROOT::RVec<S2Hit> coinc_hits{}; 
@@ -40,13 +47,14 @@ ROOT::VecOps::RVec<S2Hit> generate_S2_hits(
 
             auto& last_hit = coinc_hits.back(); 
         
-            if ( hit.Paddle() - last_hit.Paddle() ==1  &&
+            if ( hit.Paddle() - last_hit.Paddle() == 1  &&
                 std::fabs(hit.Time() - last_hit.Time()) < run_parameters::kCUT_S2_twinHit_timeErr ) { 
         
                 //these two hits are 'twins', i.e., likely caused by the same particle 
-                last_hit.Make_twinHit( &hit ); 
-            } 
-        }
+                last_hit.AddTwin( hit ); 
+                continue; 
+            }  
+        } 
         
         coinc_hits.push_back( hit );    
     }
