@@ -14,7 +14,9 @@ set(src_replay
     user_analysis_classes/PidManager.cxx
     user_analysis_classes/ReactVertex.cxx
     user_analysis_classes/RMatrixD.cxx
+    user_analysis_classes/S2.cxx
     user_analysis_classes/S2Hit.cxx
+    user_analysis_classes/S2Event.cxx
     user_analysis_classes/VDC/ChamberPair.cxx
     user_analysis_classes/VDC/VDC.cxx
     user_analysis_classes/VDC/HitCluster.cxx
@@ -55,7 +57,9 @@ set(headers_replay
 # ---   user analysis classes 
     include/APEX/PmtData.h
     include/APEX/EventCounter.h
+    include/APEX/S2.h
     include/APEX/S2Hit.h
+    include/APEX/S2Event.h
     include/APEX/ReactVertex.h
     include/APEX/PidDetector.h
     include/APEX/EventHandler.h
