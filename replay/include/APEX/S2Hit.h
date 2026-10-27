@@ -6,13 +6,10 @@
 #include <APEX/S2.h> 
 // stdlib
 #include <cmath>
-#include <optional>
 #include <memory> 
 
 namespace APEX 
 {
-
-
 
 ////////////////////////////////////////////////////////////////////////////////////
 class S2Hit { 
@@ -65,6 +62,10 @@ class S2Hit {
   }
 
   S2Hit* GetTwin() {
+    return fMyTwin.get(); 
+  }
+
+  const S2Hit* GetTwin() const {
     return fMyTwin.get(); 
   }
 
