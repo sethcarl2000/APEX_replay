@@ -3,6 +3,8 @@
 
 #include <APEX/VDC.h> 
 #include <APEX/VDC/Hit.h> 
+// stdlib 
+#include <span> 
 
 namespace APEX 
 {
@@ -20,6 +22,9 @@ public:
   
   HitGroup(bool is_RHRS, int plane) : fis_RHRS{is_RHRS}, fPlane{plane} {}; 
   
+  // fill out a hit group from a span hits (make copies of all underlying hits). 
+  HitGroup(std::span<Hit> hits); 
+
   void AddHit( const Hit& hit ) { fHits.push_back(hit); } 
   
   void AddHit( int wire, double rawtime, double T_offset=0.) {
