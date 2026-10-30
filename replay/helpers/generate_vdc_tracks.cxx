@@ -25,6 +25,7 @@
 //
 // stdlib headers
 #include <vector>
+#include <optional> 
 #include <string> 
 #include <algorithm> 
 
@@ -68,6 +69,8 @@ void generate_vdc_tracks(
     using RVecD = ROOT::RVec<double>; 
     using namespace ROOT::VecOps; 
 
+    using HandlerBranch = std::optional<EventHandler>; 
+
     //feed this script your node, with generated S2-hits, ready for tracking data. 
 
     //it'll spit out refined tracks for the plane you tell it to. 
@@ -103,7 +106,7 @@ void generate_vdc_tracks(
     {
         auto& event = events.front();  
         event.SetActiveArm(is_RHRS); 
-        return event; 
+        return HandlerBranch{EventHandler(event)}; 
     }, {branch_event_vec}); 
     
     
@@ -115,9 +118,9 @@ void generate_vdc_tracks(
         branch_group.push_back( (string)arm+"_groups_"+plane_name[p] ); 
         
         //form the groups
-        rna.Define(branch_group[p], [p](const EventHandler& evt, const RVecD& wire, const RVecD& time)
+        rna.Define(branch_group[p], [p](const HandlerBranch& evt, const RVecD& wire, const RVecD& time)
             { 
-                return group_vdc_hits(evt,p,wire,time); 
+                return group_vdc_hits(evt.value(),p,wire,time); 
             },
             {branch_event, branch_wire[p], branch_rawtime[p]});
         
@@ -131,21 +134,21 @@ void generate_vdc_tracks(
     //create lo-chamber pairs
     string br_pairs_lo = arm+"_pairs_LoChamber";
     rna.Define(br_pairs_lo, [](
-        const EventHandler& evt, 
+        const HandlerBranch& evt, 
         RVec<VDC::HitGroup>& vec_gU, 
         RVec<VDC::HitGroup>& vec_gV) { 
-            return gen_pairs(evt, vec_gU,vec_gV, true); 
+            return gen_pairs(evt.value(), vec_gU,vec_gV, true); 
         }, { branch_event, branch_group[0], branch_group[1] });
         
     rna.Filter( RVec_not_empty<VDC::ChamberPair>, {br_pairs_lo}); 
         
     //create hi-chamber pairs
     string br_pairs_hi = arm+"_pairs_HiChamber";
-    rna.Define(arm+"_pairs_HiChamber", [](
-        const EventHandler& evt, 
+    rna.Define(br_pairs_hi, [](
+        const HandlerBranch& evt, 
         RVec<VDC::HitGroup>& vec_gU, 
         RVec<VDC::HitGroup>& vec_gV) { 
-            return gen_pairs(evt, vec_gU,vec_gV, false);
+            return gen_pairs(evt.value(), vec_gU,vec_gV, false);
         }, {branch_event, branch_group[2], branch_group[3] });
         
     rna.Filter( RVec_not_empty<VDC::ChamberPair>, {br_pairs_hi}); 
@@ -155,16 +158,18 @@ void generate_vdc_tracks(
     
     //generate raw tracks
     string br_tracks_raw = arm+"_tracks_raw";
-    rna.Define(br_tracks_raw, 
-        gen_rawtracks, 
-        {branch_event, arm+"_pairs_LoChamber", arm+"_pairs_HiChamber"}); 
+    rna.Define(br_tracks_raw, [](HandlerBranch& evt, RVec<VDC::ChamberPair>& pairs_lo, RVec<VDC::ChamberPair>& pairs_hi)
+        {
+            return gen_rawtracks(evt.value(), pairs_lo, pairs_hi);    
+
+        }, {branch_event, arm+"_pairs_LoChamber", arm+"_pairs_HiChamber"}); 
         
     rna.Filter(RVec_not_empty<VDC::Track>, {br_tracks_raw}); 
     
     nPass_1rawTrack = rna.Count(); 
 
     
-    const double CUT_goodPoints_error = 40e-9; 
+    const double CUT_goodPoints_error = 40.*units::ns; 
     
     int arm_int_index = is_RHRS ? 0 : 1; 
     const double CUT_ph_min = run_parameters::CUT_ph_min[arm_int_index];
@@ -178,21 +183,31 @@ void generate_vdc_tracks(
     const double dt_offset = is_RHRS ? run_parameters::TRK_R_Dt_offset : run_parameters::TRK_L_Dt_offset; 
     const double dt_cut    = is_RHRS ? run_parameters::TRK_R_CUT_Dt : run_parameters::TRK_L_CUT_Dt; 
 
+//#define DEBUG_REFINE 
+
     //refine track candidates
     string br_refined = arm+"_tracks_refined"; 
-    rna.Define(br_refined, [CUT_th_min, CUT_th_max, CUT_ph_min, CUT_ph_max, x_param_offset, dt_offset,dt_cut] ( ROOT::RVec<VDC::Track>& tracks ) 
+    rna.Define(br_refined, [CUT_th_min, CUT_th_max, CUT_ph_min, CUT_ph_max, x_param_offset, dt_offset,dt_cut,is_RHRS] ( ROOT::RVec<VDC::Track>& tracks ) 
         { 
             RVec<VDC::Track> refined_tracks; refined_tracks.reserve(tracks.size());
-                
-            const double tau_sigma = tracks.at(0).GetEvent()->Get_tauSigma(); 
             
             for (auto& trk : tracks) {
                 
-                refine_track(trk, 20, 25e-9); 
+                refine_track(trk, 20, 25.*units::ns); 
                 
                 double err_Theta = trk.Theta() - Theta_model(trk); 
                 double err_Phi   = trk.Phi()   - Phi_model(trk); 
-                        
+                
+#ifdef DEBUG_REFINE
+                std::printf(
+                    "raw track %s ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~\n"
+                    "   Theta / phi error: %.2f / %.2f\n",
+                    (is_RHRS ? "RHRS" : "LHRS"),
+                    trk.Theta() - Theta_model(trk), 
+                    trk.Phi() - Phi_model(trk)
+                );
+#endif
+
                 if ( err_Theta < CUT_th_min || 
                     err_Theta > CUT_th_max || 
                     err_Phi   < CUT_ph_min || 
@@ -200,10 +215,21 @@ void generate_vdc_tracks(
                 
                     continue; // remove_element( trk, tracks );
                 } 
-                
+
                 //find out how many 'good' points each plane has for this track
                 compute_trackdata( trk ); 
-                
+
+#ifdef DEBUG_REFINE
+                std::printf(
+                    "   Eta:    %.4e\n"
+                    "   n. goodpoints / plane: [%i, %i, %i, %i]\n"
+                    "   total:  %i\n",
+                    trk.Get_Eta(),
+                    trk.Get_nGoodPoints(0),trk.Get_nGoodPoints(1),trk.Get_nGoodPoints(2),trk.Get_nGoodPoints(3),
+                    trk.Get_nGoodPoints()
+                );
+#endif
+
                 if (trk.Get_Eta() < run_parameters::TRK_CUT_Eta || 
                     trk.Get_nGoodPoints(0) < run_parameters::TRK_CUT_nGoodPts_min_perPlane || 
                     trk.Get_nGoodPoints(1) < run_parameters::TRK_CUT_nGoodPts_min_perPlane || 
@@ -218,6 +244,21 @@ void generate_vdc_tracks(
                 double xParam = trk.xParam();
                 double Dt     = trk.T0(); 
 
+#ifdef DEBUG_REFINE
+                std::printf(
+                    "   xParam: %+6.3f\n"
+                    "   S2-intercept:   %+5.1f cm\n"
+                    "   S2-paddle       %5i\n"
+                    "   S2-paddle - X   %+5.1f cm\n"
+                    "   Dt:     %+6.1f ns\n",
+                    xParam, 
+                    trk.S2_x()/units::cm,  
+                    trk.GetEvent()->GetS2Hit(is_RHRS)->Paddle(),
+                    trk.GetEvent()->GetS2Hit(is_RHRS)->X()/units::cm,
+                    Dt/units::ns
+                ); 
+#endif
+
                 if ( std::fabs(xParam-x_param_offset) > run_parameters::TRK_CUT_xParam || std::fabs(Dt-dt_offset) > dt_cut ) 
                 { 
                     //discard this track
@@ -228,8 +269,14 @@ void generate_vdc_tracks(
                 Compute_trackError( trk ); 
         
                 //add this track to the list of refined tracks
-                refined_tracks.push_back( trk );
+                refined_tracks.emplace_back( trk );
             }
+#ifdef DEBUG_REFINE
+            std::printf("out of %zu raw tracks, %zu refined tracks kept.\n",
+                tracks.size(), refined_tracks.size()              
+            );
+#endif
+
             return refined_tracks; 
         }, {arm+"_tracks_raw"});
         
@@ -239,7 +286,7 @@ void generate_vdc_tracks(
     {
       ROOT::RVec<double> time; time.reserve( tracks.size() ); 
       for (auto& trk : tracks) {
-	time.push_back( trk.GetEvent()->GetS2Hit(is_RHRS)->Time() );
+	        time.push_back( trk.GetEvent()->GetS2Hit(is_RHRS)->Time() );
       }
       return time; 
     }, {arm+"_tracks_refined"}); 
