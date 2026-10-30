@@ -31,106 +31,105 @@ namespace helpers
 ROOT::RVec<VDC::HitGroup> group_vdc_hits ( 
                                             const EventHandler& evt, 
                                             int   plane, 
-                                            const ROOT::RVec<double>& h_wire,
-                                            const ROOT::RVec<double>& h_rawtime 
-                                            ) 
+                                            const ROOT::RVec<double>& wire,
+                                            const ROOT::RVec<double>& rawtime 
+                                          ) 
 {
 #ifdef DEBUG_GROUP
-  using namespace units; 
-  std::cout << "DEBUG: Vdc valid real-time range: ["
-  << run_parameters::kVDC_min_realTime/ns << ", " << run_parameters::kVDC_max_realTime/ns << "]" << std::endl;
-  int n_validHits(0);
-  std::cout << "Is right arm? " << (evt.ActiveArm() ? "true" : "false") << "\n";
-  std::cout << " plane " << p << std::endl;
-  std::cout << " S2 hit time: " << evt.GetS2Hit(evt.ActiveArm())->Time()*1e9 << std::endl; 
-#endif
-  
+    const std::string plane_names[] = {"u1", "v1", "u2", "v2"}; 
+    printf(
+      "<%s>: grouping VDC hits for %s, VDC plane %s\n",
+      __func__, (evt.ActiveArm() ? "RHRS" : "LHRS"), plane_names[plane].c_str() 
+    );
+#endif        
   //return no groups if there aren't enough hits to make any 
-  if (h_rawtime.size() < run_parameters::kGroup_min_hits) return {};
-
-  int n_hits = h_rawtime.size(); 
+  if (rawtime.size() < run_parameters::kGroup_min_hits) return {};
 
   const bool is_RHRS = evt.ActiveArm();  
-  const double T_offset = evt.GetS2Hit(is_RHRS)->Time(); 
+  const double t_S2 = evt.GetS2Hit(is_RHRS)->Time(); 
   
   ROOT::RVec<VDC::HitGroup> group_vec{}; 
 
-  //cBeg->push_back((int)wire[0]);   
-  VDC::HitGroup group(is_RHRS, plane); 
+  //make a buffer of all valid hits
+  const auto nhits_total = wire.size(); 
+  std::vector<VDC::Hit> buffer; buffer.reserve(nhits_total); 
 
-  int w_prev = -1; 
-  
-  //the clust_points vector stores each hit as a 2-vector;
-  // the [0] element is the wirePos,
-  // the [1] element is the T_TDC (corrected tdc time of that hit)
-  for (int h=0; h<n_hits; h++) { 
-    
-    VDC::Hit hit( is_RHRS, plane, static_cast<int>(h_wire[h]), h_rawtime[h], T_offset );  
+  // make buffer of all valid VDC hits
+  for (std::size_t i=0; i<nhits_total; i++) {
+
+    VDC::Hit hit(is_RHRS, plane, static_cast<int>(wire[i]), rawtime[i], t_S2); 
+
+    if (auto t = hit.Time(); 
+      t > run_parameters::kVDC_min_realTime && 
+      t < run_parameters::kVDC_max_realTime) 
+    {
+      buffer.emplace_back( std::move(hit) ); 
+    }
+  }
+
+  //quit if there's not enough hits to form at least 1 hit. 
+  if (buffer.size() < run_parameters::kGroup_min_hits) return {}; 
+
+  //now, we can make groups. 
+  int prev_wire =-1; 
+
+  size_t ind_begin=0; 
+  size_t ind_end=ind_begin; 
+
+  //add a new group by copying events from the current buffer 
+  auto add_group = [&](){ 
+    group_vec.emplace_back(std::span<VDC::Hit>{
+      buffer.begin()+ind_begin, 
+      buffer.begin()+ind_end
+    }); 
+  };
+
+  //keep iterating until we've gone through all hits
+  for (size_t i=0; i<buffer.size(); i++) {
+
+    const auto& hit = buffer[i]; 
 
 #ifdef DEBUG_GROUP 
     printf(
-      "plane %i, hit: %i/%i\n"
+      "plane %i, hit %zu/%zu\n"
       "   wire:       %i\n"
       "   time:       %.1f ns\n"
       "   raw time:   %.f\n",
-      p, h, n_hits-1, 
-      hit.wNum(), 
-      hit.Time()/ns, 
-      hit.GetRawTime()
+      plane, ind_end, buffer.size(),
+      hit.WireNum(), 
+      hit.Time()/units::ns, 
+      hit.Rawtime()
     );
-#endif
-    
-    //vdc timing cut, these times won't ever be useful for a coinc track 
-    if (hit.Time() > run_parameters::kVDC_max_realTime || 
-        hit.Time() < run_parameters::kVDC_min_realTime ) {
-#ifdef DEBUG_GROUP
-        std::cout << "killed! " << std::endl; 
-#endif 
-      continue; 
-    }
-    
-#ifdef DEBUG_GROUP
-    std::cout << "kept!" << std::endl; 
-    n_validHits++; 
-#endif       
-    //if wPrev =-1, then no wires have yet been added
-    int gap = w_prev<0 ? 0 : hit.WireNum() - w_prev  -1; 
+#endif        
 
-    if (gap > run_parameters::kGroup_max_gap) { // for adjacent wires, 
+    int gap = ind_end==ind_begin ? 0 : hit.WireNum() - prev_wire -1; 
+    if (gap > run_parameters::kGroup_max_gap) { // if the gap is too big to be part of one group 
 
       //does this cluster already have enough hits? 
-      if (group.Nhits() >= run_parameters::kGroup_min_hits) { 
+      size_t n_hits_in_group = ind_end - ind_begin + 1; 
+      if (n_hits_in_group >= run_parameters::kGroup_min_hits) {
 
-        group_vec.push_back( group );  
-      } 
-
-      //otherwise, make a new group anyway.
-      group.Clear();  
+        add_group(); 
+      }     
+      
+      //otherwise, make a new group anyway. bring the 'begin' ptr to up to meet this hit (it's potentially the start of a new group)
+      ind_begin = i;  
 
     }//if (span/gap too big) 
-      
-    //if span is NOT too big, then add this hit to the current cluster
 
-    group.AddHit( hit );   
-    w_prev = hit.WireNum(); 
-    
-  }//for (int i=0; h<nHtis; h++) 
+    //get ready to re-start this loop with the next hit
+    prev_wire = hit.WireNum(); 
+    ind_end = i; 
+  }
 
-  //the last hit is reached, and it's not over-span
-  if (group.Nhits() >= run_parameters::kGroup_min_hits)  { 
-    
-    group_vec.push_back( group ); 
+  //We've reached the end, but we still might have enough hits to make a new group.  
+  size_t n_hits_in_group = ind_end - ind_begin + 1; 
+  if (n_hits_in_group >= run_parameters::kGroup_min_hits) {
 
-  } 
-  
-#ifdef DEBUG_GROUP 
-  std::cout << TString::Format( "group_hits() -  total hits:%3i, valid-hits:%3i, groups made:%2i",
-          (int)h_wire.size(), 
-          n_validHits, 
-          (int)group_vec.size() ) << std::endl; 
-#endif
-  
-  return group_vec;       
+    add_group(); 
+  }     
+
+  return group_vec; 
 }; 
 
 }
