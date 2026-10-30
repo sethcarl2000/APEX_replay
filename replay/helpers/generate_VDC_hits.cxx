@@ -46,7 +46,12 @@ ROOT::VecOps::RVec<VDC::Hit> generate_VDC_hits(
   std::cout << " plane " << p << std::endl;
   std::cout << " S2 hit time: " << evt.GetS2Hit(evt.ActiveArm())->Time()*1e9 << std::endl; 
 #endif
-  
+  if (arm_mode == kBothArms) {
+    throw std::invalid_argument(
+      "in <"+std::string{__func__}+">: called with arm_mode=kBothArms, which is not valid (must be kRHRS or kLHRS)" 
+    ); 
+    return {}; 
+  }
   //hits are stored by descending wire-number by default. let's flip the order. 
   const std::size_t n_raw = h_wire.size(); 
   
@@ -55,23 +60,18 @@ ROOT::VecOps::RVec<VDC::Hit> generate_VDC_hits(
   const bool is_RHRS = (arm_mode == kRHRS); 
 
   double default_offset = is_RHRS ? run_parameters::RHRS_S2_reftime : run_parameters::LHRS_S2_reftime; 
-
-  const double t_min = is_RHRS ? run_parameters::RHRS_VDC_min_realtime : run_parameters::LHRS_VDC_min_realtime; 
-  const double t_max = is_RHRS ? run_parameters::RHRS_VDC_max_realtime : run_parameters::LHRS_VDC_max_realtime; 
   
   for (std::size_t i=0; i<n_raw; i++) {
 
     VDC::Hit hit(
       is_RHRS, 
       plane, 
-      static_cast<int>(h_wire[i]), 
+      static_cast<int>(std::round(h_wire[i])), 
       h_rawtime[i], 
       default_offset
     ); 
 
-    //if this hit's time is reasonable, then keep it. 
-    if (double t = hit.Time(); (t > t_min && t < t_max))
-      hits.emplace_back(hit); 
+    hits.emplace_back(hit); 
   }
 
   return hits; 
