@@ -17,6 +17,8 @@
 #include <RDFNodeAccumulator.h>
 // ROOT headers
 #include <ROOT/RVec.hxx>
+// stdlib
+#include <atomic> 
 
 
 namespace APEX
@@ -105,6 +107,19 @@ ROOT::VecOps::RVec<VDC::Hit> generate_VDC_hits(
 /// @param n_pass_1group EventCounter representing the number of events which reconstructed at least 1 group 
 void generate_vdc_tracks( 
     EArmMode arm_mode, 
+    RDFNodeAccumulator& rna, 
+    EventCounter_RPtr &nPass_1group, 
+    EventCounter_RPtr &nPass_1pair, 
+    EventCounter_RPtr &nPass_1rawTrack,
+    EventCounter_RPtr &nPass_1refinedTrack
+);
+
+/// @brief Generates VDC tracks from an 'S2Event' object
+/// @param is_RHRS
+/// @param node_in input RDF node
+/// @param n_pass_1group EventCounter representing the number of events which reconstructed at least 1 group 
+void generate_vdc_tracks_from_S2Event( 
+    bool is_RHRS, 
     RDFNodeAccumulator& rna, 
     EventCounter_RPtr &nPass_1group, 
     EventCounter_RPtr &nPass_1pair, 
