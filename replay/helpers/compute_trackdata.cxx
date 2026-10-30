@@ -4,6 +4,7 @@
 //"""""
 // - muon's comment 
 
+#include <APEX/units.h>
 #include <APEX/replay/helpers.h>
 #include <APEX/run_parameters.h>
 #include <APEX/VDC/Track.h> 
@@ -26,7 +27,7 @@ void compute_trackdata(VDC::Track &trk)
 #endif 
 
     //good-point group
-    const double CUT_goodPoint = 15e-9; 
+    const double CUT_goodPoint = 15.*units::ns; 
     const double measure_sigma = run_parameters::TRK_measureSigma; 
 
     for (int p=0; p<4; p++) { 
@@ -52,14 +53,14 @@ void compute_trackdata(VDC::Track &trk)
 
             eta += TMath::Exp( -0.5*TMath::Power(err/measure_sigma, 2) ); 
 #if DEBUG 
-            cout 
-                << TString::Format("h:%3i  wp=%3.3f t-T=%3.3f t-T0=%3.3f g-Time=%3.3f err=%3.3f",
-                            h, 
-                            group->WirePos(h), 
-                            1e9*trk->Get_T_model(p,group->WirePos(h)),
-                            1e9*trk->T0(),
-                            1e9*group->Time(h), 
-                            1e9*err )            << endl; 
+            printf("h:%3i  wp=%3.3f t-T=%3.3f t-T0=%3.3f g-Time=%3.3f err=%3.3f",
+                    h, 
+                    group->WirePos(h), 
+                    1e9*trk->Get_T_model(p,group->WirePos(h)),
+                    1e9*trk->T0(),
+                    1e9*group->Time(h), 
+                    1e9*err 
+                ); 
 #endif 
 
             RMS += err*err; 
