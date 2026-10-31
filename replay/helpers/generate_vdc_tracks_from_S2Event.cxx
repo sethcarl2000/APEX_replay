@@ -55,7 +55,7 @@ namespace {
 /// @param is_RHRS
 /// @param node_in input RDF node
 /// @param n_pass_1group EventCounter representing the number of events which reconstructed at least 1 group 
-void generate_vdc_tracks_from_S2hit( 
+void generate_vdc_tracks_from_S2Event( 
     EArmMode arm_mode, 
     RDFNodeAccumulator& rna, 
     EventCounter_RPtr &nPass_1group, 
@@ -64,6 +64,12 @@ void generate_vdc_tracks_from_S2hit(
     EventCounter_RPtr &nPass_1refinedTrack
 ) 
 {
+    if (arm_mode == kBothArms) {
+        throw std::invalid_argument(
+            "in <"+std::string{__func__}+">: called with arm_mode=kBothArms, which is not valid (must be kRHRS or kLHRS)" 
+        ); 
+        return; 
+    }
     const bool is_RHRS = (arm_mode == kRHRS); 
 
     using RVecD = ROOT::RVec<double>; 
@@ -152,8 +158,8 @@ void generate_vdc_tracks_from_S2hit(
 
     for (int p=0; p<VDC::kN_planes; p++) { 
 
-        //form the groups
-        rna.Overwrite(br_S2Event_array, [p](RVec<S2Event>& S2_events, const RVecD& wire, const RVecD& rawtime)
+        //form the groups 
+        rna.Overwrite(br_S2Event_array+"_"+plane_name[p], [p](RVec<S2Event>& S2_events, const RVecD& wire, const RVecD& rawtime)
             {   
                 // go through the list of S2 events, make VDC hit groups for each one 
                 for (auto& S2_event : S2_events) {
@@ -171,10 +177,12 @@ void generate_vdc_tracks_from_S2hit(
                 return S2_events; 
             },
             {br_S2Event_array, branch_wire[p], branch_rawtime[p]});
+
+        br_S2Event_array += "_"+plane_name[p];
     } 
 
     //sort out events that don't have at least one group
-    rna.Overwrite(br_S2Event_array, [](RVec<S2Event>& S2_events){
+    rna.Overwrite(br_S2Event_array+"_srt", [](RVec<S2Event>& S2_events){
 
         // sort events by whether or not they have at least 1 group. 
         // the 'sort' aglorithm is analogous to the '<' comparator, and it uses 
@@ -189,6 +197,7 @@ void generate_vdc_tracks_from_S2hit(
 
         return S2_events; 
     }, {br_S2Event_array}); 
+    br_S2Event_array += "_srt"; 
 
     // Filter out events that don't have any S2 events left 
     rna.Filter(RVec_not_empty<S2Event>, {br_S2Event_array}); 
@@ -196,7 +205,7 @@ void generate_vdc_tracks_from_S2hit(
     //record the number of events that form at least 1 group 
     nPass_1group = rna.Count(); 
      
-    rna.Overwrite(br_S2Event_array, [](RVec<S2Event>& S2_events){
+    rna.Overwrite(br_S2Event_array+"_pairs", [](RVec<S2Event>& S2_events){
 
         static constexpr bool kLowChamber{true}, kHiChamber{false}; 
 
@@ -232,6 +241,7 @@ void generate_vdc_tracks_from_S2hit(
         return S2_events; 
 
     }, {br_S2Event_array}); 
+    br_S2Event_array += "_pairs";
 
     // Filter out events that don't have any S2 events left 
     rna.Filter(RVec_not_empty<S2Event>, {br_S2Event_array}); 
@@ -240,7 +250,7 @@ void generate_vdc_tracks_from_S2hit(
     nPass_1pair = rna.Count(); 
 
     // Now, generate 'Raw' tracks
-    rna.Overwrite(br_S2Event_array, [](RVec<S2Event>& S2_events){
+    rna.Overwrite(br_S2Event_array+"_rwtrk", [](RVec<S2Event>& S2_events){
 
         static constexpr bool kLowChamber{true}, kHiChamber{false}; 
 
@@ -265,7 +275,7 @@ void generate_vdc_tracks_from_S2hit(
         return S2_events; 
 
     }, {br_S2Event_array}); 
-    
+    br_S2Event_array += "_rwtrk"; 
     
     // Filter out events that don't have any S2 events left 
     rna.Filter(RVec_not_empty<S2Event>, {br_S2Event_array}); 
@@ -288,7 +298,7 @@ void generate_vdc_tracks_from_S2hit(
     const double dt_cut    = is_RHRS ? run_parameters::TRK_R_CUT_Dt : run_parameters::TRK_L_CUT_Dt; 
 
     //refine track candidates
-    rna.Overwrite(br_S2Event_array, [=](RVec<S2Event>& S2_events) { 
+    rna.Overwrite(br_S2Event_array+"_reftrk", [=](RVec<S2Event>& S2_events) { 
         
         for (auto& S2_event : S2_events) {
 
@@ -355,6 +365,7 @@ void generate_vdc_tracks_from_S2hit(
         return S2_events; 
 
     }, {br_S2Event_array});
+    br_S2Event_array += "_reftrk"; 
 
     std::string br_refined = arm+"_tracks_refined"; 
     rna.Define(br_refined, [](RVec<S2Event>& S2_events){
