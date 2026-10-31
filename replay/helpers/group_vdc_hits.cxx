@@ -71,7 +71,7 @@ ROOT::RVec<VDC::HitGroup> group_vdc_hits (
   if (buffer.size() < run_parameters::kGroup_min_hits) return {}; 
 
   //now, we can make groups. 
-  int prev_wire =-1; 
+  int prev_wire = buffer.front().WireNum(); 
 
   size_t ind_begin=0; 
   size_t ind_end=ind_begin; 
@@ -86,7 +86,7 @@ ROOT::RVec<VDC::HitGroup> group_vdc_hits (
 
   //keep iterating until we've gone through all hits
   for (size_t i=0; i<buffer.size(); i++) {
-
+     
     const auto& hit = buffer[i]; 
 
 #ifdef DEBUG_GROUP 
@@ -102,7 +102,7 @@ ROOT::RVec<VDC::HitGroup> group_vdc_hits (
     );
 #endif        
 
-    int gap = ind_end==ind_begin ? 0 : hit.WireNum() - prev_wire -1; 
+    int gap = i==ind_begin ? 0 : hit.WireNum() - prev_wire -1; 
     if (gap > run_parameters::kGroup_max_gap) { // if the gap is too big to be part of one group 
 
       //does this cluster already have enough hits? 
@@ -118,8 +118,8 @@ ROOT::RVec<VDC::HitGroup> group_vdc_hits (
     }//if (span/gap too big) 
 
     //get ready to re-start this loop with the next hit
+    ind_end = i;
     prev_wire = hit.WireNum(); 
-    ind_end = i; 
   }
 
   //We've reached the end, but we still might have enough hits to make a new group.  
