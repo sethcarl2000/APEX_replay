@@ -90,22 +90,22 @@ namespace APEX
   EventHandler::EventHandler( replay::EArmMode arm_mode, 
 			      double beamCurrent,
 			      int runNumber, 
-			      const S2Hit *fHit_R, 
-			      const S2Hit *fHit_L ) { 
-    f_activeArm  = (arm_mode == replay::kRHRS); 
+			      const S2Hit* hit_R, 
+			      const S2Hit* hit_L ) 
+{ 
+  f_activeArm  = (arm_mode == replay::kRHRS); 
   
   fRunNumber = runNumber; 
   
   fBeamCurrent = beamCurrent; 
   
+  if (hit_R != nullptr) fS2Hit_RHRS = S2Hit(*hit_R); 
+  if (hit_L != nullptr) fS2Hit_LHRS = S2Hit(*hit_L); 
   
   if (fBeamCurrent < -1e3) { 
     f_isNullBeamCurrent=true; 
     fBeamCurrent = beamCurrent_DEFAULT_VALUE; 
   }
-  
-  fS2Hit_Right = fHit_R; 
-  fS2Hit_Left  = fHit_L;  
 
   //develop drift-parameters for left arm
   for (int s=0; s<Npts_SLOPE; s++) { 
