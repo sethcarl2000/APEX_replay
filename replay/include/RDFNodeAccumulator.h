@@ -164,7 +164,7 @@ public:
     void PrintMsgAndAbort()
     {
       if (fAbortOnError) {
-	Error("RDFNodeAccumulator", GetErrorMsg().c_str()); 
+	    Error("RDFNodeAccumulator", "%s", GetErrorMsg().c_str()); 
 	std::exit(1); 
       } else {
 	throw std::logic_error("in <RDFNodeAccumulator>: " + GetErrorMsg()); 
