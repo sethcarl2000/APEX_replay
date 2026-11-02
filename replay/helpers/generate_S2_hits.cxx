@@ -9,6 +9,7 @@
 // stdlib headers
 #include <cmath> 
 #include <stdexcept> 
+#include <algorithm> 
 
 namespace APEX
 {
@@ -58,6 +59,9 @@ ROOT::VecOps::RVec<S2Hit> generate_S2_hits(
         
         coinc_hits.push_back( hit );    
     }
+
+    //sort the S2 hits by ascending time 
+    std::sort(coinc_hits.begin(), coinc_hits.end()); 
     
     return coinc_hits; 
 }
