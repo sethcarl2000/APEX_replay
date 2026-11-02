@@ -10,14 +10,28 @@ namespace APEX
 {
 
 //_________________________________________________________________________________________________________
-S2Event::S2Event(bool is_RHRS, S2Hit hit) 
-    : fis_RHRS{is_RHRS}, fS2Hit{hit} 
+S2Event::S2Event(bool is_RHRS, S2Hit hit, const EventHandler* evt_handler, std::size_t _id) 
+    : fis_RHRS{is_RHRS}, fS2Hit{hit}, id{_id}
 {
     if (!fS2Hit.IsCoinc()) {
         throw std::invalid_argument(
             "in <"+std::string{__func__}+">: S2 hit is not valid!"
         ); 
     }
+
+    if (!evt_handler) {
+        throw std::invalid_argument(
+            "in <"+std::string{__func__}+">: event handler passed is null"
+        ); 
+    }
+
+    fEventHandler = std::make_shared<EventHandler>(
+        Is_RHRS() ? replay::kRHRS : replay::kLHRS, 
+        evt_handler->GetBeamCurrent(),
+        evt_handler->GetRunNumber(), 
+        Is_RHRS() ? &fS2Hit : evt_handler->GetS2Hit(false), 
+        Is_RHRS() ? evt_handler->GetS2Hit(true)  : &fS2Hit   
+    ); 
 }
 //_________________________________________________________________________________________________________
 double S2Event::S2Time() const
@@ -71,7 +85,7 @@ void S2Event::make_vdc_hit_groups(
     }
 
     //quit if there's not enough hits to form at least 1 hit. 
-    if (buffer.empty() < run_parameters::kGroup_min_hits) return; 
+    if (buffer.size() < run_parameters::kGroup_min_hits) return; 
 
     //now, we can make groups. 
     int prev_wire =-1; 
