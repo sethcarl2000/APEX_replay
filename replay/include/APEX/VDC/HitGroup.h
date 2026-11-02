@@ -38,11 +38,17 @@ public:
   double    Time( unsigned int h ) const; 
   
   Hit& GetHit( unsigned int h ) { return fHits.at(h); } 
+
+  // First wire in the hit-group 
+  int    FirstWire() const { return fHits.front().WireNum(); }
+  // Last wire in the hit-group  
+  int    LastWire()  const { return fHits.back().WireNum(); }
   
-  int    FirstWire()  const; 
-  
-  double LoEdge()   const; 
-  double HiEdge()   const; 
+  // Low edge
+  double LoEdge()    const { return fHits.back().WirePos(); }
+   
+  // hi edge
+  double HiEdge()    const { return fHits.front().WirePos(); }
   
   double Span()     const { return HiEdge()-LoEdge(); }
   
