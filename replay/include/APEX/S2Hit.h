@@ -73,6 +73,9 @@ class S2Hit {
   
   //number of S2 segments
   static constexpr int N_paddles() { return S2::N_paddles; }
+
+  // this is needed to be able to sort S2 hits by ascending time 
+  bool operator<(const S2Hit& rhs) const { return Time() < rhs.Time(); }
 };
 /////////////////////////////////////////////////////////////////////////////////
 
