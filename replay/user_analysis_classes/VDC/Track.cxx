@@ -3,6 +3,7 @@
 #include <APEX/VDC/Track.h>
 #include <APEX/VDC.h> 
 #include <APEX/utils.h> 
+#include <APEX/units.h>
 //ROOT headers
 #include <TString.h> 
 #include <TMatrixD.h> 
@@ -44,7 +45,7 @@ namespace {
     constexpr char report_prefix[] = "APEX::VDC::Track"; 
 
     //speed of light
-    constexpr double kC = 2.99e8; 
+    constexpr double kC = APEX::units::speed_of_light_vacuum; 
 }
 
 namespace APEX
