@@ -5,6 +5,7 @@
 #include <APEX/S2Hit.h>
 // ROOT headers
 #include <ROOT/RVec.hxx>
+#include <optional> 
 
 namespace APEX
 {
@@ -17,17 +18,24 @@ class EventHandler {
    * 
    ***/ 
   
-  EventHandler( replay::EArmMode arm_mode =replay::kRHRS, 
-		 double beamCurrent=0.,
-		 int runNumber=-1, 
-		 const S2Hit *fHit_R=0, 
-		 const S2Hit *fHit_L=0  ); 
+  EventHandler( replay::EArmMode arm_mode, 
+        double beamCurrent,
+        int runNumber, 
+        const S2Hit* hit_RHRS, 
+        const S2Hit* hit_LHRS  
+        ); 
   
   void SetActiveArm(bool arm) { f_activeArm=arm; }
   
   bool ActiveArm() const { return f_activeArm; }
+
+  int GetRunNumber() const { return fRunNumber; }
   
-  const S2Hit* GetS2Hit(bool is_RHRS) const { return is_RHRS ? fS2Hit_Right : fS2Hit_Left; }
+  const S2Hit* GetS2Hit(bool is_RHRS) const { 
+    return is_RHRS ? 
+    (fS2Hit_RHRS.has_value() ? &fS2Hit_RHRS.value() : nullptr ) :  
+    (fS2Hit_LHRS.has_value() ? &fS2Hit_LHRS.value() : nullptr );   
+  }
     
   //un-blurred drift function
   double Drift_X( double tau, double slope, int derivative=0 ) const; 
@@ -47,8 +55,7 @@ class EventHandler {
   
  private: 
   bool f_activeArm; 
-  const S2Hit *fS2Hit_Right; 
-  const S2Hit *fS2Hit_Left; 
+  std::optional<S2Hit> fS2Hit_RHRS{std::nullopt}, fS2Hit_LHRS{std::nullopt}; 
 
   int fUniqueTrackCounter_RHRS{0};
   int fUniqueTrackCounter_LHRS{0};
