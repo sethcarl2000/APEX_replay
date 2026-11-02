@@ -119,7 +119,7 @@ void generate_vdc_tracks(
 /// @param node_in input RDF node
 /// @param n_pass_1group EventCounter representing the number of events which reconstructed at least 1 group 
 void generate_vdc_tracks_from_S2Event( 
-    bool is_RHRS, 
+    EArmMode arm_mode, 
     RDFNodeAccumulator& rna, 
     EventCounter_RPtr &nPass_1group, 
     EventCounter_RPtr &nPass_1pair, 
