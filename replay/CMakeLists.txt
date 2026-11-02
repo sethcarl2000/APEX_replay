@@ -30,6 +30,7 @@ set(src_replay
     helpers/compute_trackdata.cxx
     helpers/gen_coinc_window_events.cxx
     helpers/generate_vdc_tracks.cxx
+    helpers/generate_vdc_tracks_from_S2Event.cxx
     helpers/compute_track_error.cxx
     helpers/gen_rawtracks.cxx
     helpers/refine_track.cxx
@@ -58,6 +59,7 @@ set(headers_replay
     include/APEX/PmtData.h
     include/APEX/EventCounter.h
     include/APEX/S2.h
+    include/APEX/Cerenkov.h
     include/APEX/S2Hit.h
     include/APEX/S2Event.h
     include/APEX/ReactVertex.h
@@ -80,6 +82,13 @@ include(PoddCMakeEnv)
 
 # add the shared library 
 add_library(APEX_replay SHARED ${src_replay})
+
+# use debug 
+target_compile_options(APEX_replay PRIVATE -g -Wall -Wextra)
+option(DEBUG "Enable extra debug printing / compile flags" OFF)
+if (DEBUG)
+    target_compile_definitions(APEX_replay PRIVATE DEBUG)
+endif()
 
 # add the include dir
 target_include_directories(APEX_replay 

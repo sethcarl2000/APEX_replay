@@ -134,7 +134,7 @@ int Manager::Process(const std::string& path_input, const std::string& stem_outp
   const bool are_both_arms_active = (fArmMode == kBothArms);
   
   //find the central-momentum of both arms using EPICS vars
-  ROOT::EnableImplicitMT(fN_threads);   
+  //ROOT::EnableImplicitMT(fN_threads);   
 
  
   //initialize the react vertex
@@ -142,7 +142,7 @@ int Manager::Process(const std::string& path_input, const std::string& stem_outp
   // using raster information, and known v-wire positions. 
   ReactVertex *R_react_vertex, *L_react_vertex;
 
-  const bool single_threadding = !run_parameters::kEnableMT;
+  const bool single_threadding = (run_parameters::kEnableMT == false) || fN_threads==1;
 
   //check status of multithreadding d
   if (!single_threadding) {
@@ -211,7 +211,7 @@ int Manager::Process(const std::string& path_input, const std::string& stem_outp
   if (is_RHRS_active) {
     rna.Define("R_S2_hits", [](const RVec<double>& R_pmt, const RVec<double>& L_pmt)
       {
-          return helpers::generate_S2_hits(kRHRS, R_pmt, L_pmt); 
+        return helpers::generate_S2_hits(kRHRS, R_pmt, L_pmt); 
       }, {"R.s2.rt", "R.s2.lt"});
     rna.Filter(vector_isnt_empty<S2Hit>(), {"R_S2_hits"});
   }
@@ -219,7 +219,7 @@ int Manager::Process(const std::string& path_input, const std::string& stem_outp
   if (is_LHRS_active) {
     rna.Define("L_S2_hits", [](const RVec<double>& R_pmt, const RVec<double>& L_pmt)
       {
-          return helpers::generate_S2_hits(kLHRS, R_pmt, L_pmt); 
+        return helpers::generate_S2_hits(kLHRS, R_pmt, L_pmt); 
       }, {"L.s2.rt", "L.s2.lt"}); 
     rna.Filter(vector_isnt_empty<S2Hit>(), {"L_S2_hits"}); 
   }
@@ -369,7 +369,7 @@ int Manager::Process(const std::string& path_input, const std::string& stem_outp
   //first, generate tracks in the right arm 
   if (is_RHRS_active) {
     //generate tracks
-    helpers::generate_vdc_tracks(kRHRS, rna, 
+    helpers::generate_vdc_tracks_from_S2Event(kRHRS, rna, 
       nPass_1group_R, 
       nPass_1pair_R, 
       nPass_1raw_R, 
@@ -382,7 +382,7 @@ int Manager::Process(const std::string& path_input, const std::string& stem_outp
   //now, do the left-arm tracks
   if (is_LHRS_active) {
     //geenrate tracks
-    helpers::generate_vdc_tracks(kLHRS, rna, 
+    helpers::generate_vdc_tracks_from_S2Event(kLHRS, rna, 
       nPass_1group_L, 
       nPass_1pair_L, 
       nPass_1raw_L, 
@@ -413,6 +413,7 @@ int Manager::Process(const std::string& path_input, const std::string& stem_outp
 
   if (is_RHRS_active) {
 
+    bool is_RHRS=true; 
     track_branch = "R_tracks_refined"; 
     arm = "R";
     define_output_from_track(track_branch, arm+"_x_fp",     &VDC::Track::FP_x);
@@ -420,11 +421,20 @@ int Manager::Process(const std::string& path_input, const std::string& stem_outp
     define_output_from_track(track_branch, arm+"_dxdz_fp",  &VDC::Track::FP_dx_dz);
     define_output_from_track(track_branch, arm+"_dydz_fp",  &VDC::Track::FP_dy_dz);
     
-    define_output_from_track(track_branch, arm+"_s2_x",     &VDC::Track::S2_x);
-    define_output_from_track(track_branch, arm+"_s2_y",     &VDC::Track::S2_y);
+    //intercept with the S2 plane
+    define_output_from_track(track_branch, arm+"_S2_x", &VDC::Track::S2_x);
+    define_output_from_track(track_branch, arm+"_S2_y", &VDC::Track::S2_y);
+    define_output_from_track(track_branch, arm+"_S2_t", &VDC::Track::S2_y);
 
-    //define_output_from_track(track_branch, arm+"_S2_x_param", &VDC::Track::xParam);
-    define_output_from_track(track_branch, arm+"_S2_dt",    &VDC::Track::T0);
+    //intercept with the S2 plane
+    define_output_from_track(track_branch, arm+"_Cerenkov_x", &VDC::Track::Cerenkov_x);
+    define_output_from_track(track_branch, arm+"_Cerenkov_y", &VDC::Track::Cerenkov_y);
+    define_output_from_track(track_branch, arm+"_Cerenkov_t", &VDC::Track::Cerenkov_t);
+    rna.DefineOutput(arm+"_cer_a_c", [](const RVec<double>& v){ return v; }, {arm+".cer.a_c"});
+    rna.DefineOutput(arm+"_cer_t_c", [](const RVec<double>& v){ return v; }, {arm+".cer.t_c"});
+
+    define_output_from_track(track_branch, arm+"_S2_x_param", &VDC::Track::xParam);
+    define_output_from_track(track_branch, arm+"_S2_dt",      &VDC::Track::T0);
 
     //define_output_from_track(track_branch, arm+"_Eta", &VDC::Track::Get_Eta);
 
@@ -447,6 +457,18 @@ int Manager::Process(const std::string& path_input, const std::string& stem_outp
       }
       return ret; 
     }, {track_branch});
+
+    //separation between PMT times for our S2 hit
+    rna.DefineOutput(arm+"_S2_time", [](const RVec<VDC::Track>& tracks){
+      RVecD ret; ret.reserve(tracks.size()); 
+      for (const auto& trk : tracks) {
+        
+        const auto s2_hit = trk.GetEvent()->GetS2Hit(trk.IsRightArm());
+        ret.push_back(s2_hit->Time());
+      }
+      return ret; 
+    }, {track_branch});
+
 
     rna.DefineOutput(arm+"_S2_paddle", [](const RVec<VDC::Track>& tracks){
       RVec<int> ret; ret.reserve(tracks.size()); 
@@ -474,6 +496,8 @@ int Manager::Process(const std::string& path_input, const std::string& stem_outp
   }
 
   if (is_LHRS_active) {
+    
+    bool is_RHRS = false; 
     track_branch = "L_tracks_refined"; 
     arm = "L";
     define_output_from_track(track_branch, arm+"_x_fp", &VDC::Track::FP_x);
@@ -481,12 +505,25 @@ int Manager::Process(const std::string& path_input, const std::string& stem_outp
     define_output_from_track(track_branch, arm+"_dxdz_fp", &VDC::Track::FP_dx_dz);
     define_output_from_track(track_branch, arm+"_dydz_fp", &VDC::Track::FP_dy_dz);
     
+    //intercept with the S2 plane
     define_output_from_track(track_branch, arm+"_S2_x", &VDC::Track::S2_x);
     define_output_from_track(track_branch, arm+"_S2_y", &VDC::Track::S2_y);
+    define_output_from_track(track_branch, arm+"_S2_t", &VDC::Track::S2_y);
 
-    //define_output_from_track(track_branch, arm+"_S2_x_param", &VDC::Track::xParam);
+    //intercept with the Cerenkov plane
+    define_output_from_track(track_branch, arm+"_Cerenkov_x", &VDC::Track::Cerenkov_x);
+    define_output_from_track(track_branch, arm+"_Cerenkov_y", &VDC::Track::Cerenkov_y);
+    define_output_from_track(track_branch, arm+"_Cerenkov_t", &VDC::Track::Cerenkov_t);
+    rna.DefineOutput(arm+"_cer_a_c", [](const RVec<double>& v){ return v; }, {arm+".cer.a_c"});
+    rna.DefineOutput(arm+"_cer_t_c", [](const RVec<double>& v){ return v; }, {arm+".cer.t_c"});
+
+    define_output_from_track(track_branch, arm+"_S2_x_param", &VDC::Track::xParam);
     define_output_from_track(track_branch, arm+"_S2_dt", &VDC::Track::T0);
-
+    
+    define_output_from_track(track_branch, arm+"_S2_n_goodpts", &VDC::Track::Get_Eta);
+    
+    
+    
     //define_output_from_track(track_branch, arm+"_Eta", &VDC::Track::Get_Eta);
 
     rna.DefineOutput(arm+"_n_points", [](const RVec<VDC::Track>& tracks){
@@ -507,6 +544,24 @@ int Manager::Process(const std::string& path_input, const std::string& stem_outp
       }
       return ret; 
     }, {track_branch});
+
+    //separation between PMT times for our S2 hit
+    rna.DefineOutput(arm+"_S2_time", [](const RVec<VDC::Track>& tracks){
+      RVecD ret; ret.reserve(tracks.size()); 
+      for (const auto& trk : tracks) {
+        
+        const auto s2_hit = trk.GetEvent()->GetS2Hit(trk.IsRightArm());
+        ret.push_back(s2_hit->Time());
+      }
+      return ret; 
+    }, {track_branch});
+    
+    //separation between PMT times for our S2 hit
+    rna.DefineOutput(arm+"_all_S2_time", [](const RVec<S2Hit>& hits){
+      RVecD ret; ret.reserve(hits.size()); 
+      for (const auto& hit : hits) ret.emplace_back(hit.Time()); 
+      return ret; 
+    }, {arm+"_S2_hits"});
 
     rna.DefineOutput(arm+"_S2_paddle", [](const RVec<VDC::Track>& tracks){
       RVec<int> ret; ret.reserve(tracks.size()); 
@@ -635,14 +690,13 @@ int Manager::Process(const std::string& path_input, const std::string& stem_outp
   }
 
   std::printf(
-    "Cpu time:  %.3f s  ( %.6f ms/raw event )\n"
+    "Elapsed time:  %8.3f s  ( %.6f ms/raw event )\n"
+    "Cpu time:      %8.3f s  ( %.6f ms/raw event )\n"
     "exiting...",
     elapsed, 1000.*elapsed/((double)total_events),
     cpu_time, 1000.*cpu_time/((double)total_events)
   ); 
 
-  
-  
   return 0; 
 }
 //______________________________________________________________________________________________________________
