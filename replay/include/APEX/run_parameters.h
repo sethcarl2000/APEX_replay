@@ -19,7 +19,7 @@ namespace run_parameters {
     constexpr double kVDC_min_realTime = -50.*units::ns; ///minimum real-time for VDC hit, rel. to S2 hit
 
     /// this cut is how we determine if two adjacent S2 hits are 'twin' hits (likely caused by the same particle)
-    constexpr double kCUT_S2_twinHit_timeErr =5.*units::ns; 
+    constexpr double kCUT_S2_twinHit_timeErr = 4.5*units::ns; 
 
     // spacing between coarse-grained grid-search 
     constexpr double kGridSpacing = VDC::kWireSpacing/10.; 
@@ -30,9 +30,9 @@ namespace run_parameters {
 
     //track cuts
     constexpr double TRK_R_CUT_Dt     = 12.*units::ns; 
-    constexpr double TRK_L_CUT_Dt     = 20.*units::ns; 
-    constexpr double TRK_R_Dt_offset = +28.*units::ns; 
-    constexpr double TRK_L_Dt_offset = -15.*units::ns;   
+    constexpr double TRK_L_CUT_Dt     = 15.*units::ns; 
+    constexpr double TRK_R_Dt_offset  = 0.*units::ns; //+28.*units::ns; 
+    constexpr double TRK_L_Dt_offset  = -8.*units::ns; //-15.*units::ns;   
     constexpr double TRK_CUT_xParam = 0.60; 
     constexpr double TRK_R_xParam_offset = 0.10; 
     constexpr double TRK_L_xParam_offset = 0.00; 
