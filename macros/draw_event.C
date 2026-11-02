@@ -7,6 +7,7 @@
 #include <APEX/run_parameters.h>
 // Replay classes
 #include <APEX/EventHandler.h>
+#include <APEX/S2Event.h>
 #include <APEX/VDC.h>
 #include <APEX/VDC/Hit.h>
 #include <APEX/VDC/HitGroup.h>
@@ -17,6 +18,7 @@
 #include <TStyle.h> 
 #include <TAxis.h> 
 #include <TBox.h> 
+#include <TLine.h> 
 #include <ROOT/RVec.hxx>
 // stdlib
 #include <string> 
@@ -29,12 +31,14 @@ namespace {
     constexpr bool kRHRS{true}, kLHRS{false}; 
     // left arm 
     constexpr bool is_RHRS = kLHRS;  
+
+    constexpr int run_number = 4902; 
 }
 
 /// draw VDC window 
 void drawVDC(); 
 
-void draw_event(std::string path_infile="data-v2/decode.4016.root")
+void draw_event(std::string path_infile="data-v2/decode.4902.root")
 {
     using namespace APEX; 
 
@@ -99,10 +103,29 @@ void drawVDC()
     
     if (kernel.IsActive()) 
         dummy_event = std::make_shared<EventHandler>(mode, 
-            beam_current, 4016,
+            beam_current, run_number,
             &S2_hits_RHRS.front(),
             &S2_hits_LHRS.front()
         ); 
+
+
+    const auto & S2_hits = is_RHRS ? S2_hits_RHRS : S2_hits_LHRS; 
+    Rv<S2Event> S2_events; S2_events.reserve(S2_hits.size());
+    
+    for (const auto& S2_hit : S2_hits) {
+        EventHandler event(
+            mode, beam_current, 4016,
+            is_RHRS ? &S2_hit : dummy_event->GetS2Hit(false), 
+            is_RHRS ? dummy_event->GetS2Hit(true)  : &S2_hit
+        );
+        S2_events.emplace_back(
+            is_RHRS, 
+            S2_hit, 
+            &event
+        ); 
+    }
+
+    TH1F *plane_frames[APEX::VDC::kN_planes]; 
 
     TCanvas* canv{nullptr}; 
     static TVirtualPad* pad[] = {nullptr, nullptr, nullptr, nullptr}; 
@@ -129,10 +152,12 @@ void drawVDC()
         mpad->cd();  
         mpad->SetTopMargin(0.);
         mpad->SetBottomMargin(0.); 
-        auto frame = mpad->DrawFrame(
-            0.,min_VDC, ((double)APEX::VDC::kN_wires_per_plane)-1.,max_VDC 
+
+        plane_frames[plane] = mpad->DrawFrame(
+            APEX::VDC::WirePos(is_RHRS,plane,APEX::VDC::kN_wires_per_plane-1),min_VDC, 
+            APEX::VDC::WirePos(is_RHRS,plane,0),max_VDC 
         ); 
-        frame->SetTitle(";wire num;VDC time (ns)"); 
+        plane_frames[plane]->SetTitle(";wire num;VDC time (ns)"); 
 
         Rv<double> pts_wire, pts_time; 
 
@@ -142,39 +167,73 @@ void drawVDC()
             
             APEX::VDC::Hit hit(is_RHRS, plane, (int)wire[i], rawtime[i], 0.); 
         
-            pts_wire.emplace_back(hit.WireNum()); 
+            pts_wire.emplace_back(hit.WirePos()); 
             pts_time.emplace_back(hit.Time()/units::ns);
         }
         g = new TGraph(wire.size(), pts_wire.data(), pts_time.data()); 
         g->SetMarkerStyle(kOpenCircle);  
         kernel.Draw(g, "SAME P"); 
 
-        for (auto& S2_hit : (is_RHRS ? S2_hits_RHRS : S2_hits_LHRS)) {
+        for (auto& S2_event : S2_events) {
 
-            EventHandler event(
-                mode, beam_current, 4016,
-                is_RHRS ? &S2_hit : dummy_event->GetS2Hit(false), 
-                is_RHRS ? dummy_event->GetS2Hit(true)  : &S2_hit
-            );
+            S2_event.get_groups(plane) = replay::helpers::group_vdc_hits(S2_event.GetEventHandler(), plane, wire, rawtime); 
 
-            auto hit_groups = replay::helpers::group_vdc_hits(*dummy_event, plane, wire, rawtime); 
-
-            for (const auto& group : hit_groups) {
+            for (const auto& group : S2_event.get_groups(plane)) {
                 
-                double t_S2 = S2_hit.Time()/units::ns;
+                double t_S2 = S2_event.GetEventHandler().GetS2Hit(is_RHRS)->Time()/units::ns;
 
                 auto box = new TBox(
-                    ((double)group.FirstWire()) - ((double)run_parameters::kGroup_max_gap)/2., 
+                    ((double)group.LoEdge()) - APEX::VDC::kWireSpacing*((double)run_parameters::kGroup_max_gap)/2., 
                     t_S2 + run_parameters::kVDC_min_realTime/units::ns,
-                    ((double)group.LastWire())  + ((double)run_parameters::kGroup_max_gap)/2.,
+                    ((double)group.HiEdge())  + APEX::VDC::kWireSpacing*((double)run_parameters::kGroup_max_gap)/2.,
                     t_S2 + run_parameters::kVDC_max_realTime/units::ns
                 ); 
                 box->SetFillStyle(0);
                 kernel.Draw(box, "SAME"); 
             }
+
         }
 
        
+    }
+
+    for (auto& S2_event : S2_events) {
+        for (const bool is_loChamber : {true, false}) {
+
+            auto& group_u = S2_event.get_groups(is_loChamber ? 0 : 2); 
+            auto& group_v = S2_event.get_groups(is_loChamber ? 1 : 3); 
+
+            S2_event.get_chamber_pairs(is_loChamber) = replay::helpers::gen_pairs(
+                S2_event.GetEventHandler(),
+                group_u, group_v, 
+                is_loChamber
+            ); 
+
+            int plane_u = is_loChamber ? 0 : 2; 
+            int plane_v = is_loChamber ? 1 : 3; 
+
+            double t_S2 = S2_event.GetEventHandler().GetS2Hit(is_RHRS)->Time(); 
+            double t_min = (t_S2 + run_parameters::kVDC_min_realTime)/units::ns; 
+            double t_max = (t_S2 + run_parameters::kVDC_max_realTime)/units::ns;
+
+
+            for (const auto& pair : S2_event.get_chamber_pairs(is_loChamber)) {
+
+                pad[plane_u]->cd(); 
+
+                auto line = new TLine(pair.v(),t_min, pair.v(),t_max); 
+                line->SetLineColor(kRed); 
+                line->SetLineStyle(kDashed); 
+                kernel.Draw(line); 
+
+                pad[plane_v]->cd(); 
+
+                line = new TLine(pair.u(),t_min, pair.u(),t_max); 
+                line->SetLineColor(kRed); 
+                line->SetLineStyle(kDashed); 
+                kernel.Draw(line); 
+            }
+        }
     }
 
 }
