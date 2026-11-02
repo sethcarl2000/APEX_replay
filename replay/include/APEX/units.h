@@ -6,6 +6,7 @@ namespace APEX
 namespace units 
 {
 
+
     //length
     constexpr double m   = 1.; 
     constexpr double cm  = m/100.; 
@@ -23,6 +24,12 @@ namespace units
     constexpr double rad  = 1.;
     constexpr double mrad = rad/1000.; 
     constexpr double deg  = rad * (3.14159265359 / 180.); 
+
+    //constants
+    
+    // speed of light in vacuum
+    constexpr double speed_of_light_vacuum = 300e6*(m/s); 
+
 
 }
 }
