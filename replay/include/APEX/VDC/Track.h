@@ -1,13 +1,15 @@
 #ifndef APEX_VDC_Track_H
 #define APEX_VDC_Track_H 
 
-//APEX headers 
+// APEX headers 
+#include <APEX/Cerenkov.h>
 #include <APEX/VDC.h> 
 #include <APEX/VDC/ChamberPair.h> 
 #include <APEX/EventHandler.h> 
-#include <math.h> 
-//ROOT headers
+// ROOT headers
 #include <TVector3.h>
+// stdlib
+#include <cmath> 
 
 namespace APEX 
 {
@@ -50,6 +52,7 @@ class Track {
   
   inline double T0() const { return fT0; }
   inline void   Set_T0(const double T0) { fT0=T0; }
+  
     
   //returns the agreement of this hit with the S2-paddle
   double xParam() const; 
@@ -99,6 +102,13 @@ class Track {
   double FP_dx_dz() const;
   double FP_dy_dz() const; 
 
+
+private:
+  std::size_t fS2_id; 
+public: 
+  void Set_S2_id(std::size_t id) { fS2_id=id; }
+  std::size_t Get_S2_id() const { return fS2_id; }
+
   //optics data ~~~~~~~~~~~~~~~~~~~~~~~~~~ (Computation handled by THRS class)
   //track target coordinates ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
   //placeholder functions 
@@ -123,9 +133,10 @@ class Track {
   
   
   //track fp coordinates ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-  inline void Set_focalPlaneCoords( const double fp_y, 
-			     const double fp_theta, 
-			     const double fp_phi ) 
+  inline void Set_focalPlaneCoords( 
+    const double fp_y, 
+    const double fp_theta, 
+    const double fp_phi ) 
   { f_fp_y     =fp_y;
     f_fp_theta =fp_theta; 
     f_fp_phi   =fp_phi; } 
@@ -139,8 +150,31 @@ class Track {
   double GetTimeAtZ(const double z) const; 
   
   
+  /// @return X-intercept of this track with the S2 plane, TRANSPORT coordinates
   double S2_x()  const; 
+  /// @return Y-intercept of this track with the S2 plane, TRANSPORT coordinates
   double S2_y()  const; 
+  /// @return time of this track's arrival at the S2 plane. 
+  double S2_t()  const { return fT0; }
+
+
+  /// @return X-intercept of this track with the Cerenkov plane, TRANSPORT coordinates
+  double Cerenkov_x() const {
+    return ComputeIntercept_z(Cerenkov::Z(f_isRightArm)).x(); 
+  }; 
+  /// @return Y-intercept of this track with the Cerenkov plane, TRANSPORT coordinates
+  double Cerenkov_y() const {
+    return ComputeIntercept_z(Cerenkov::Z(f_isRightArm)).y(); 
+  }; 
+  /// @return time-of-intercept of this track with the Cerenkov plane
+  double Cerenkov_t() const {
+
+    double dist_to_S2 = 
+      (f_S2Int_xyz - ComputeIntercept_z(Cerenkov::Z(f_isRightArm))).Mag(); 
+
+    return fT0 - (dist_to_S2/units::speed_of_light_vacuum); 
+  }; 
+
   
   double Theta() const; 
   double Phi()   const; 
