@@ -2,6 +2,7 @@
 #ifndef APEX_VDC_H
 #define APEX_VDC_H
 
+#include <APEX/replay.h>
 #include <APEX/units.h>
 
 namespace APEX
@@ -20,6 +21,44 @@ constexpr double kTDC_resolution = 0.5*units::ns;
 
 /// spacing between VDC wires (perp. distance) (m)
 constexpr double kWireSpacing = 4.2426*units::mm;
+
+// VDC chamber (low or high)
+enum class Chamber { Low, High }; 
+
+// VDC plane
+enum class Plane { U1, V1, U2, V2 }; 
+
+
+template<Chamber C> inline constexpr Plane get_U() {
+    if constexpr (is_loChamber<C>()) return Plane::U1; 
+    return Plane::U2; 
+}
+template<Chamber C> inline constexpr Plane get_V() {
+    if constexpr (is_loChamber<C>()) return Plane::V1; 
+    return Plane::V2; 
+}
+
+// number of VDC plane 
+template<Plane P> inline constexpr int number() {
+    if constexpr (P == Plane::U1) return 0; 
+    if constexpr (P == Plane::U2) return 1; 
+    if constexpr (P == Plane::V1) return 2; 
+    return 3; 
+}
+
+/// @tparam P VDC plane 
+/// @return 'true' if low-chamber (U1 || V1) else otherwise (U2 || V2)
+template<Plane P> inline constexpr bool is_loChamber() {
+    if constexpr ((P == Plane::U1) || (P == Plane::V1)) { return true; } else { return false; } 
+}
+
+/// @tparam VDC Chamber C  
+/// @return 'true' if low-chamber (Chamber::Low) 'false' otherwise (Chamber::High)
+template<Chamber C> inline constexpr bool is_loChamber() { return C == Chamber::Low; } 
+
+template<Plane P> inline constexpr Chamber get_Chamber() {
+    if constexpr (VDC::is_loChamber<P>()) { return Chamber::Low } else { return Chamber::High; }
+}
 
 /// @return real-time of VDC hit (s) 
 double RealTime( const bool is_RHRS, 
@@ -40,6 +79,10 @@ int WireNum( const bool   is_RHRS,
 /// @return w-position (vertical) of the plane (m)
 double w( const bool is_RHRS, const int plane );
 
+template<Plane P> inline double w(bool is_RHRS) {
+    return w(is_RHRS, VDC::number<P>() );
+}
+
 /// w-values (coordinate normal-vertical to plane) of each RHRS vdc plane (m)
 constexpr double kW_RHRS[kN_planes] = { 0.*units::m, 0.026*units::m, 0.333245*units::m, 0.359245*units::m };
 /// w-values (coordinate normal-vertical to plane) of each RHRS vdc plane (m)
@@ -48,7 +91,8 @@ constexpr double kW_LHRS[kN_planes] = { 0.*units::m, 0.026*units::m, 0.335344*un
 /// @brief name of the namespace as a const char array
 constexpr char kNamespaceName[] = "APEX::VDC";
 
-};
+
+}
 }
 
 #endif

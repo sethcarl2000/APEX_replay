@@ -2,7 +2,7 @@
 #define APEX_S2Event_H 
 
 #include <APEX/utils.h>
-#include <APEX/units.h> 
+#include <APEX/ObjCollection.h>
 #include <APEX/S2.h> 
 #include <APEX/VDC.h>
 #include <APEX/VDC/Hit.h>
@@ -15,6 +15,13 @@
 // stdlib
 #include <vector>
 #include <memory> 
+#include <cstddef> 
+#include <limits> 
+#include <map> 
+#include <stdexcept> 
+#include <tuple> 
+#include <concepts> 
+
 
 namespace APEX 
 {
@@ -30,39 +37,86 @@ private:
 
   // id of this event, unique per-arm 
   std::size_t id{0};
-
+  
   // we wrap this event handler to pass it to some legacy functions that use it 
   std::shared_ptr<EventHandler> fEventHandler{nullptr}; 
 
-  // list of all hit-groups for each plane
-  ROOT::VecOps::RVec<VDC::HitGroup> fHitGroups[VDC::kN_planes]; 
+  std::tuple<
 
-  // list of all hit clusters for each VDC plane
-  ROOT::VecOps::RVec<VDC::HitCluster> fHitClusters[VDC::kN_planes]; 
+    ObjCollection<VDC::HitGroup<VDC::Plane::U1>>,  // U1 Hit groups
+    ObjCollection<VDC::HitGroup<VDC::Plane::V1>>,  // V1 
+    ObjCollection<VDC::HitGroup<VDC::Plane::U2>>,  // U2 
+    ObjCollection<VDC::HitGroup<VDC::Plane::V2>>,  // V2 
+  
+    ObjCollection<VDC::HitCluster<VDC::Plane::U1>>, // U1 Hit clusters
+    ObjCollection<VDC::HitCluster<VDC::Plane::V1>>, // V1 
+    ObjCollection<VDC::HitCluster<VDC::Plane::U2>>, // U2 
+    ObjCollection<VDC::HitCluster<VDC::Plane::V2>>, // V2 
 
-  // list of all chamber pairs for each VDC chamber 
-  ROOT::VecOps::RVec<VDC::ChamberPair> fChamberPairs_lo, fChamberPairs_hi; 
+    ObjCollection<VDC::ChamberPair<VDC::Chamber::Low>>,  // Low-chamber Chamber pairs
+    ObjCollection<VDC::ChamberPair<VDC::Chamber::High>>, // Hi-chamber 
+    
+    ObjCollection<VDC::Track> //tracks 
 
-  // list of all VDC tracks
-  ROOT::VecOps::RVec<VDC::Track> fTracks; 
+  > fObjects; 
 
 public: 
 
   S2Event(bool is_RHRS, S2Hit hit, const EventHandler* event_handler, std::size_t _id=0); 
 
-  void make_vdc_hit_groups(
-    int plane, 
-    const ROOT::VecOps::RVec<double>& wire, 
-    const ROOT::VecOps::RVec<double>& rawtime 
-  );
+  /// @return Ref to S2 hit this event is based around
+  S2Hit& GetS2Hit() { return fS2Hit; }
+  
+  /// @return Ref to S2 hit this event is based around
+  const S2Hit& GetS2Hit() const { return fS2Hit; }
 
-  ROOT::VecOps::RVec<VDC::HitGroup>& get_groups(int plane) { return fHitGroups[plane]; }
-  
-  ROOT::VecOps::RVec<VDC::HitCluster>& get_hit_clusters(int plane) { return fHitClusters[plane]; }
-  
-  ROOT::VecOps::RVec<VDC::ChamberPair>& get_chamber_pairs(bool is_lo_chamber) { return is_lo_chamber ? fChamberPairs_lo : fChamberPairs_hi; }
-  
-  ROOT::VecOps::RVec<VDC::Track>& get_tracks() { return fTracks; } 
+  /// @brief Return size of current event's collection of a given type 
+  /// @tparam T Type of object 
+  /// @return size in current collection 
+  template<typename T> std::size_t size() noexcept {
+    return std::get<ObjCollection<T>>( fObjects ).size(); 
+  }
+
+  /// @tparam T Type of object 
+  /// @return 'true' if current collection of that object type is empty, 'false' otherwise 
+  template<typename T> bool empty() noexcept {
+    return this->size<T>() < 1; 
+  }
+
+  /// @brief Add object of type 'T' to collection of objects for that type 
+  /// @tparam T Type of object
+  /// @param Args&&...args constructor arguments
+  /// @return size of collection, after new object added
+  template<typename T, typename... Args> std::size_t emplace(Args&&... args) {
+    auto& collection = std::get<ObjCollection<T>>( fObjects ); 
+    return collection.emplace(std::forward<Args>(args)...); 
+    return this->size<T>(); 
+  }
+
+  /// @brief Get collection of all objects of given type
+  /// @tparam T type of object to fetch 
+  /// @return ObjCollection<T> of all objects currently in event 
+  template<typename T> const ObjCollection<T>& GetCollection() const {
+    return std::get<ObjCollection<T>>(fObjects); 
+  }
+
+  /// @brief Item collection with certain ID 
+  /// @return 
+  template<typename T> T& get(std::size_t id) {
+    auto& collection = std::get<ObjCollection<T>>(fObjects); 
+    auto find_it = collection.get(id); 
+    if (find_it == collection.end()) {
+      throw std::out_of_range("in <get>: tried to access object using ref that doesn't exist"); 
+    }
+    return *find_it; 
+  }
+
+  /// @brief Compute the drift time for a given drift-distance, slope, (and derivative order).
+  /// @param x absolute drift-distance from midplane of VDC drift chamber
+  /// @param slope slope of current VDC track (affects some drift-parameters)
+  /// @param derivative which derivative to compute, 0 (no derivative 1-st or 2-nd order. 
+  /// @return drift time from track intercept with wire's 'vertical plane' 
+  double Drift_T( double x,   double slope, int derivative=0 ) const;  
 
   //get the timing of this S2 event. 
   double S2Time() const; 
@@ -74,9 +128,47 @@ public:
 
   bool Is_RHRS() const { return fis_RHRS; }
 
+  /// Do this to make sure that each track keeps track of this object's address in memory (in case RDataFrame moves it)
+  void RefereshEventPointers() {
+    auto& tracks = std::get<ObjCollection<VDC::Track>>( fObjects ); 
+    for (auto& track : tracks) track.SetEvent(this); 
+  }
+
 };
 /////////////////////////////////////////////////////////////////////////////////
 
 }
 
 #endif 
+
+
+/*
+  std::size_t n_groups(int plane)   const { return fHitGroups[plane].size(); }
+  std::size_t n_clusters(int plane) const { return fHitClusters[plane].size(); }
+  std::size_t n_chamber_pairs(bool is_loChamber) const { return is_loChamber ? fChamberPairs_lo.size() : fChamberPairs_hi.size(); }
+  std::size_t n_tracks() const { return fTracks.size(); }
+
+  template<typename... Args> void add_group(int plane, Args&&... args) {
+    //check plane range 
+    if (plane<0 || plane>=VDC::kN_planes)
+      throw std::out_of_range("in <"+std::string{__func__}+"> VDC plane index '"+std::to_string(plane)+"' out-of-range"); 
+  
+    fHitGroups[plane].emplace(std::forward<Args>(args)...); 
+  }
+
+  template<typename... Args> void add_cluster(int plane, Args&&... args) {
+    //check plane range 
+    if (plane<0 || plane>=VDC::kN_planes)
+      throw std::out_of_range("in <"+std::string{__func__}+"> VDC plane index '"+std::to_string(plane)+"' out-of-range"); 
+  
+    fHitClusters[plane].emplace(std::forward<Args>(args)...); 
+  }
+
+  template<typename... Args> void add_chamber_pair(bool is_loChamber, Args&&... args) {
+    auto& my_map = is_loChamber ? fChamberPairs_lo : fChamberPairs_hi; 
+    my_map.emplace(std::forward<Args>(args)...); 
+  }
+
+  template<typename... Args> void add_track(Args&&... args) {
+    fTracks.emplace(std::forward<Args>(args)...); 
+  }  */ 

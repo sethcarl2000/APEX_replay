@@ -1,6 +1,7 @@
 #ifndef APEX_VDC_HitGroup_H
 #define APEX_VDC_HitGroup_H
 
+#include <APEX/ObjRef.h>
 #include <APEX/VDC.h> 
 #include <APEX/VDC/Hit.h> 
 // stdlib 
@@ -8,27 +9,32 @@
 
 namespace APEX 
 {
+
 namespace VDC
 {
 
-class HitGroup {
+template<VDC::Plane P> class HitGroup {
 private: 
-  bool fis_RHRS; 
-  std::vector<Hit> fHits; 
-  int fPlane; 
 
+  friend class ObjCollection<HitGroup<P>>; 
+  unique_id id{0}; 
+
+  bool fis_RHRS; 
+  std::vector<Hit<P>> fHits{}; 
 
 public:   
   
-  HitGroup(bool is_RHRS, int plane) : fis_RHRS{is_RHRS}, fPlane{plane} {}; 
+  HitGroup(bool is_RHRS) : fis_RHRS{is_RHRS} {}; 
   
   // fill out a hit group from a span hits (make copies of all underlying hits). 
-  HitGroup(std::span<Hit> hits); 
+  HitGroup(std::span<Hit<P>> hits); 
 
-  void AddHit( const Hit& hit ) { fHits.push_back(hit); } 
+  template<typename... Args> void AddHit(Args&&... args) { 
+    fHits.emplace_back(std::forward<Args>(args)...); 
+  } 
   
   void AddHit( int wire, double rawtime, double T_offset=0.) {
-    fHits.emplace_back(fis_RHRS, fPlane, wire, rawtime, T_offset);  
+    fHits.emplace_back(fis_RHRS, wire, rawtime, T_offset);  
   }; 
   
   int Nhits() const { return fHits.size(); }
@@ -37,7 +43,7 @@ public:
   int    WireNum( unsigned int h ) const; 
   double    Time( unsigned int h ) const; 
   
-  Hit& GetHit( unsigned int h ) { return fHits.at(h); } 
+  Hit<P>& GetHit( unsigned int h ) { return fHits.at(h); } 
 
   // First wire in the hit-group 
   int    FirstWire() const { return fHits.front().WireNum(); }
@@ -52,13 +58,17 @@ public:
   
   double Span()     const { return HiEdge()-LoEdge(); }
   
-  bool IsRightArm() const { return fHits.front().Is_RHRS(); }
+  bool Is_RHRS() const { return fis_RHRS; }
   
   double W()        const { return fHits.front().W(); }
 
   //delete all hits
   void Clear() { fHits.clear(); }
-  
+
+  // Get unique ID
+  unique_id ID() const { return id; }
+  bool operator==(const HitGroup<P>& rhs) const { return rhs.id == id; }
+
 private: 
   
 }; 

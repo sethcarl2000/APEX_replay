@@ -6,31 +6,31 @@
 
 namespace APEX 
 {
+class S2Event; 
 namespace VDC
 {
 
 /////////////////////////////////////////////////////////////////////////////////
-class Hit { 
+template<VDC::Plane plane> class Hit { 
 
   bool   fis_RHRS; 
-  int    fPlane;
   int    fWireNum; 
   double fRawTime; 
   double fT_offset; 
 
  public: 
 
-  Hit( bool is_RHRS, int plane, int wire_num, double rawtime, double t_offset=0. ) 
+  Hit( bool is_RHRS, int wire_num, double rawtime, double t_offset=0. ) 
     : fis_RHRS{is_RHRS}, 
-    fPlane{plane}, 
     fWireNum{wire_num}, 
     fRawTime{rawtime},
     fT_offset{t_offset} {};  
   
+  // this is true for any hit in this plane
+  int Plane() const { return VDC::number<plane>(); }
 
   // methods which this class stores, i.e., this class' private data is the 'source of truth' 
   bool Is_RHRS() const { return fis_RHRS; } 
-  int    Plane() const { return fPlane; } 
   int    WireNum() const { return fWireNum; } 
   double Rawtime() const { return fRawTime; }
   double T_offset() const { return fT_offset; }
@@ -39,10 +39,10 @@ class Hit {
   void Set_T_offset(double t_offset) { fT_offset=t_offset; }
 
   // methods which this class fetches from tables, using its private raw data: 
-  double Time() const { return VDC::RealTime(fis_RHRS,fPlane,fWireNum,fRawTime) - fT_offset; }
-  double WirePos() const { return VDC::WirePos(fis_RHRS,fPlane,fWireNum); } 
-  double W()     const { return VDC::w(fis_RHRS,fPlane); } 
-  
+  double Time() const { return VDC::RealTime(fis_RHRS,VDC::number<plane>(),fWireNum,fRawTime) - fT_offset; }
+  double WirePos() const { return VDC::WirePos(fis_RHRS,VDC::number<plane>(),fWireNum); } 
+  double W()     const { return VDC::w(fis_RHRS,VDC::number<plane>()); } 
+
 }; 
 
 }
