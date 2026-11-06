@@ -45,11 +45,11 @@ namespace run_parameters {
     constexpr int    kGausIntPoints = 20; 
 
     //these are kinematic cuts to the transport coordinate angles of VDC tracks. ph = dy/dz(tra), th = dx/dz(tra). 
-    constexpr double CUT_ph_min[] = { -0.012 , -0.018 };
-    constexpr double CUT_ph_max[] = {  0.012 ,  0.008 };   
+    constexpr double CUT_ph_min_R{-0.012}, CUT_ph_min_L{-0.018};
+    constexpr double CUT_ph_max_R{+0.012}, CUT_ph_max_L{+0.008};   
 
-    constexpr double CUT_th_min[] = { -0.018 , -0.020 };
-    constexpr double CUT_th_max[] = {  0.018 ,  0.018 }; 
+    constexpr double CUT_th_min_R{-0.018}, CUT_th_min_L{-0.020};
+    constexpr double CUT_th_max_R{+0.018}, CUT_th_max_L{+0.018}; 
         
     constexpr double CUT_xParam = 2.00; 
 

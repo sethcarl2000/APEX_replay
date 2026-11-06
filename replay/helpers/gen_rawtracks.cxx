@@ -20,6 +20,8 @@ namespace replay
 namespace helpers
 {
 
+//#define DEBUG_RAW_TRACK
+
 void gen_rawtracks( 
     S2Event& evt
 ) 
@@ -34,17 +36,14 @@ void gen_rawtracks(
 
     const bool is_RHRS = evt.Is_RHRS(); 
     
-    const int arm_int_index = is_RHRS ? 0 : 1;  
-    const double CUT_ph_min = run_parameters::CUT_ph_min[arm_int_index];
-    const double CUT_ph_max = run_parameters::CUT_ph_max[arm_int_index];
+    const double CUT_ph_min = is_RHRS ? run_parameters::CUT_ph_min_R : run_parameters::CUT_ph_min_L; //run_parameters::CUT_ph_min[arm_int_index];
+    const double CUT_ph_max = is_RHRS ? run_parameters::CUT_ph_max_R : run_parameters::CUT_ph_max_L;
 
-    const double CUT_th_min = run_parameters::CUT_th_min[arm_int_index];
-    const double CUT_th_max = run_parameters::CUT_th_max[arm_int_index];
+    const double CUT_th_min = is_RHRS ? run_parameters::CUT_th_min_R : run_parameters::CUT_th_min_L;
+    const double CUT_th_max = is_RHRS ? run_parameters::CUT_th_max_R : run_parameters::CUT_th_max_L;
 
     using Pair_lo = VDC::ChamberPair<Lo>; 
     using Pair_hi = VDC::ChamberPair<Hi>; 
-
-    const auto& pairs_lo = evt.GetCollection<Pair_lo>(); 
 
     evt.GetCollection<VDC::Track>().reserve( 
         evt.size<Pair_lo>() * evt.size<Pair_hi>()
@@ -52,20 +51,27 @@ void gen_rawtracks(
 
     for (const auto& pair_lo : evt.GetCollection<Pair_lo>()) { 
         for (const auto& pair_hi : evt.GetCollection<Pair_hi>()) { 
-            
-            //add a new track to the list of tracks
-            //tracks.emplace_back( &evt, &pLo, &pHi, evt.GenUniqueTrackID(is_RHRS) ); 
-            
+
+#ifdef DEBUG_RAW_TRACK
+            std::printf("<gen_rawtracks>: checking pair %2zu/%2zu\n", pair_lo.ID(), pair_hi.ID()); 
+#endif 
+            //Consider a new track 
             VDC::Track track(&evt, pair_lo, pair_hi);
 
             double err_Theta = track.Theta() - Theta_model( track ); 
             double err_Phi   = track.Phi()   - Phi_model( track ); 
             
+#ifdef DEBUG_RAW_TRACK
+            std::printf("<gen_rawtracks>:\n"
+                "   err-theta:   %+6.3f < %+6.3f < %+6.3f  %s\n"
+                "   err-phi:     %+6.3f < %+6.3f < %+6.3f  %s\n", 
+                CUT_th_min, err_Theta, CUT_th_max, ((err_Theta  < CUT_th_min || err_Theta  > CUT_th_max) ? "--> cut" : ""),
+                CUT_ph_min, err_Phi,   CUT_ph_max, ((err_Phi    < CUT_ph_min || err_Phi    > CUT_ph_max) ? "--> cut" : "")
+            ); 
+#endif                    
             //if this track has a good angular match, keep it. 
-            if ( err_Theta  < CUT_th_min ||
-                 err_Theta  > CUT_th_max ||
-                 err_Phi    < CUT_ph_min ||
-                 err_Phi    > CUT_ph_max ) { continue; }
+            if ( err_Theta  < CUT_th_min || err_Theta  > CUT_th_max ||
+                 err_Phi    < CUT_ph_min || err_Phi    > CUT_ph_max ) { continue; }
             
             //check to make sure each plane passes the min-eta cut
             bool pass_minEtaCut=true; 
@@ -82,7 +88,9 @@ void gen_rawtracks(
                     9.*units::ns, 
                     25.*units::ns 
                 ); 
-                
+#ifdef DEBUG_RAW_TRACK
+                std::printf("<gen_rawtracks>: Eta-%s: %6.3f\n", VDC::plane_name<P>().c_str(), eta); 
+#endif
                 track.SetEta<P>(eta);
             });
 

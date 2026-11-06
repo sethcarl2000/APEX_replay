@@ -113,13 +113,12 @@ ROOT::RVec<S2Event> generate_vdc_tracks_from_S2Event(
 
     const double CUT_goodPoints_error = 40e-9; 
     
-    int arm_int_index = is_RHRS ? 0 : 1; 
-    const double CUT_ph_min = run_parameters::CUT_ph_min[arm_int_index];
-    const double CUT_ph_max = run_parameters::CUT_ph_max[arm_int_index];
+    const double CUT_ph_min = is_RHRS ? run_parameters::CUT_ph_min_R : run_parameters::CUT_ph_min_L; 
+    const double CUT_ph_max = is_RHRS ? run_parameters::CUT_ph_max_R : run_parameters::CUT_ph_max_L;
 
-    const double CUT_th_min = run_parameters::CUT_th_min[arm_int_index];
-    const double CUT_th_max = run_parameters::CUT_th_max[arm_int_index];
-        
+    const double CUT_th_min = is_RHRS ? run_parameters::CUT_th_min_R : run_parameters::CUT_th_min_L;
+    const double CUT_th_max = is_RHRS ? run_parameters::CUT_th_max_R : run_parameters::CUT_th_max_L;
+   
     const double x_param_offset = is_RHRS ? run_parameters::TRK_R_xParam_offset : run_parameters::TRK_L_xParam_offset; 
 
     const double dt_offset = is_RHRS ? run_parameters::TRK_R_Dt_offset : run_parameters::TRK_L_Dt_offset; 
@@ -241,6 +240,7 @@ ROOT::RVec<S2Event> generate_vdc_tracks_from_S2Event(
 #ifdef DEBUG_S2Event
     std::printf("<Event Loop>: %llu events so far surviving '1 pair' cut\n", static_cast<EventCounter>(nPass_1pair));
 #endif
+
     ///////////////////////////////////////////////////////////////////////////////////
     ///
     ///     generate 'raw' tracks for each S2 event
@@ -248,9 +248,14 @@ ROOT::RVec<S2Event> generate_vdc_tracks_from_S2Event(
     for (auto& S2_event : S2_events) { 
         // do this to make sure each track has the correct event pointer. 
         S2_event.RefereshEventPointers(); 
-
+#ifdef DEBUG_S2Event
+    std::printf("<Event Loop>: Gen rawtracks\n");
+#endif
         gen_rawtracks(S2_event); 
     }
+#ifdef DEBUG_S2Event
+    std::printf("<Event Loop>: Remove & sort rawtracks\n");
+#endif
     remove_and_sort<VDC::Track>(S2_events); 
 
     // if there are no events left, then carry on 
