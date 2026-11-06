@@ -1,5 +1,6 @@
 
 // APEX
+#include <APEX/utils/AtomicCounter.h>
 #include <APEX/replay/helpers.h>
 #include <APEX/run_parameters.h>
 #include <APEX/VDC/HitGroup.h>
@@ -149,7 +150,9 @@ template<VDC::Chamber C> void gen_pairs(
         }//for (int g=0; g<groups.size(); g++) 
         
         //no clusters found! 
-        if (clust_all.empty()) { 
+        if (clust_all.empty()) {
+            
+            //AtomicCounter::increment("Killed: No cluster");  
 #ifdef DEBUG_PAIR
             std::printf("<gen_pairs: find_clusters %s>: No clusters found\n", VDC::plane_name<P>().c_str()); 
 

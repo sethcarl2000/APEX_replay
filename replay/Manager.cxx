@@ -355,13 +355,45 @@ int Manager::Process(const std::string& path_input, const std::string& stem_outp
 
   //first, generate tracks in the right arm 
   if (is_RHRS_active) {
-    //generate tracks
-    helpers::generate_vdc_tracks_from_S2Event(kRHRS, rna, 
-      nPass_1group_R, 
-      nPass_1pair_R, 
-      nPass_1raw_R, 
-      nPass_1ref_R
-    ); 
+    
+    std::string arm = "R";
+
+    bool is_RHRS=true; 
+
+    rna.Overwrite(arm+"_S2Events", [&](
+        const RVec<EventHandler>& events, 
+        const RVec<S2Hit>& S2_hits,
+        const RVec<double>& wire_u1, const RVec<double>& rawtime_u1,
+        const RVec<double>& wire_v1, const RVec<double>& rawtime_v1,
+        const RVec<double>& wire_u2, const RVec<double>& rawtime_u2,
+        const RVec<double>& wire_v2, const RVec<double>& rawtime_v2
+    ){
+      
+      helpers::RawVDCData data{
+          {wire_u1, rawtime_u1},
+          {wire_v1, rawtime_v1},
+          {wire_u2, rawtime_u2},
+          {wire_v2, rawtime_v2}
+      };
+      
+      return helpers::generate_vdc_tracks_from_S2Event(
+        is_RHRS, events, S2_hits, data, 
+        nPass_1group_R, 
+        nPass_1pair_R, 
+        nPass_1raw_R, 
+        nPass_1ref_R
+      ); 
+
+    }, {"coinc_events", 
+        arm+"_S2_hits",
+        arm+".vdc.u1.wire", arm+".vdc.u1.rawtime",
+        arm+".vdc.v1.wire", arm+".vdc.v1.rawtime",
+        arm+".vdc.u2.wire", arm+".vdc.u2.rawtime",
+        arm+".vdc.v2.wire", arm+".vdc.v2.rawtime" 
+    }); 
+
+    rna.Filter(vector_isnt_empty<S2Event>(), {arm+"_S2Events"}); 
+
     //generate pid data
     helpers::gen_pid_data(kRHRS, rna, &pid_manager); 
   }
@@ -369,12 +401,44 @@ int Manager::Process(const std::string& path_input, const std::string& stem_outp
   //now, do the left-arm tracks
   if (is_LHRS_active) {
     //geenrate tracks
-    helpers::generate_vdc_tracks_from_S2Event(kLHRS, rna, 
-      nPass_1group_L, 
-      nPass_1pair_L, 
-      nPass_1raw_L, 
-      nPass_1ref_L
-    );
+    std::string arm = "L";
+
+    bool is_RHRS=false; 
+
+    rna.Overwrite(arm+"_S2Events", [&](
+        const RVec<EventHandler>& events, 
+        const RVec<S2Hit>& S2_hits,
+        const RVec<double>& wire_u1, const RVec<double>& rawtime_u1,
+        const RVec<double>& wire_v1, const RVec<double>& rawtime_v1,
+        const RVec<double>& wire_u2, const RVec<double>& rawtime_u2,
+        const RVec<double>& wire_v2, const RVec<double>& rawtime_v2
+    ){
+      
+      helpers::RawVDCData data{
+          {wire_u1, rawtime_u1},
+          {wire_v1, rawtime_v1},
+          {wire_u2, rawtime_u2},
+          {wire_v2, rawtime_v2}
+      };
+
+      return helpers::generate_vdc_tracks_from_S2Event(
+        is_RHRS, events, S2_hits, data, 
+        nPass_1group_L, 
+        nPass_1pair_L, 
+        nPass_1raw_L, 
+        nPass_1ref_L
+      ); 
+
+    }, {"coinc_events", 
+        arm+"_S2_hits",
+        arm+".vdc.u1.wire", arm+".vdc.u1.rawtime",
+        arm+".vdc.v1.wire", arm+".vdc.v1.rawtime",
+        arm+".vdc.u2.wire", arm+".vdc.u2.rawtime",
+        arm+".vdc.v2.wire", arm+".vdc.v2.rawtime" 
+    }); 
+
+    rna.Filter(vector_isnt_empty<S2Event>(), {arm+"_S2Events"}); 
+
     //generate pid data
     helpers::gen_pid_data(kLHRS, rna, &pid_manager); 
   }
@@ -526,6 +590,8 @@ int Manager::Process(const std::string& path_input, const std::string& stem_outp
     elapsed, 1000.*elapsed/((double)total_events),
     cpu_time, 1000.*cpu_time/((double)total_events)
   ); 
+
+
 
   return 0; 
 }

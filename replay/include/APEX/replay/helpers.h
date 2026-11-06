@@ -108,19 +108,30 @@ ROOT::VecOps::RVec<S2Hit> generate_S2_hits(
     const ROOT::RVec<double>& PMT_L 
 );
 
+
+template<VDC::Plane P> struct PlaneData { ROOT::VecOps::RVec<double> wire, rawtime; };
+    
+using RawVDCData = std::tuple<
+    PlaneData<VDC::Plane::U1>,
+    PlaneData<VDC::Plane::V1>,
+    PlaneData<VDC::Plane::U2>,
+    PlaneData<VDC::Plane::V2>
+>;
+
 /// @brief Generates VDC tracks from an 'S2Event' object
 /// @param is_RHRS
 /// @param node_in input RDF node
 /// @param n_pass_1group EventCounter representing the number of events which reconstructed at least 1 group 
-void generate_vdc_tracks_from_S2Event( 
-    EArmMode arm_mode, 
-    RDFNodeAccumulator& rna, 
+ROOT::RVec<S2Event> generate_vdc_tracks_from_S2Event( 
+    const bool is_RHRS, 
+    const ROOT::RVec<EventHandler>& event_handlers,
+    const ROOT::RVec<S2Hit>& S2_hits, 
+    const RawVDCData& VDC_data, 
     EventCounter_atomic &nPass_1group, 
     EventCounter_atomic &nPass_1pair, 
     EventCounter_atomic &nPass_1rawTrack,
     EventCounter_atomic &nPass_1refinedTrack
 );
-
 
 //
 // Refine tracks from the hi-chamber using newton's method
