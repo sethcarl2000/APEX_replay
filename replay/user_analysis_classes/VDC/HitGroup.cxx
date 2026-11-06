@@ -10,11 +10,11 @@ namespace VDC
 {
 
 //______________________________________________________________________________________________________________________________________
-HitGroup::HitGroup(std::span<Hit> hits)
-  : fis_RHRS{hits.begin()->Is_RHRS()}, fPlane{hits.begin()->Plane()}, fHits(hits.begin(), hits.end())
+template<Plane P> HitGroup<P>::HitGroup(std::span<const Hit<P>> hits)
+  : fis_RHRS{hits.begin()->Is_RHRS()}, fHits(hits.begin(), hits.end())
 {}
 //______________________________________________________________________________________________________________________________________
-double HitGroup::WirePos( unsigned int h ) const 
+template<Plane P> double HitGroup<P>::WirePos( unsigned int h ) const 
 {   
   if (h>=Nhits()) {
     throw std::logic_error(Form("<%s::%s> hit index %u out-of-range; max is %u", 
@@ -26,7 +26,7 @@ double HitGroup::WirePos( unsigned int h ) const
   return fHits[h].WirePos();
 }
 //______________________________________________________________________________________________________________________________________
-int    HitGroup::WireNum( unsigned int h ) const 
+template<Plane P> int    HitGroup<P>::WireNum( unsigned int h ) const 
 { 
   if (h>=Nhits()) {
     throw std::logic_error(Form("<%s::%s> hit index %u out-of-range; max is %u", 
@@ -39,7 +39,7 @@ int    HitGroup::WireNum( unsigned int h ) const
   return fHits[h].WireNum(); 
 }
 //______________________________________________________________________________________________________________________________________
-double HitGroup::Time( unsigned int h )    const 
+template<Plane P> double HitGroup<P>::Time( unsigned int h )    const 
 { 
   if (h>=Nhits()) {
     throw std::logic_error(Form("<%s::%s> hit index %u out-of-range; max is %u", 

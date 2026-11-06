@@ -5,12 +5,18 @@
 #include <cstddef> 
 #include <vector>
 #include <algorithm>
+#include <type_traits>
 
 namespace APEX
 {
 
 // Type representing unique object ID 
 using object_id = std::size_t;
+
+/// This concept requires that the callable F is callable with single argument 'const T&' and returns 'bool'  
+template<typename F, typename T> concept BoolPredicate = requires(F&& f, const T& t) {
+    { std::forward<F>(f).operator()(t) } -> std::same_as<bool>; 
+};
 
 template<typename T> class ObjCollection {
 private: 
@@ -21,8 +27,8 @@ private:
     }, "Type 'T' is missing 'object_id id' field / ObjCollection<T> is not friended"); 
 
     static_assert(std::is_move_assignable_v<T>,     "Type 'T' is not move-assignable"); 
-    static_assert(std::is_move_constructable_v<T>,  "Type 'T' is not move-constructable"); 
-    static_assert(std::is_copy_constructable_v<T>,  "Type 'T' is not copy-constructible");
+    static_assert(std::is_move_constructible_v<T>,  "Type 'T' is not move-constructable"); 
+    static_assert(std::is_copy_constructible_v<T>,  "Type 'T' is not copy-constructible");
 
     object_id counter{0}; 
     std::vector<T> objects{};
@@ -44,6 +50,8 @@ public:
     const_iterator cend()   const { return objects.cend(); }
 
     std::size_t size() const { return objects.size(); }
+
+    void reserve(std::size_t _size) { objects.reserve(_size); }
 
     /// @brief Get object with particular ID
     /// @param id id of object to fetch
@@ -72,6 +80,7 @@ public:
         ++counter; 
 
         objects.emplace_back( std::move(obj) );
+        return objects.back().id; 
     }
 
     /// @brief Check if matching object exists in list 
@@ -81,17 +90,34 @@ public:
         auto it = std::find_if(this->begin(), this->end(), [&obj](const T& rhs){ return obj.id == rhs.id; }); 
         return (it != this->end()); 
     }
-    
+
+    /// @brief Removes all elements which satisfy a user-supplied predicate 
+    /// @tparam F Predicate expression 
+    /// @param predicate The predicate expresion. must accept 'const T&' as argument, and return bool. removes all elements which evaluate 'predicate(elem)==true'. 
+    /// @return number of elements removed. 
+    template<typename F> 
+        requires BoolPredicate<F,T>  // <- see comment on def. of this concept above to see what conditions it imposes. 
+    std::size_t remove_if(F&& predicate) {
+
+        std::size_t size_before = this->size(); 
+        
+        // this shifts all elements which evaluate 'predicate()==false' to the front, and moves all elements for which 
+        // 'predicate()==true' to the front. return a new iterator pointing to the end of the range of elements for which
+        // 'predicate()==false' (end of all kept elements)
+        auto new_end = std::remove_if(this->begin(), this->end(), std::forward<F>(predicate)); 
+
+        objects.erase(new_end, this->end()); 
+
+        return size_before - this->size(); 
+    }
+
+
     /// @brief Erase matching object from list, if it exists. 
     /// @param obj instance to erase
     /// @return 'true' if a matching item was removed, 'false' otherwise
     bool remove_item(const T& obj) {
-        std::size_t before = this->size(); 
-        objects.erase(
-            std::remove_if(this->begin(), this->end(), [](const T& rhs){ obj.id == rhs.id; }), 
-            objects.end()
-        );
-        return (before != this->size()); 
+        std::size_t n_removed = remove_if([&obj](const T& rhs){ return obj.id == rhs.id; }); 
+        return n_removed > 0; 
     }
 }; 
 

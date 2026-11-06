@@ -3,11 +3,16 @@
 
 #include <cstddef>
 #include <limits> 
+#include <vector> 
+#include <map> 
+#include <concepts>
+#include <cstddef> 
+
 
 namespace APEX
 {
 
-class S2Event; 
+template<typename T> class ObjCollection; 
 
 /// @brief This is a 'smart pointer', which let's analysis objects have reference to each other within the same S2 event 
 /// @tparam T 
@@ -15,7 +20,7 @@ template<typename T> class ObjRef {
 private: 
 
     // S2Event can handle the internal data from an ObjRef. 
-    friend class S2Event; 
+    friend class ObjCollection<T>; 
 
     // this maximum possible value for an object's position will be used as the null value
     static constexpr std::size_t maxpos = std::numeric_limits<std::size_t>::max(); 

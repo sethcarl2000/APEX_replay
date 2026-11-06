@@ -16,7 +16,7 @@ template<VDC::Chamber C> class ChamberPair {
 private: 
 
   friend class ObjCollection<ChamberPair<C>>; 
-  unique_id id{0}; 
+  object_id id{0}; 
 
   using ClustU = HitCluster<VDC::get_U<C>()>; 
   using ClustV = HitCluster<VDC::get_V<C>()>; 
@@ -47,15 +47,24 @@ public:
     fClust_V.SetIntercept(u); 
     fClust_U.SetIntercept(v); 
   };
+
+  ClustU& GetCluster_U() { return fClust_U; }
+  ClustV& GetCluster_V() { return fClust_V; }
+
+  const ClustU& GetCluster_U() const { return fClust_U; }
+  const ClustV& GetCluster_V() const { return fClust_V; }
   
   bool Is_loChamber() const { return VDC::is_loChamber<C>(); }
 
   bool Is_RHRS() const { return fClust_U.Is_RHRS(); }
   
   // Get unique ID
-  unique_id ID() const { return id; }
+  object_id ID() const { return id; }
   bool operator==(const ChamberPair<C>& rhs) const { return rhs.id == id; }
 };
+// explicit instantiations 
+template class ChamberPair<Chamber::Low>; 
+template class ChamberPair<Chamber::High>; 
 
 }; 
 } 

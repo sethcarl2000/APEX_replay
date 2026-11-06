@@ -30,9 +30,9 @@ void compute_trackdata(VDC::Track &trk)
     const double CUT_goodPoint = 15.*units::ns; 
     const double measure_sigma = run_parameters::TRK_measureSigma; 
 
-    for (int p=0; p<4; p++) { 
+    VDC::for_each_plane([&]<VDC::Plane P>(){ 
         
-        auto group = trk.GetGroup(p); 
+        auto& group = trk.GetGroup<P>(); 
         
         double eta(0.); 
         double RMS(0.); 
@@ -42,16 +42,16 @@ void compute_trackdata(VDC::Track &trk)
         cout << TString::Format("plane %2i ", p);   
 #endif 
         
-        for (int h=0; h<group->Nhits(); h++) { 
+        for (int h=0; h<group.Nhits(); h++) { 
 
-            double err = std::fabs( trk.Get_T_model(p,group->WirePos(h)) + trk.T0() - group->Time(h) ); 
+            double err = std::fabs( trk.Get_T_model<P>(group.WirePos(h)) + trk.T0() - group.Time(h) ); 
 
             if (err > CUT_goodPoint) continue; 
 
             //now, lets use this point (it's good, according to our cut)
             nGoodPoints++; 
 
-            eta += TMath::Exp( -0.5*TMath::Power(err/measure_sigma, 2) ); 
+            eta += std::exp( -0.5*utils::intpow<2>(err/measure_sigma) ); 
 #if DEBUG 
             printf("h:%3i  wp=%3.3f t-T=%3.3f t-T0=%3.3f g-Time=%3.3f err=%3.3f",
                     h, 
@@ -71,17 +71,11 @@ void compute_trackdata(VDC::Track &trk)
         else            { cout << "Eta= NaN !!!!!!!!!!!!!!!!!!!!!!!" << endl; } 
 #endif 
         
-        trk.Set_Eta( p, eta ); 
+        trk.SetEta<P>( eta ); 
         
-        trk.Set_nGoodPoints( p, nGoodPoints ); 
+        trk.Set_nGoodPoints<P>( nGoodPoints ); 
         
-        if (nGoodPoints > 0) { 
-
-            trk.Set_RMS( p, TMath::Sqrt( RMS/((double)nGoodPoints) ) ); 
-
-        } else { trk.Set_RMS( p, -1e30 ); }
-        
-    }//for (int p=0; p<4; p++) 
+    });//for (int p=0; p<4; p++) 
 
     return;  
 };

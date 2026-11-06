@@ -44,10 +44,71 @@ double S2Event::S2Time() const
     }
 }
 //_________________________________________________________________________________________________________
+double S2Event::Drift_T(double x, double slope, int derivative) const 
+{
+    return fEventHandler->Drift_T(x,slope,derivative); 
+}
+/*
+//_________________________________________________________________________________________________________
+VDC::HitGroup& S2Event::get(int plane, ObjRef<VDC::HitGroup> ref)
+{
+    if (plane<0 || plane>=VDC::kN_planes)
+      throw std::out_of_range("in <"+std::string{__func__}+"> VDC plane index '"+std::to_string(plane)+"' out-of-range");
+
+    auto& my_map = fHitGroups[plane]; 
+    auto itor = my_map.find(ref); 
+
+    if (itor == fHitGroups[plane].end()) {
+        throw std::out_of_range(
+            "in <S2Event::"+std::string{__func__}+">: Ref to hit group is invalid."
+        ); 
+    }
+    return itor->second; 
+}
+//_________________________________________________________________________________________________________
+VDC::HitCluster& S2Event::get(int plane, ObjRef<VDC::HitCluster> ref)
+{
+    if (plane<0 || plane>=VDC::kN_planes)
+      throw std::out_of_range("in <"+std::string{__func__}+"> VDC plane index '"+std::to_string(plane)+"' out-of-range"); 
+    
+    auto& my_map = fHitClusters[plane]; 
+    auto itor = my_map.find(ref); 
+
+    if (itor == my_map.end()) {
+        throw std::out_of_range(
+            "in <S2Event::"+std::string{__func__}+">: Ref to hit cluster is invalid."
+        ); 
+    }
+    return itor->second; 
+}
+//_________________________________________________________________________________________________________
+VDC::ChamberPair& S2Event::get(bool is_loChamber, ObjRef<VDC::ChamberPair> ref)
+{
+    auto& my_map = is_loChamber ? fChamberPairs_lo : fChamberPairs_hi;  
+    auto itor = my_map.find(ref); 
+
+    if (itor == my_map.end()) {
+        throw std::out_of_range(
+            "in <S2Event::"+std::string{__func__}+">: Ref to hit cluster is invalid."
+        ); 
+    }
+    return itor->second; 
+}
+//_________________________________________________________________________________________________________
+VDC::Track& S2Event::get(ObjRef<VDC::Track> ref)
+{
+    auto& my_map = fTracks; 
+    auto itor = my_map.find(ref); 
+
+    if (itor == my_map.end()) {
+        throw std::out_of_range(
+            "in <S2Event::"+std::string{__func__}+">: Ref to hit cluster is invalid."
+        ); 
+    }
+    return itor->second; 
+}
 //_________________________________________________________________________________________________________
 //_________________________________________________________________________________________________________
-//_________________________________________________________________________________________________________
-//_________________________________________________________________________________________________________
-//_________________________________________________________________________________________________________
+*/ 
 
 }

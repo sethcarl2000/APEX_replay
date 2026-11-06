@@ -2,6 +2,7 @@
 #define APEX_VDC_Track_H 
 
 // APEX headers 
+#include <APEX/ObjCollection.h> 
 #include <APEX/Cerenkov.h>
 #include <APEX/VDC.h> 
 #include <APEX/VDC/ChamberPair.h> 
@@ -10,307 +11,308 @@
 #include <TVector3.h>
 // stdlib
 #include <cmath> 
+#include <stdexcept> 
+#include <span> 
+#include <algorithm>
+#include <array> 
+#include <numeric> 
 
 namespace APEX 
 {
+class S2Event; 
+
 namespace VDC
 {
     
 class Track { 
-  
- public: 
+private: 
+
+  // we need to friend this so the 'id' field is accessible 
+  friend class ObjCollection<Track>; 
+
+  ChamberPair<Chamber::Low>  fPair_lo; //lower chamber pair
+  ChamberPair<Chamber::High> fPair_hi; //upper chamber pair 
+
+  const S2Event* fS2Event{nullptr}; // S2Event 
+
+  double fT0; // time offset rel. to S2 time 
+
+  // errors for each intercept / time. the inidces are: 
+  /// [0] <= error of U1 intercept
+  /// [1] <= error of V1 intercept
+  /// [2] <= error of U2 intercept
+  /// [3] <= error of V2 intercept
+  /// [4] <= error of T0 (time shift rel. to S2 hit)
+  std::array<double, VDC::kN_planes + 1> fErrors; 
+
+  std::array<int, VDC::kN_planes> fN_goodpoints_per_plane; 
+
+  /// @brief Any time an intercept / timing offset is shifted, we have to nullify the meta-data (like n. goodpoints and errors)
+  void InvalidateData(); 
+
+public: 
   // This is the track object, which handles self-refinement, 
   // as well as acting as a container for its constituent points. 
   Track( 
-    const EventHandler *event=nullptr, 
-    ChamberPair *pLo=0, 
-    ChamberPair *pHi=0,
-    int unique_id=-1
+    const S2Event* event,
+    const ChamberPair<Chamber::Low>&  pair_low, 
+    const ChamberPair<Chamber::High>& pair_hi
   ); 
   
-  inline ~Track() {
-    //cout << "Track:: deleting track..."<<endl; 
-    
-    //if (fPair_Lo) fPair_Lo->Remove_track(GetID()); 
-    //if (fPair_Hi) fPair_Hi->Remove_track(GetID()); 
-  }; //noop
+  /// @brief Get chamber pair 
+  /// @tparam C VDC Chamber 
+  /// @return the ChamberPair<C> this track owns
+  template<Chamber C> ChamberPair<C>& GetPair() {
+    if constexpr (VDC::is_loChamber<C>()) { return fPair_lo; } else { return fPair_hi; }
+  }
+
+  /// @brief Get chamber pair (const)
+  /// @tparam C VDC Chamber 
+  /// @return the ChamberPair<C> this track owns
+  template<Chamber C> const ChamberPair<C>& GetPair() const {
+    if constexpr (VDC::is_loChamber<C>()) { return fPair_lo; } else { return fPair_hi; }
+  }
   
-  void SetPair_Hi( ChamberPair *pHi );  
-  void SetPair_Lo( ChamberPair *pLo );  
+  ChamberPair<Chamber::Low>&  GetPair_Lo() { return GetPair<Chamber::Low>(); }
+  ChamberPair<Chamber::High>& GetPair_Hi() { return GetPair<Chamber::High>(); }
+
+  const ChamberPair<Chamber::Low>&  GetPair_Lo() const { return GetPair<Chamber::Low>(); }
+  const ChamberPair<Chamber::High>& GetPair_Hi() const { return GetPair<Chamber::High>(); }
   
-  inline ChamberPair* GetPair_Hi() { return fPair_Hi; }
-  inline ChamberPair* GetPair_Lo() { return fPair_Lo; }
+  void SetEvent(const S2Event* ptr) { fS2Event=ptr; }
+  const S2Event* GetEvent() const { return fS2Event; }
+
+  bool Is_RHRS() const; 
   
-  inline void SetEvent( EventHandler *evt ) { fEvent=evt; }
-  inline const EventHandler *GetEvent() const { return fEvent; }
+  /// @brief Set u & v intercept for Low/Hi-chamber. Recall that the 'U' plane determines the 'v' intercept; and the 'V' planes determines the 'u' intercept. 
+  /// @tparam C VDC Chamber
+  /// @param u u-intercept
+  /// @param v v-intercept
+  template<Chamber C> void Set_uv(double u, double v) {
+    GetPair<C>().Set_uv(u,v); 
+    InvalidateData(); 
+  }
   
-  inline bool IsRightArm() const { return f_isRightArm; }
+  /// @brief Set u & v intercept for Low-chamber. Recall that the 'U' plane determines the 'v' intercept; and the 'V' planes determines the 'u' intercept. 
+  /// @param u u-intercept
+  /// @param v v-intercept
+  void Set_uv_Lo(double u, double v) { Set_uv<Chamber::Low>(u,v); }
+
+  /// @brief Set u & v intercept for High-chamber. Recall that the 'U' plane determines the 'v' intercept; and the 'V' planes determines the 'u' intercept. 
+  /// @param u u-intercept
+  /// @param v v-intercept
+  void Set_uv_Hi(double u, double v) { Set_uv<Chamber::High>(u,v); } 
   
-  void Set_uv_Hi( const double u, const double v ); 
-  
-  void Set_uv_Lo( const double u, const double v );
-  
-  inline double T0() const { return fT0; }
-  inline void   Set_T0(const double T0) { fT0=T0; }
-  
+  double T0() const { return fT0; }
+  void   Set_T0(const double T0) { fT0=T0; InvalidateData(); }
     
   //returns the agreement of this hit with the S2-paddle
   double xParam() const; 
   
-  
   //adjust the params by this amount
-  void Nudge_params( double nudge[5] ); 
-  
-  void Set_params( const double vLo, 
-		   const double uLo,
-		   const double vHi, 
-		   const double uHi, 
-		   const double T0 ); 
-  
-  void Set_params( const double params[5] ); 
-  
-  inline APEX::VDC::HitGroup *GetGroup(int plane) { return fGroup[plane]; }
-    
-  double Slope_u(); 
-  double Slope_v(); 
-  
-  //per-plane operations
-  void   Set_intercept(int plane, double x); 
-  double Intercept(int plane)       const;
+  void Nudge_params(std::span<const double, VDC::kN_planes + 1> nudge); 
 
-  //this is for monte-carlo processing, and it avoids needing actual hit data
-  void Set_S2int_angles( const double s2x, 
-			 const double s2y, 
-			 const double theta, 
-			 const double phi ); 
+  /// @brief This track's hit-cluster corresponding to VDC Plane P
+  /// @tparam P VDC Plane
+  /// @return Ref. to Hit Cluster
+  template<Plane P> VDC::HitCluster<P>& GetCluster() {
+    static constexpr Chamber Ch = VDC::get_Chamber<P>(); 
+    auto& pair = GetPair<Ch>(); 
+    if constexpr (P == VDC::get_U<Ch>()) { return pair.GetCluster_U(); } else { return pair.GetCluster_V(); }
+  }
+
+  /// @brief This track's hit-cluster corresponding to VDC Plane P
+  /// @tparam P VDC Plane
+  /// @return Ref. to Hit Cluster
+  template<Plane P> const VDC::HitCluster<P>& GetCluster() const {
+    static constexpr Chamber Ch = VDC::get_Chamber<P>(); 
+    auto& pair = GetPair<Ch>(); 
+    if constexpr (P == VDC::get_U<Ch>()) { return pair.GetCluster_U(); } else { return pair.GetCluster_V(); }
+  }
+
+  /// @brief This track's hit-group corresponding to VDC Plane P
+  /// @tparam P VDC Plane
+  /// @return Ref. to Hit Group
+  template<Plane P> VDC::HitGroup<P>& GetGroup() { 
+    return GetCluster<P>().GetGroup(); 
+  }
+
+  /// @brief This track's hit-group corresponding to VDC Plane P
+  /// @tparam P VDC Plane
+  /// @return Ref. to Hit Group
+  template<Plane P> const VDC::HitGroup<P>& GetGroup() const { 
+    return GetCluster<P>().GetGroup(); 
+  }
+
+  /// @return this track's (dw/du) slope in the VDC's UVW coordinates 
+  double Slope_u() const {
+    const auto& clust_V1 = GetCluster<Plane::V1>(); 
+    const auto& clust_V2 = GetCluster<Plane::V2>(); 
+    double w_sep = VDC::w<Plane::V2>(Is_RHRS()) - VDC::w<Plane::V1>(Is_RHRS()); 
+    return w_sep/(clust_V2.GetIntercept() - clust_V1.GetIntercept()); 
+  }; 
+
+  /// @return this track's (dw/dv) slope in the VDC's UVW coordinates 
+  double Slope_v() const {
+    const auto& clust_U1 = GetCluster<Plane::U1>(); 
+    const auto& clust_U2 = GetCluster<Plane::U2>(); 
+    double w_sep = VDC::w<Plane::U2>(Is_RHRS()) - VDC::w<Plane::U1>(Is_RHRS()); 
+    return w_sep/(clust_U2.GetIntercept() - clust_U1.GetIntercept()); 
+  }; 
+
+  /// @brief Get VDC slope (dw/du or dw/dv) for Plane P 
+  /// @tparam P VDC Plane
+  /// @return slope (dw/du or dw/dv)
+  template<Plane P> double Slope() const {
+    if constexpr ((P == Plane::U1) || (P == Plane::U2)) { return Slope_v(); } else { return Slope_u(); }
+  }
+   
+  /// @tparam P VDC Plane 
+  /// @return Track intercept, in VDC UVW coords  
+  template<Plane P> double GetIntercept() const { return GetCluster<P>().GetIntercept(); } 
+   
+  /// @tparam P VDC Plane 
+  /// @return Track intercept, in VDC UVW coords  
+  template<Plane P> void SetIntercept(double x) { return GetCluster<P>().SetIntercept(x); } 
+
+  /// @brief Set 'Eta'
+  /// @tparam P VDC Plane  
+  template<Plane P> void SetEta(double eta) { GetCluster<P>().SetEta(eta); }
+
+  /// @brief Set 'Eta' for each plane
+  void SetEta(std::span<const double,VDC::kN_planes> _data) { 
+    VDC::for_each_plane([_data,this]<VDC::Plane P>(){
+      SetEta<P>( _data[VDC::number<P>()] );
+    });
+  }
+
+  /// @tparam P VDC Plane 
+  /// @return 'Eta' 
+  template<Plane P> double GetEta() const { return GetCluster<P>().GetEta(); }
+
+  /// @return Sum of 'Eta' for all planes 
+  double GetEta() const { 
+    double sum=0.; 
+    VDC::for_each_plane([&sum,this]<VDC::Plane P>(){
+      sum += GetCluster<P>().GetEta(); 
+    }); 
+    return sum; 
+  }
+
+  /// @brief Set errors for each VDC plane intercept + timing offset
+  void SetErrors(std::span<const double, VDC::kN_planes+1> _err) { std::ranges::copy(_err, fErrors.begin()); } 
+
+  /// @brief Get intercept error est. for given VDC plane
+  /// @tparam P VDC Plane
+  /// @return Est. of intercept RMS
+  template<Plane P> double GetInterceptError() const {
+    return fErrors[VDC::number<P>()]; 
+  }
+
+  /// @return Est. of T0 RMS
+  double GetT0Error() const {
+    return fErrors.back(); 
+  }
+
+  /// @brief Set the number of goodpoints for a given plane
+  /// @tparam P VDC Plane 
+  /// @param n_goodpoints n. of 'goodpoints' 
+  template<Plane P> void Set_nGoodPoints(int n_goodpoints) {
+    fN_goodpoints_per_plane[VDC::number<P>()] = n_goodpoints; 
+  }
+
+  /// @brief Get the number of goodpoints for a given plane
+  /// @tparam P VDC Plane 
+  /// @param n_goodpoints Number of 'goodpoints'
+  template<Plane P> int Get_nGoodPoints() const {
+    return fN_goodpoints_per_plane[VDC::number<P>()];
+  }
+
+  /// @return Number of 'goodpoints' across all 4 planes
+  int Get_nGoodPoints() const {
+    return std::accumulate(fN_goodpoints_per_plane.begin(), fN_goodpoints_per_plane.end(), 0); 
+  }
   
-  int    Nhits(int plane)           const;
+  template<Plane P> double Tau(int h)       const { return GetGroup<P>().Time(h); } 
+  template<Plane P> double WirePos(int h)   const { return GetGroup<P>().WirePos(h); } 
   
-  double Tau(int plane, int h)      const; 
-  double WirePos(int plane, int h)  const; 
-  double Slope(int plane)           const; 
+  static TVector3 Rotate_uvw_to_xyz( const TVector3& vec ); 
+  static TVector3 Rotate_xyz_to_uvw( const TVector3& vec ); 
   
-  double Get_T_model(int plane, double x, int derivative=0) const; 
+  TVector3 ComputeIntercept_w(const double w) const; 
   
-  double ToF(int plane, double x)   const; 
+  TVector3 ComputeIntercept_z(const double z) const;   
+
+  /// @return The 3-vector position of this track's intercept with the S2 plane. 
+  TVector3 Get_S2_intercept() const; 
+
+  /// @brief Compute the time-of-fligth between a certain VDC coordinate (v-pos or u-pos), and this track's intercept with the S2 plane. 
+  /// @tparam P VDC plane 
+  /// @param pos position in VDC-coordinates
+  /// @return time-of-flight between this track's intercept with the S2-plane, and a plane defined by a given VDC coordinate
+  template<Plane P> double ToF(double pos) const; 
+
+  template<Plane P> double Get_T_model(double x, int derivative=0) const; 
   
-  void UpdateTrackInfo();
-    
   //overall track parameters (in focal-plane coordinates)
-  double FP_x()     const; 
-  double FP_y()     const; 
-  double FP_dx_dz() const;
-  double FP_dy_dz() const; 
+  double Transport_x()     const { return ComputeIntercept_z(0.).X(); }
+  double Transport_y()     const { return ComputeIntercept_z(0.).Y(); } 
+  double Transport_dx_dz() const {
+    auto S = Track::Rotate_uvw_to_xyz(TVector3(1./Slope_u(), 1./Slope_v(), 1.)); 
+    return S.x() / S.z(); 
+  };
+  double Transport_dy_dz() const {
+    auto S = Track::Rotate_uvw_to_xyz(TVector3(1./Slope_u(), 1./Slope_v(), 1.)); 
+    return S.y() / S.z(); 
+  };
 
+  double Theta()  const { return Transport_dx_dz(); }
+  double Phi()    const { return Transport_dy_dz(); } 
+
+  //overall track parameters (in focal-plane coordinates)
+  double FP_x()     const { return Transport_x(); }
+  double FP_y()     const { return Transport_y(); } 
+  double FP_dx_dz() const { return Transport_dx_dz() - Transport_x()/6.; }
+  double FP_dy_dz() const { return Transport_dy_dz(); }
 
 private:
   std::size_t fS2_id; 
 public: 
   void Set_S2_id(std::size_t id) { fS2_id=id; }
   std::size_t Get_S2_id() const { return fS2_id; }
-
-  //optics data ~~~~~~~~~~~~~~~~~~~~~~~~~~ (Computation handled by THRS class)
-  //track target coordinates ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-  //placeholder functions 
-  inline double Transport_x() const { return FP_x(); } 
-  inline double Transport_y() const { return FP_y(); } 
-  inline double dx_dz()       const { return std::tan(Theta()); } 
-  inline double dy_dz()       const { return std::tan(Phi()); } 
+  
     
-  inline void Set_targetCoords( const double tg_y, 
-			 const double tg_theta, 
-			 const double tg_phi, 
-			 const double tg_dp ) 
-  { f_tg_y     =tg_y;
-    f_tg_theta =tg_theta; 
-    f_tg_phi   =tg_phi; 
-    f_tg_dp    =tg_dp; } 
-  
-  //all angles in radians 
-  inline double Get_tg_y()     const { return f_tg_y; } 
-  inline double Get_tg_theta() const { return f_tg_theta; } 
-  inline double Get_tg_phi()   const { return f_tg_phi; } 
-  
-  
-  //track fp coordinates ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-  inline void Set_focalPlaneCoords( 
-    const double fp_y, 
-    const double fp_theta, 
-    const double fp_phi ) 
-  { f_fp_y     =fp_y;
-    f_fp_theta =fp_theta; 
-    f_fp_phi   =fp_phi; } 
-  
-  //all angles in radians 
-  inline double Get_fp_y()     const { return f_fp_y; } 
-  inline double Get_fp_theta() const { return f_fp_theta; } 
-  inline double Get_fp_phi()   const { return f_fp_phi; } 
-    
-  
-  double GetTimeAtZ(const double z) const; 
-  
-  
   /// @return X-intercept of this track with the S2 plane, TRANSPORT coordinates
-  double S2_x()  const; 
+  double S2_x()  const { return Get_S2_intercept().X(); }
   /// @return Y-intercept of this track with the S2 plane, TRANSPORT coordinates
-  double S2_y()  const; 
+  double S2_y()  const { return Get_S2_intercept().Y(); } 
   /// @return time of this track's arrival at the S2 plane. 
   double S2_t()  const { return fT0; }
 
 
   /// @return X-intercept of this track with the Cerenkov plane, TRANSPORT coordinates
   double Cerenkov_x() const {
-    return ComputeIntercept_z(Cerenkov::Z(f_isRightArm)).x(); 
+    return ComputeIntercept_z(Cerenkov::Z(Is_RHRS())).X(); 
   }; 
   /// @return Y-intercept of this track with the Cerenkov plane, TRANSPORT coordinates
   double Cerenkov_y() const {
-    return ComputeIntercept_z(Cerenkov::Z(f_isRightArm)).y(); 
-  }; 
-  /// @return time-of-intercept of this track with the Cerenkov plane
+    return ComputeIntercept_z(Cerenkov::Z(Is_RHRS())).Y(); 
+  };  
+  /// @return time-of-intercept of this track with the Cerenkov plane (rel. to S2 hit)
   double Cerenkov_t() const {
 
     double dist_to_S2 = 
-      (f_S2Int_xyz - ComputeIntercept_z(Cerenkov::Z(f_isRightArm))).Mag(); 
+      (Get_S2_intercept() - ComputeIntercept_z(Cerenkov::Z(Is_RHRS()))).Mag(); 
 
     return fT0 - (dist_to_S2/units::speed_of_light_vacuum); 
   }; 
 
-  
-  double Theta() const; 
-  double Phi()   const; 
-  
-  //set/get track errors. 
-  void Set_Errors( double errors[5] ); 
-  
-  inline double Error_intercept(int plane) const { return fIntercept_ERR[plane]; }
-  inline double Error_T0()                 const { return fT0_ERR; }
-  
-  //a general figure which is a stand-in for the error of all track intercepts
-  double Error_allIntercept()       const; 
-    
-  
-  inline double Error_Theta()              const { return fTheta_ERR; }
-  inline double Error_Phi()                const { return fPhi_ERR; }
-  
-  
-  //
-  inline void Set_goodPointGroup( int plane, APEX::VDC::HitGroup *goodPointGroup ) {
-    f_goodPointGroup[plane] = goodPointGroup; 
-  }
-  
-  inline APEX::VDC::HitGroup *Get_goodPointGroup( int plane ) { 
-    return f_goodPointGroup[plane]; 
-  }
-  
-  inline void   Set_Eta(int plane, double eta) { fPlane_Eta[plane]=eta; }
-  void   Set_Eta(double eta[4]); 
-  inline double Get_Eta(int plane) const       { return fPlane_Eta[plane]; }
-  double Get_Eta()          const; //for all planes
-  
-  inline void   Set_RMS(int plane, double RMS) { fPlane_RMS[plane]=RMS; }
-  inline double Get_RMS(int plane) const       { return fPlane_RMS[plane]; }
-  double Get_RMS()          const; //for all planes
-  
-  inline void Set_nGoodPoints(int plane, int pts) { fPlane_goodPoints[plane]=pts; }
-  inline int  Get_nGoodPoints(int plane) const    { return fPlane_goodPoints[plane]; }
-  int  Get_nGoodPoints()          const; //for all planes
-    
-  
-  //this flag is used for monte-carlo testing
-  inline void Set_isGoodTrack(bool isGood) { f_isGoodTrack =isGood; } 
-  inline bool IsGoodTrack() const { return f_isGoodTrack; }
-    
-  static TVector3 Rotate_uvw_to_xyz( const TVector3& vec ); 
-  static TVector3 Rotate_xyz_to_uvw( const TVector3& vec ); 
-  
-  static void Compute_Theta_Phi( const bool arm, 
-				 const double intercepts[4], 
-				 double &Theta, 
-				 double &Phi ); 
-    
-  enum ECoordType { kDetector=0, kTransport, kFocalPlane };  
 
-  TVector3 ComputeIntercept_w(const double w) const; 
-  
-  TVector3 ComputeIntercept_z(const double z) const;   
-
-  //use the uniqueness of each track's memory address to define a unique instance of a track
-  inline bool operator==(const APEX::VDC::Track& rhs) { return (this)==(&rhs); }
-  
-  /// @return unique ID of this track 
-  int GetID() const { return fID; }
-
-  inline bool operator==(const Track& rhs) const { return (rhs.IsRightArm()==IsRightArm()) && (rhs.GetID()==GetID()); }
-
- private: 
-  const EventHandler *fEvent;
-  bool f_isRightArm; 
-    
-  //unique id assigned to this track. 
-  int fID; 
-
-  //does this track have associated hits/hitgroups? if not make sure we don't try 
-  // to access them. 
-  bool f_hasVDCdata; 
-  
-  ChamberPair *fPair_Hi; 
-  ChamberPair *fPair_Lo; 
-
-  /// VDC plane w-coordinate (normal-up from vdc plane) (m)
-  const double* fW; 
-  double fIntercept[4]; 
-  
-  double fPlane_RMS[4]; //per-plane RMS
-  double fPlane_Eta[4]; //per-plane Eta
-  int    fPlane_goodPoints[4]; 
-    
-  double fTheta;
-  double fPhi; 
-  
-  //errors
-  double fIntercept_ERR[4] = {-1e30}; 
-  double fT0_ERR    =-1e30; 
-  
-  
-  double fTheta_ERR =-1e30;
-  double fPhi_ERR   =-1e30; 
-  
-  TVector2 f_FPInt_xy_ERR = TVector2(-1e30,-1e30); 
-  
-  TVector3 f_S2Int_xyz;   //intercept with S2-plane
-  TVector3 f_FPInt_xyz;   //intercept with focal plane (defined by z=0)
-  
-  double fEta; 
-  
-  //target & fp coordinates
-  double f_fp_y;     //focal-plane coords
-  double f_fp_theta; 
-  double f_fp_phi; 
-  
-  double f_tg_y;     //target coords
-  double f_tg_theta;
-  double f_tg_phi; 
-  double f_tg_dp; 
-    
-  
-  //intercepts with the S2, in u-v coords
-  double fS2_u, fS2_v; 
-
-  //track speed (direction) in 
-  double fC_u, fC_v; 
-  
-  double fT0=0.; 
-  
-  APEX::VDC::HitGroup *fGroup[4]; 
-  
-  //this tracks the 'good points' which agree well enough with the final track
-  APEX::VDC::HitGroup *f_goodPointGroup[4]; 
-  
-  double fSlope_u; 
-  double fSlope_v; 
-  
-  bool f_isGoodTrack;  
-  
+private: 
+  object_id id;
+public: 
+  object_id ID() const { return id; }
+  bool operator==(const Track& rhs) const { return this->id == rhs.id; }
 }; 
 
 }

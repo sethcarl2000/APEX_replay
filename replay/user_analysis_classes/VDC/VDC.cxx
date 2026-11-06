@@ -31,6 +31,8 @@ namespace VDC
 {
 //_______________________________________________________________________________________________________________________
 
+// chamber classes
+
 //functions accesible globally from the APEX/VDC namespace 
 double RealTime( const bool is_RHRS, 
                 const int plane, 

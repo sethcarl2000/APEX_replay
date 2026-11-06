@@ -26,6 +26,21 @@
 namespace APEX 
 {
 
+// concept where type must be one of the analysis classes
+template<typename T> concept AnaClass = 
+  std::same_as<T, VDC::HitGroup<VDC::Plane::U1>> || // VDC Hit Groups 
+  std::same_as<T, VDC::HitGroup<VDC::Plane::V1>> || 
+  std::same_as<T, VDC::HitGroup<VDC::Plane::U2>> || 
+  std::same_as<T, VDC::HitGroup<VDC::Plane::V2>> || 
+  std::same_as<T, VDC::HitCluster<VDC::Plane::U1>> || // VDC Hit Clusters
+  std::same_as<T, VDC::HitCluster<VDC::Plane::V1>> || 
+  std::same_as<T, VDC::HitCluster<VDC::Plane::U2>> || 
+  std::same_as<T, VDC::HitCluster<VDC::Plane::V2>> || 
+  std::same_as<T, VDC::ChamberPair<VDC::Chamber::Low>>  || // VDC Chamber Pairs
+  std::same_as<T, VDC::ChamberPair<VDC::Chamber::High>> || 
+  std::same_as<T, VDC::Track>; // VDC Track
+  
+
 /// @brief This class is a S2-centered event; all analysis processes (from raw data to track reconstruction) proceed around a single S2 hit (or twin hit.)
 class S2Event { 
 private: 
@@ -73,13 +88,13 @@ public:
   /// @brief Return size of current event's collection of a given type 
   /// @tparam T Type of object 
   /// @return size in current collection 
-  template<typename T> std::size_t size() noexcept {
+  template<AnaClass T> std::size_t size() const noexcept {
     return std::get<ObjCollection<T>>( fObjects ).size(); 
   }
 
   /// @tparam T Type of object 
   /// @return 'true' if current collection of that object type is empty, 'false' otherwise 
-  template<typename T> bool empty() noexcept {
+  template<AnaClass T> bool empty() const noexcept {
     return this->size<T>() < 1; 
   }
 
@@ -87,7 +102,7 @@ public:
   /// @tparam T Type of object
   /// @param Args&&...args constructor arguments
   /// @return size of collection, after new object added
-  template<typename T, typename... Args> std::size_t emplace(Args&&... args) {
+  template<AnaClass T, typename... Args> std::size_t emplace(Args&&... args) {
     auto& collection = std::get<ObjCollection<T>>( fObjects ); 
     return collection.emplace(std::forward<Args>(args)...); 
     return this->size<T>(); 
@@ -96,13 +111,29 @@ public:
   /// @brief Get collection of all objects of given type
   /// @tparam T type of object to fetch 
   /// @return ObjCollection<T> of all objects currently in event 
-  template<typename T> const ObjCollection<T>& GetCollection() const {
+  template<AnaClass T> const ObjCollection<T>& GetCollection() const {
     return std::get<ObjCollection<T>>(fObjects); 
+  }
+
+  /// @brief Get collection of all objects of given type
+  /// @tparam T type of object to fetch 
+  /// @return ObjCollection<T> of all objects currently in event 
+  template<AnaClass T> ObjCollection<T>& GetCollection() {
+    return std::get<ObjCollection<T>>(fObjects); 
+  }
+
+  /// @brief Try to remove object with same ID as 'item'
+  /// @tparam T Type of object
+  /// @param item intsance 
+  /// @return 'true' if an item is removed, 'false' otherwise 
+  template<AnaClass T> bool remove_object(T& item) {
+    auto& collection = std::get<ObjCollection<T>>( fObjects ); 
+    return collection.remove_item(item); 
   }
 
   /// @brief Item collection with certain ID 
   /// @return 
-  template<typename T> T& get(std::size_t id) {
+  template<AnaClass T> T& get(std::size_t id) {
     auto& collection = std::get<ObjCollection<T>>(fObjects); 
     auto find_it = collection.get(id); 
     if (find_it == collection.end()) {
@@ -121,10 +152,13 @@ public:
   //get the timing of this S2 event. 
   double S2Time() const; 
 
+  void SetID(std::size_t _id) { id=_id; }
   /// @return unique ID of this event. unique among all events _for this arm_ but _not_ between arms (i.e, both arms will have an event with 'id = 0')
   std::size_t GetID() const { return id; }
 
   EventHandler& GetEventHandler() { return *fEventHandler.get(); } 
+
+  double Get_tauSigma() const { return fEventHandler->Get_tauSigma(); } 
 
   bool Is_RHRS() const { return fis_RHRS; }
 

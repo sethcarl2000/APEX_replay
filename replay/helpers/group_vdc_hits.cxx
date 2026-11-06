@@ -23,18 +23,19 @@ namespace helpers
 //#define DEBUG_GROUP
 
 /// @brief Form 'VDC::HitGroup's from groups of VDC hits
-/// @param evt Apex event handler
-/// @param p the VDC plane in question, [0,..,3].
-/// @param h_rawtime a collection of all VDC wire rawtimes 
+/// @param event Apex S2-event handler
+/// @param plane the VDC plane in question, [0,..,3].
 /// @param h_wire a collection of all VDC wire numbers
+/// @param h_rawtime a collection of all VDC wire rawtimes 
 /// @return a vector of all valid VDC hit groups  
-ROOT::RVec<VDC::HitGroup> group_vdc_hits ( 
-                                            const EventHandler& evt, 
-                                            int   plane, 
-                                            const ROOT::RVec<double>& wire,
-                                            const ROOT::RVec<double>& rawtime 
-                                          ) 
+template<VDC::Plane P> void group_vdc_hits( 
+  S2Event& evt, 
+  const ROOT::RVec<double>& wire,
+  const ROOT::RVec<double>& rawtime 
+) 
 {
+  constexpr int plane = VDC::number<P>(); 
+
 #ifdef DEBUG_GROUP
     const std::string plane_names[] = {"u1", "v1", "u2", "v2"}; 
     printf(
@@ -42,22 +43,23 @@ ROOT::RVec<VDC::HitGroup> group_vdc_hits (
       __func__, (evt.ActiveArm() ? "RHRS" : "LHRS"), plane_names[plane].c_str() 
     );
 #endif        
-  //return no groups if there aren't enough hits to make any 
-  if (rawtime.size() < run_parameters::kGroup_min_hits) return {};
 
-  const bool is_RHRS = evt.ActiveArm();  
-  const double t_S2 = evt.GetS2Hit(is_RHRS)->Time(); 
+  //return no groups if there aren't enough hits to make any 
+  if (rawtime.size() < run_parameters::kGroup_min_hits) return;
+
+  const bool is_RHRS = evt.Is_RHRS();  
+  const double t_S2 = evt.S2Time(); 
   
-  ROOT::RVec<VDC::HitGroup> group_vec{}; 
+  ROOT::RVec<VDC::HitGroup<P>> group_vec{}; 
 
   //make a buffer of all valid hits
   const auto nhits_total = wire.size(); 
-  std::vector<VDC::Hit> buffer; buffer.reserve(nhits_total); 
+  std::vector<VDC::Hit<P>> buffer; buffer.reserve(nhits_total); 
 
   // make buffer of all valid VDC hits
   for (std::size_t i=0; i<nhits_total; i++) {
 
-    VDC::Hit hit(is_RHRS, plane, static_cast<int>(wire[i]), rawtime[i], t_S2); 
+    VDC::Hit<P> hit(is_RHRS, static_cast<int>(wire[i]), rawtime[i], t_S2); 
 
     if (auto t = hit.Time(); 
       t > run_parameters::kVDC_min_realTime && 
@@ -68,20 +70,18 @@ ROOT::RVec<VDC::HitGroup> group_vdc_hits (
   }
 
   //quit if there's not enough hits to form at least 1 hit. 
-  if (buffer.size() < run_parameters::kGroup_min_hits) return {}; 
+  if (buffer.size() < run_parameters::kGroup_min_hits) return; 
 
   //now, we can make groups. 
   int prev_wire = buffer.front().WireNum(); 
 
-  size_t ind_begin=0; 
-  size_t ind_end=ind_begin; 
+  std::size_t ind_begin=0; 
+  std::size_t ind_end=ind_begin; 
 
   //add a new group by copying events from the current buffer 
   auto add_group = [&](){ 
-    group_vec.emplace_back(std::span<VDC::Hit>{
-      buffer.begin()+ind_begin, 
-      buffer.begin()+ind_end
-    }); 
+    auto hits = std::span<const VDC::Hit<P>>{buffer.begin()+ind_begin, buffer.begin()+ind_end}; 
+    evt.emplace<VDC::HitGroup<P>>(hits);
   };
 
   //keep iterating until we've gone through all hits
@@ -117,7 +117,7 @@ ROOT::RVec<VDC::HitGroup> group_vdc_hits (
 
     }//if (span/gap too big) 
 
-    //get ready to re-start this loop with the next hit
+    //get ready to re-start this loop with the next hisdfst
     ind_end = i;
     prev_wire = hit.WireNum(); 
   }
@@ -129,8 +129,30 @@ ROOT::RVec<VDC::HitGroup> group_vdc_hits (
     add_group(); 
   }     
 
-  return group_vec; 
 }; 
+//////////////////////////////////////////////////////////////////////////////
+// explicit template instantiations 
+template void group_vdc_hits<VDC::Plane::U1>( 
+  S2Event&, 
+  const ROOT::RVec<double>&,
+  const ROOT::RVec<double>& 
+);
+template void group_vdc_hits<VDC::Plane::V1>( 
+  S2Event&, 
+  const ROOT::RVec<double>&,
+  const ROOT::RVec<double>& 
+);
+template void group_vdc_hits<VDC::Plane::U2>( 
+  S2Event&, 
+  const ROOT::RVec<double>&,
+  const ROOT::RVec<double>& 
+);
+template void group_vdc_hits<VDC::Plane::V2>( 
+  S2Event&, 
+  const ROOT::RVec<double>&,
+  const ROOT::RVec<double>& 
+);
+
 
 }
 }

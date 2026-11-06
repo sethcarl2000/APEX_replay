@@ -23,15 +23,9 @@
 #include <string> 
 #include <iostream>
 #include <functional> 
+#include <concepts> 
 
 namespace {
-
-    std::string here(const char* const func) {
-        static constexpr char classname[] = "Manager"; 
-        std::ostringstream oss;
-        oss << "<"<<classname<<"::"<<func<<">:";
-        return oss.str();  
-    }
 
     template<typename T> std::function<bool(const ROOT::VecOps::RVec<T>&)> vector_isnt_empty() {
         return [](const ROOT::RVec<T>& vec) { return !vec.empty(); };
@@ -57,6 +51,47 @@ namespace APEX
 {
 namespace replay
 {
+
+/// concept requiruing that a callable function takes a VDC::Track as argument, and returns type 'T' 
+template<typename T, typename F> concept TrackCallable = requires(F&& expr, const VDC::Track& t){
+  { std::forward<F>(expr)(t) } -> std::same_as<T>; 
+};
+
+/// @brief Add an output as a member field of a track branch
+/// @tparam T Return type of expression
+/// @tparam F type of expression 
+/// @param rna RDF node accumulator
+/// @param event_branch name of event branch
+/// @param name name of output branch 
+/// @param expr expression to return result 
+template<typename T, typename F> 
+  requires TrackCallable<T,F>  
+void define_track_output(RDFNodeAccumulator& rna, std::string event_branch, std::string name, F&& expr)
+{
+  //check if this output already exists
+  if (rna.IsBranchDefined(name)) {
+    throw std::invalid_argument("<define_track_output>: branch '"+name+"' already exists"); 
+  }
+
+  rna.DefineOutput(name, [&](ROOT::RVec<S2Event>& events){
+
+    std::size_t n_tracks{0}; for (const auto& evt : events) n_tracks += evt.size<VDC::Track>(); 
+
+    ROOT::RVec<T> out; out.reserve(n_tracks); 
+
+    for (auto& evt : events) {
+      evt.RefereshEventPointers(); 
+      for (const auto& trk : evt.GetCollection<VDC::Track>()) {
+        out.emplace_back( std::forward<F>(expr)(trk) ); 
+      } 
+    }
+  
+    return out; 
+
+  }, {event_branch}); 
+
+}
+
 
 //______________________________________________________________________________________________________________
 Manager::Manager()
@@ -105,10 +140,6 @@ int Manager::Process(const std::string& path_input, const std::string& stem_outp
 {
   using namespace units; 
   using ROOT::VecOps::RVec; 
-  using RVecD = ROOT::VecOps::RVec<double>; 
-
-  const bool kRHRS_bool = true;
-  const bool kLHRS_bool = false; 
   
     //assemble the output file path
     std::ostringstream oss; 
@@ -229,49 +260,6 @@ int Manager::Process(const std::string& path_input, const std::string& stem_outp
   
   EventCounter_RPtr rptr_nPass_1event; 
 
-  /*
-  //now, we will generate the coinc-time.
-  //this histogram will be the 'subtraction' of all coinc-times  
-  double dt_sigma, dt_center; 
-
-  if (are_both_arms_active) {
-
-    auto hist_dt = rna.Get()
-      
-      .Define("dt", [](const RVec<S2Hit>& R_hits, const RVec<S2Hit>& L_hits)
-      {
-        RVecD dt; dt.reserve(R_hits.size() * L_hits.size()); 
-
-        for (const auto& R_hit : R_hits) {
-          for (const auto& L_hit : L_hits) {
-            dt.push_back( R_hit.Time() - L_hit.Time() );
-          }
-        }
-
-        return dt; 
-      
-      }, {"R_S2_hits", "L_S2_hits"}) 
-      
-      .Histo1D<RVecD>({"h_dt", "coinc_times;s;", 200, -75*ns, +75*ns }, "dt");
-
-    try {
-      utils::fit_gaus_to_hist( (TH1D*)hist_dt->Clone("test_h"), 20*ns, dt_center, dt_sigma);
-    } catch (const std::exception& e) {
-      
-      //if the fit fails, we will just make it so that there is no coinc-cut. 
-      Warning(__func__, "Fitting gaussian to coincidence peak failed; A TR-TL time-coincidence cut will not be applied for this run.\nn. events in hist: %.2e\n what(): %s", hist_dt->Integral(), e.what()); 
-      dt_center = utils::kNaN;
-      dt_sigma  = utils::kNaN;  
-    }
-
-    std::printf(
-      " central coinc-time (S2_r - S2_l): %.2f ns\n"
-      " central coinc-time sigma: %.3f ns (cut is %.3f stddev-s from center)\n",
-      dt_center/ns, 
-      dt_sigma/ns, run_parameters::kS2_coinc_sigma_cut
-    );  
-
-    }*/
   
   //create TeventHandler objets 
   switch (fArmMode) {
@@ -363,8 +351,8 @@ int Manager::Process(const std::string& path_input, const std::string& stem_outp
   
   PidManager pid_manager; 
   
-  EventCounter_RPtr nPass_1group_R, nPass_1pair_R, nPass_1raw_R, nPass_1ref_R; 
-  EventCounter_RPtr nPass_1group_L, nPass_1pair_L, nPass_1raw_L, nPass_1ref_L; 
+  EventCounter_atomic nPass_1group_R{0}, nPass_1pair_R{0}, nPass_1raw_R{0}, nPass_1ref_R{0}; 
+  EventCounter_atomic nPass_1group_L{0}, nPass_1pair_L{0}, nPass_1raw_L{0}, nPass_1ref_L{0}; 
 
   //first, generate tracks in the right arm 
   if (is_RHRS_active) {
@@ -396,206 +384,54 @@ int Manager::Process(const std::string& path_input, const std::string& stem_outp
   if (is_RHRS_active) { helpers::gen_react_vertex(rna, R_react_vertex); }
   if (is_LHRS_active) { helpers::gen_react_vertex(rna, L_react_vertex); }
 
-  //let's define some output branches 
-  //_________________________________________________________________________________________________________________
-  auto define_output_from_track = [&rna](std::string trk_branch, std::string output, double (VDC::Track::*method)() const) 
-  {
-    rna.DefineOutput(output, [method](const ROOT::RVec<VDC::Track>& tracks)
-        { 
-          RVec<double> vals; vals.reserve(tracks.size()); 
-          for (const auto& trk : tracks) vals.push_back( (trk.*method)() ); 
-          return vals; 
-        }, {trk_branch}); 
-  };
-  //_________________________________________________________________________________________________________________
+  for (const bool is_RHRS : {true, false}) {
 
-  std::string track_branch, arm; 
+    const bool is_LHRS = !is_RHRS; 
 
-  if (is_RHRS_active) {
-
-    bool is_RHRS=true; 
-    track_branch = "R_tracks_refined"; 
-    arm = "R";
-    define_output_from_track(track_branch, arm+"_x_fp",     &VDC::Track::FP_x);
-    define_output_from_track(track_branch, arm+"_y_fp",     &VDC::Track::FP_y);
-    define_output_from_track(track_branch, arm+"_dxdz_fp",  &VDC::Track::FP_dx_dz);
-    define_output_from_track(track_branch, arm+"_dydz_fp",  &VDC::Track::FP_dy_dz);
+    if (is_RHRS && (!is_RHRS_active)) continue; 
+    if (is_LHRS && (!is_LHRS_active)) continue; 
+ 
+    std::string arm = is_RHRS ? "R" : "L";
+    std::string event_branch = arm+"_S2Events";
     
-    //intercept with the S2 plane
-    define_output_from_track(track_branch, arm+"_S2_x", &VDC::Track::S2_x);
-    define_output_from_track(track_branch, arm+"_S2_y", &VDC::Track::S2_y);
-    define_output_from_track(track_branch, arm+"_S2_t", &VDC::Track::S2_y);
+    define_track_output<double>(rna, event_branch, arm+"_x_fp",    [](const VDC::Track& t){ return t.FP_x(); });
+    define_track_output<double>(rna, event_branch, arm+"_y_fp",    [](const VDC::Track& t){ return t.FP_y(); });
+    define_track_output<double>(rna, event_branch, arm+"_dxdz_fp", [](const VDC::Track& t){ return t.FP_dx_dz(); });
+    define_track_output<double>(rna, event_branch, arm+"_dydz_fp", [](const VDC::Track& t){ return t.FP_dy_dz(); });
 
-    //intercept with the S2 plane
-    define_output_from_track(track_branch, arm+"_Cerenkov_x", &VDC::Track::Cerenkov_x);
-    define_output_from_track(track_branch, arm+"_Cerenkov_y", &VDC::Track::Cerenkov_y);
-    define_output_from_track(track_branch, arm+"_Cerenkov_t", &VDC::Track::Cerenkov_t);
+    define_track_output<double>(rna, event_branch, arm+"_S2_x",    [](const VDC::Track& t){ return t.S2_x(); });
+    define_track_output<double>(rna, event_branch, arm+"_S2_y",    [](const VDC::Track& t){ return t.S2_y(); });
+    define_track_output<double>(rna, event_branch, arm+"_S2_dt",   [](const VDC::Track& t){ return t.S2_t(); });
+    
+    // S2 hit information 
+    define_track_output<double>(rna, event_branch, arm+"_S2_xParam",    [](const VDC::Track& t){ return t.xParam(); });
+    define_track_output<double>(rna, event_branch, arm+"_S2_hit_time",  [](const VDC::Track& t){ return t.GetEvent()->S2Time(); });
+    define_track_output<double>(rna, event_branch, arm+"_S2_hit_PMT_dt_raw",[](const VDC::Track& t){ return t.GetEvent()->GetS2Hit().DeltaT_raw(); });
+    define_track_output<int>   (rna, event_branch, arm+"_S2_hit_paddle",[](const VDC::Track& t){ return t.GetEvent()->GetS2Hit().Paddle(); });
+    define_track_output<std::size_t>(rna, event_branch, arm+"_S2_hit_id", [](const VDC::Track& t){ return t.GetEvent()->GetID(); });
+
+    // Cerenkov information 
+    define_track_output<double>(rna, event_branch, arm+"_Cerenkov_x",    [](const VDC::Track& t){ return t.Cerenkov_x(); });
+    define_track_output<double>(rna, event_branch, arm+"_Cerenkov_y",    [](const VDC::Track& t){ return t.Cerenkov_y(); });
+    define_track_output<double>(rna, event_branch, arm+"_Cerenkov_t",    [](const VDC::Track& t){ return t.Cerenkov_t(); });
+
+    // Raw Cerenkov data 
     rna.DefineOutput(arm+"_cer_a_c", [](const RVec<double>& v){ return v; }, {arm+".cer.a_c"});
     rna.DefineOutput(arm+"_cer_t_c", [](const RVec<double>& v){ return v; }, {arm+".cer.t_c"});
 
-    define_output_from_track(track_branch, arm+"_S2_x_param", &VDC::Track::xParam);
-    define_output_from_track(track_branch, arm+"_S2_dt",      &VDC::Track::T0);
-
     //define_output_from_track(track_branch, arm+"_Eta", &VDC::Track::Get_Eta);
-
-    rna.DefineOutput(arm+"_n_points", [](const RVec<VDC::Track>& tracks){
-      RVec<int> ret; ret.reserve(tracks.size()); 
-      for (const auto& trk : tracks) {
-	  ret.push_back( trk.Get_nGoodPoints() ); 
-      }
-      return ret; 
-    }, {track_branch});
-
-    
-    //separation between PMT times for our S2 hit
-    rna.DefineOutput(arm+"_S2_pmt_dt", [](const RVec<VDC::Track>& tracks){
-      RVecD ret; ret.reserve(tracks.size()); 
-      for (const auto& trk : tracks) {
-        
-        const auto s2_hit = trk.GetEvent()->GetS2Hit(trk.IsRightArm());
-        ret.push_back(s2_hit->DeltaT_raw());
-      }
-      return ret; 
-    }, {track_branch});
-
-    //separation between PMT times for our S2 hit
-    rna.DefineOutput(arm+"_S2_time", [](const RVec<VDC::Track>& tracks){
-      RVecD ret; ret.reserve(tracks.size()); 
-      for (const auto& trk : tracks) {
-        
-        const auto s2_hit = trk.GetEvent()->GetS2Hit(trk.IsRightArm());
-        ret.push_back(s2_hit->Time());
-      }
-      return ret; 
-    }, {track_branch});
-
-
-    rna.DefineOutput(arm+"_S2_paddle", [](const RVec<VDC::Track>& tracks){
-      RVec<int> ret; ret.reserve(tracks.size()); 
-      for (const auto& trk : tracks) {
-        
-        const auto s2_hit = trk.GetEvent()->GetS2Hit(trk.IsRightArm());
-        ret.push_back(s2_hit->Paddle());
-      }
-      return ret; 
-    }, {track_branch});
-
-    //separation between PMT times for our S2 hit
-    rna.DefineOutput(arm+"_S2_is_twin_hit", [](const RVec<VDC::Track>& tracks){
-      RVec<bool> ret; ret.reserve(tracks.size()); 
-      for (const auto& trk : tracks) {
-        
-        const auto s2_hit = trk.GetEvent()->GetS2Hit(trk.IsRightArm());
-        ret.push_back(s2_hit->Is_twinHit());
-      }
-      return ret; 
-    }, {track_branch});
-
-    rna.AddBranchToOutput("R_position_vtx");
-    rna.DefineOutput("R_y_BPM", [](double bpma_y, double bpmb_y){ return (bpma_y + bpmb_y)/2; }, {"Rrb.BPMA.y","Rrb.BPMB.y"});  
+    rna.AddBranchToOutput(arm+"_position_vtx");
+    rna.DefineOutput(arm+"_y_BPM", [](double bpma_y, double bpmb_y){ return (bpma_y + bpmb_y)/2; }, {arm+"rb.BPMA.y", arm+"rb.BPMB.y"});  
   }
-
-  if (is_LHRS_active) {
-    
-    bool is_RHRS = false; 
-    track_branch = "L_tracks_refined"; 
-    arm = "L";
-    define_output_from_track(track_branch, arm+"_x_fp", &VDC::Track::FP_x);
-    define_output_from_track(track_branch, arm+"_y_fp", &VDC::Track::FP_y);
-    define_output_from_track(track_branch, arm+"_dxdz_fp", &VDC::Track::FP_dx_dz);
-    define_output_from_track(track_branch, arm+"_dydz_fp", &VDC::Track::FP_dy_dz);
-    
-    //intercept with the S2 plane
-    define_output_from_track(track_branch, arm+"_S2_x", &VDC::Track::S2_x);
-    define_output_from_track(track_branch, arm+"_S2_y", &VDC::Track::S2_y);
-    define_output_from_track(track_branch, arm+"_S2_t", &VDC::Track::S2_y);
-
-    //intercept with the Cerenkov plane
-    define_output_from_track(track_branch, arm+"_Cerenkov_x", &VDC::Track::Cerenkov_x);
-    define_output_from_track(track_branch, arm+"_Cerenkov_y", &VDC::Track::Cerenkov_y);
-    define_output_from_track(track_branch, arm+"_Cerenkov_t", &VDC::Track::Cerenkov_t);
-    rna.DefineOutput(arm+"_cer_a_c", [](const RVec<double>& v){ return v; }, {arm+".cer.a_c"});
-    rna.DefineOutput(arm+"_cer_t_c", [](const RVec<double>& v){ return v; }, {arm+".cer.t_c"});
-
-    define_output_from_track(track_branch, arm+"_S2_x_param", &VDC::Track::xParam);
-    define_output_from_track(track_branch, arm+"_S2_dt", &VDC::Track::T0);
-    
-    define_output_from_track(track_branch, arm+"_S2_n_goodpts", &VDC::Track::Get_Eta);
-    
-    
-    
-    //define_output_from_track(track_branch, arm+"_Eta", &VDC::Track::Get_Eta);
-
-    rna.DefineOutput(arm+"_n_points", [](const RVec<VDC::Track>& tracks){
-      RVec<int> ret; ret.reserve(tracks.size()); 
-      for (const auto& trk : tracks) {
-	ret.push_back( trk.Get_nGoodPoints() ); 
-      }
-      return ret; 
-    }, {track_branch});
-    
-    //separation between PMT times for our S2 hit
-    rna.DefineOutput(arm+"_S2_pmt_dt", [](const RVec<VDC::Track>& tracks){
-      RVecD ret; ret.reserve(tracks.size()); 
-      for (const auto& trk : tracks) {
-        
-        const auto s2_hit = trk.GetEvent()->GetS2Hit(trk.IsRightArm());
-        ret.push_back(s2_hit->DeltaT_raw());
-      }
-      return ret; 
-    }, {track_branch});
-
-    //separation between PMT times for our S2 hit
-    rna.DefineOutput(arm+"_S2_time", [](const RVec<VDC::Track>& tracks){
-      RVecD ret; ret.reserve(tracks.size()); 
-      for (const auto& trk : tracks) {
-        
-        const auto s2_hit = trk.GetEvent()->GetS2Hit(trk.IsRightArm());
-        ret.push_back(s2_hit->Time());
-      }
-      return ret; 
-    }, {track_branch});
-    
-    //separation between PMT times for our S2 hit
-    rna.DefineOutput(arm+"_all_S2_time", [](const RVec<S2Hit>& hits){
-      RVecD ret; ret.reserve(hits.size()); 
-      for (const auto& hit : hits) ret.emplace_back(hit.Time()); 
-      return ret; 
-    }, {arm+"_S2_hits"});
-
-    rna.DefineOutput(arm+"_S2_paddle", [](const RVec<VDC::Track>& tracks){
-      RVec<int> ret; ret.reserve(tracks.size()); 
-      for (const auto& trk : tracks) {
-        
-        const auto s2_hit = trk.GetEvent()->GetS2Hit(trk.IsRightArm());
-        ret.push_back(s2_hit->Paddle());
-      }
-      return ret; 
-    }, {track_branch});
-    
-    //separation between PMT times for our S2 hit
-    rna.DefineOutput(arm+"_S2_is_twin_hit", [](const RVec<VDC::Track>& tracks){
-      RVec<bool> ret; ret.reserve(tracks.size()); 
-      for (const auto& trk : tracks) {
-        
-        const auto s2_hit = trk.GetEvent()->GetS2Hit(trk.IsRightArm());
-        ret.push_back(s2_hit->Is_twinHit());
-      }
-      return ret; 
-    }, {track_branch});
-
-    rna.AddBranchToOutput("L_position_vtx");
-    rna.DefineOutput("L_y_BPM", [](double bpma_y, double bpmb_y){ return (bpma_y + bpmb_y)/2; }, {"Lrb.BPMA.y","Lrb.BPMB.y"});  
-  } 
 
   if (are_both_arms_active) {
     rna.DefineOutput("y_BPM", [](double R_y, double L_y){ return (R_y + L_y)/2.; }, {"R_y_BPM","L_y_BPM"}); 
   }
 
   //define some misc. information 
-  define_constant_valued_output(rna, "run_number", fRunNumber); 
-  define_constant_valued_output(rna, "rawfile_number", rawfile_number);
-  define_constant_valued_output(rna, "segment_number", segment_number);
+  define_constant_valued_output<int>(rna, "run_number", fRunNumber); 
+  define_constant_valued_output<int>(rna, "rawfile_number", rawfile_number);
+  define_constant_valued_output<int>(rna, "segment_number", segment_number);
   
   rna.DefineOutput("beam_current", [](double beam_current){
     return beam_current;
@@ -618,21 +454,16 @@ int Manager::Process(const std::string& path_input, const std::string& stem_outp
   EventCounter n_pass_1s2hit   = *rptr_nPass_coinc; 
   EventCounter n_pass_coinc    = *rptr_nPass_1event; 
 
-  EventCounter n_pass_1group_R, n_pass_1pair_R, n_pass_1raw_R, n_pass_1ref_R; 
-  EventCounter n_pass_1group_L, n_pass_1pair_L, n_pass_1raw_L, n_pass_1ref_L; 
-  
-  if (is_RHRS_active) {
-    n_pass_1group_R = *nPass_1group_R; 
-    n_pass_1pair_R  = *nPass_1pair_R; 
-    n_pass_1raw_R   = *nPass_1raw_R; 
-    n_pass_1ref_R   = *nPass_1ref_R; 
-  } 
-  if (is_LHRS_active) {
-    n_pass_1group_L = *nPass_1group_L; 
-    n_pass_1pair_L  = *nPass_1pair_L; 
-    n_pass_1raw_L   = *nPass_1raw_L;
-    n_pass_1ref_L   = *nPass_1ref_L; 
-  }
+  EventCounter 
+    n_pass_1group_R{nPass_1group_R},
+    n_pass_1pair_R{nPass_1pair_R},
+    n_pass_1raw_R{nPass_1raw_R},
+    n_pass_1ref_R{nPass_1ref_R}, 
+
+    n_pass_1group_L{nPass_1group_L},
+    n_pass_1pair_L{nPass_1pair_L},
+    n_pass_1raw_L{nPass_1raw_L},
+    n_pass_1ref_L{nPass_1ref_L}; 
 
   std::printf(
     "N. events with at least: --------------------------------------------\n"
@@ -668,7 +499,7 @@ int Manager::Process(const std::string& path_input, const std::string& stem_outp
   );
 
   //check to make sure we've kept at least 1 event
-  if (n_pass_1ref_L > 0) {
+  if (nPass_1ref_L > 0) {
 
     Info(__func__, "Acceptable replay completed for file: %s", path_output.c_str());
     

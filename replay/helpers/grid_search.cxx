@@ -3,6 +3,7 @@
 #include <APEX/replay/helpers.h>
 #include <APEX/VDC/HitGroup.h> 
 #include <APEX/EventHandler.h> 
+#include <APEX/S2Event.h>
 #include <APEX/utils.h> 
 #include <APEX/run_parameters.h>
 // stdlib
@@ -19,9 +20,9 @@ namespace helpers
 //#define DEBUG_GRID
 
 /////////////////////////////////////////////////////////////////////////////
-double grid_search( 
-    const EventHandler& evt, 
-    VDC::HitGroup& group, 
+template<VDC::Plane P> double grid_search( 
+    S2Event& evt, 
+    const VDC::HitGroup<P>& group, 
     double m1, //slope 
     double m2, 
     double x_Lo,
@@ -104,6 +105,27 @@ double grid_search(
     return eta; 
 };
 //////////////////////////////////////////////////////////////////////////////
+// explicit template instantiations 
+template double grid_search( 
+    S2Event&, 
+    const VDC::HitGroup<VDC::Plane::U1>&, 
+    double, double, double, double, double, double
+); 
+template double grid_search( 
+    S2Event&, 
+    const VDC::HitGroup<VDC::Plane::V1>&, 
+    double, double, double, double, double, double
+); 
+template double grid_search( 
+    S2Event&, 
+    const VDC::HitGroup<VDC::Plane::U2>&, 
+    double, double, double, double, double, double
+); 
+template double grid_search( 
+    S2Event&, 
+    const VDC::HitGroup<VDC::Plane::V2>&, 
+    double, double, double, double, double, double
+); 
 
 }
 }

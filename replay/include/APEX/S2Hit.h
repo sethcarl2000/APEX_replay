@@ -47,7 +47,7 @@ class S2Hit {
   double Time_PMT_R() const { return fRealTime_pmtR; }
   double Time_PMT_L() const { return fRealTime_pmtL; }
 
-  double DeltaT_raw()   const { return (fRawTime_pmtR - fRawTime_pmtL)/S2::TDC_resolution; }
+  double DeltaT_raw()   const { return (fRawTime_pmtR - fRawTime_pmtL); }
   
   double X()            const { return S2::get_paddle_X(fis_RHRS,fPaddle); }
   double Y()            const { return S2::get_Y(); }

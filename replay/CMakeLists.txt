@@ -1,5 +1,7 @@
 
 find_package(ROOT 6.36 REQUIRED COMPONENTS Core RIO Physics)
+# Eigen3 lin. algebra library 
+# find_package(Eigen3 5.0 REQUIRED)
 
 #-------------------------------------------------------------------------------------------
 #
@@ -17,19 +19,15 @@ set(src_replay
     user_analysis_classes/S2.cxx
     user_analysis_classes/S2Hit.cxx
     user_analysis_classes/S2Event.cxx
-    user_analysis_classes/VDC/ChamberPair.cxx
     user_analysis_classes/VDC/VDC.cxx
-    user_analysis_classes/VDC/HitCluster.cxx
     user_analysis_classes/VDC/Track.cxx
     user_analysis_classes/VDC/HitGroup.cxx
 # ---   Replay helper classes
     helpers/grid_search.cxx
     helpers/generate_S2_hits.cxx
-    helpers/generate_VDC_hits.cxx
     helpers/gen_coinc_events.cxx
     helpers/compute_trackdata.cxx
     helpers/gen_coinc_window_events.cxx
-    helpers/generate_vdc_tracks.cxx
     helpers/generate_vdc_tracks_from_S2Event.cxx
     helpers/compute_track_error.cxx
     helpers/gen_rawtracks.cxx
@@ -62,6 +60,7 @@ set(headers_replay
     include/APEX/Cerenkov.h
     include/APEX/S2Hit.h
     include/APEX/S2Event.h
+    include/APEX/ObjCollection.h 
     include/APEX/ReactVertex.h
     include/APEX/PidDetector.h
     include/APEX/EventHandler.h

@@ -11,7 +11,7 @@ namespace VDC
 {
 
 /////////////////////////////////////////////////////////////////////////////////
-template<VDC::Plane plane> class Hit { 
+template<VDC::Plane P> class Hit { 
 
   bool   fis_RHRS; 
   int    fWireNum; 
@@ -27,7 +27,7 @@ template<VDC::Plane plane> class Hit {
     fT_offset{t_offset} {};  
   
   // this is true for any hit in this plane
-  int Plane() const { return VDC::number<plane>(); }
+  int Plane() const { return VDC::number<P>(); }
 
   // methods which this class stores, i.e., this class' private data is the 'source of truth' 
   bool Is_RHRS() const { return fis_RHRS; } 
@@ -39,11 +39,22 @@ template<VDC::Plane plane> class Hit {
   void Set_T_offset(double t_offset) { fT_offset=t_offset; }
 
   // methods which this class fetches from tables, using its private raw data: 
-  double Time() const { return VDC::RealTime(fis_RHRS,VDC::number<plane>(),fWireNum,fRawTime) - fT_offset; }
-  double WirePos() const { return VDC::WirePos(fis_RHRS,VDC::number<plane>(),fWireNum); } 
-  double W()     const { return VDC::w(fis_RHRS,VDC::number<plane>()); } 
+  double Time()    const { 
+    return VDC::RealTime(fis_RHRS,VDC::number<P>(),fWireNum,fRawTime) - fT_offset; 
+  }
+  double WirePos() const { 
+    return VDC::WirePos(fis_RHRS,VDC::number<P>(),fWireNum); 
+  } 
+  double W()     const { 
+    return VDC::w<P>(fis_RHRS); 
+  } 
 
 }; 
+// explicit instantiations 
+template class Hit<Plane::U1>; 
+template class Hit<Plane::V1>; 
+template class Hit<Plane::U2>; 
+template class Hit<Plane::V2>; 
 
 }
 }
