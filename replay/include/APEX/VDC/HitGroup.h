@@ -6,6 +6,7 @@
 #include <APEX/VDC/Hit.h> 
 // stdlib 
 #include <span> 
+#include <stdexcept> 
 
 namespace APEX 
 {
@@ -22,6 +23,9 @@ private:
   bool fis_RHRS; 
   std::vector<Hit<P>> fHits{}; 
 
+  void ThrowIfEmpty() const {
+    if (fHits.empty()) throw std::out_of_range("in <VDC::HitGroup>: tried to access hits from an empty group"); 
+  }
 
 public:   
 
@@ -46,35 +50,38 @@ public:
   iterator begin() { return fHits.begin(); }
   iterator end()   { return fHits.end(); }
 
-  const_iterator begin() const { return fHits.begin(); }
-  const_iterator end()   const { return fHits.end(); }
+  const_iterator begin() const { ThrowIfEmpty(); return fHits.begin(); }
+  const_iterator end()   const { ThrowIfEmpty(); return fHits.end(); }
 
-  const_iterator cbegin() const { return fHits.cbegin(); }
-  const_iterator cend()   const { return fHits.cend(); }
+  const_iterator cbegin() const { ThrowIfEmpty(); return fHits.cbegin(); }
+  const_iterator cend()   const { ThrowIfEmpty(); return fHits.cend(); }
 
 
   double WirePos( unsigned int h ) const; 
   int    WireNum( unsigned int h ) const; 
   double    Time( unsigned int h ) const; 
   
-  Hit<P>& GetHit( unsigned int h ) { return fHits.at(h); } 
+  Hit<P>& GetHit( unsigned int h ) { 
+    ThrowIfEmpty(); 
+    return fHits.at(h); 
+  } 
 
   // First wire in the hit-group 
-  int    FirstWire() const { return fHits.front().WireNum(); }
+  int    FirstWire() const { ThrowIfEmpty(); return fHits.front().WireNum(); }
   // Last wire in the hit-group  
-  int    LastWire()  const { return fHits.back().WireNum(); }
+  int    LastWire()  const { ThrowIfEmpty(); return fHits.back().WireNum(); }
   
   // Low edge
-  double LoEdge()    const { return fHits.back().WirePos(); }
+  double LoEdge()    const { ThrowIfEmpty(); return fHits.back().WirePos(); }
    
   // hi edge
-  double HiEdge()    const { return fHits.front().WirePos(); }
+  double HiEdge()    const { ThrowIfEmpty(); return fHits.front().WirePos(); }
   
-  double Span()     const { return HiEdge()-LoEdge(); }
+  double Span()     const { ThrowIfEmpty(); return HiEdge()-LoEdge(); }
   
   bool Is_RHRS() const { return fis_RHRS; }
   
-  double W()        const { return fHits.front().W(); }
+  double W()        const { ThrowIfEmpty(); return fHits.front().W(); }
 
   //delete all hits
   void Clear() { fHits.clear(); }

@@ -166,8 +166,7 @@ int Manager::Process(const std::string& path_input, const std::string& stem_outp
   
   //find the central-momentum of both arms using EPICS vars
   //ROOT::EnableImplicitMT(fN_threads);   
-
- 
+  
   //initialize the react vertex
   //create the 'TReactVertex' object, which computes the reaction vertex,
   // using raster information, and known v-wire positions. 

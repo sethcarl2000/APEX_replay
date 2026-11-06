@@ -60,8 +60,12 @@ namespace {
     template<typename T> void remove_and_sort(ROOT::VecOps::RVec<S2Event>& S2_events)
     {
 #ifdef DEBUG_S2Event
-        Info("remove_and_sort", "N. events start: %zu", S2_events.size());
+        std::printf("<remove and sort>: N. items for each event:<remove and sort>: ");
+        for (const auto& S2_event : S2_events) std::printf("%2zu  ", S2_event.size<T>()); 
+        std::printf("\n"); 
 #endif
+
+
         // this shifts all events to the left if they aren't empty, and to the right if they are.
         // returns an iterator pointing to the boundary between the haves and have-nots 
         auto new_end = std::remove_if(
@@ -76,7 +80,7 @@ namespace {
         // refresh the pointers of all the S2 hits 
         for (auto& event : S2_events) event.RefereshEventPointers(); 
 #ifdef DEBUG_S2Event
-        Info("remove_and_sort", "N. events end: %zu", S2_events.size());
+        std::printf("<remove and sort>: N. events end: %zu\n", S2_events.size());
 #endif
     }
 
@@ -87,7 +91,7 @@ namespace {
         PlaneData<VDC::Plane::V1>,
         PlaneData<VDC::Plane::U2>,
         PlaneData<VDC::Plane::V2>
-        >; 
+    >; 
 
 }
 
@@ -195,13 +199,15 @@ void generate_vdc_tracks_from_S2Event(
     )
     {
         
+        // define an array of 'S2Events', which will be the basis of all our data. 
+        RVec<S2Event> S2_events; S2_events.reserve(S2_hits.size()); 
+        
+        if (events.empty()) return S2_events; 
+    
         // use the first event in the list as a 'template' for all following events
         // it's really arbitrary which event we use; what matters is that we have an event we can pass down
         // which keeps track of the run number and beam current information. 
         const auto& evt_template = events.front(); 
-
-        // define an array of 'S2Events', which will be the basis of all our data. 
-        RVec<S2Event> S2_events; S2_events.reserve(S2_hits.size()); 
 
         std::size_t id{0}; 
 
@@ -224,7 +230,7 @@ void generate_vdc_tracks_from_S2Event(
         }
 
 #ifdef DEBUG_S2Event
-        Info("Event Loop", "N. S2 events: %zu", S2_events.size());
+        std::printf("<Event Loop>: N. S2 events: %zu\n", S2_events.size());
 #endif
         ///////////////////////////////////////////////////////////////////////////////////
         ///
@@ -236,11 +242,15 @@ void generate_vdc_tracks_from_S2Event(
             {wire_u2, rawtime_u2},
             {wire_v2, rawtime_v2}
         };
-
-        VDC::for_each_plane([&data,&S2_events]<VDC::Plane P>(){
+#ifdef DEBUG_S2Event
+            std::printf("<Event Loop>: New Event ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~\n");
+#endif
+        VDC::for_each_plane([&data,&S2_events]<VDC::Plane P>(){ 
+            
+            if (S2_events.empty()) return; 
 
 #ifdef DEBUG_S2Event
-        Info("Event Loop", "Creating Groups for VDC Plane %i", VDC::number<P>());
+            std::printf("<Event Loop>: Creating Groups for VDC Plane %i\n", VDC::number<P>());
 #endif
             for (auto& S2_event : S2_events) {
                 // do this to make sure each track has the correct event pointer. 
@@ -250,6 +260,9 @@ void generate_vdc_tracks_from_S2Event(
                 // form VDC::HitGroup objects for this plane
                 group_vdc_hits<P>(S2_event, d.wire, d.rawtime); 
             }
+#ifdef DEBUG_S2Event
+            std::printf("<Event Loop>: remove & sort (%s)\n", VDC::plane_name<P>().c_str());
+#endif
             // remove any S2 hits which don't have at least 1 group 
             remove_and_sort<VDC::HitGroup<P>>(S2_events); 
         });
@@ -258,14 +271,14 @@ void generate_vdc_tracks_from_S2Event(
         if (S2_events.empty()) return S2_events; 
 
 #ifdef DEBUG_S2Event
-        Info("Event Loop", "%zu events have at least 1 group per plane", S2_events.size());
+        std::printf("<Event Loop>: %zu events have at least 1 group per plane\n", S2_events.size());
 #endif
 
         // count the number of events we still have 
         increment( nPass_1group ); 
 
 #ifdef DEBUG_S2Event
-        Info("Event Loop", "%llu events so far surviving '1 group' cut", static_cast<EventCounter>(nPass_1group));
+        std::printf("<Event Loop>: %llu events so far surviving '1 group' cut\n", static_cast<EventCounter>(nPass_1group));
 #endif
         ///////////////////////////////////////////////////////////////////////////////////
         ///
@@ -273,28 +286,29 @@ void generate_vdc_tracks_from_S2Event(
         ///
         VDC::for_each_chamber([&S2_events]<VDC::Chamber C>(){
 
-            //if (S2_events.empty()) return; 
+            if (S2_events.empty()) return; 
+
 #ifdef DEBUG_S2Event
-        Info("Event Loop", "making pairs for chamber 'VDC %s'", (C == VDC::Chamber::Low ? "Low" : "High"));
+        std::printf("<Event Loop>: making pairs for chamber 'VDC %s'\n", (C == VDC::Chamber::Low ? "Low" : "High"));
 #endif
 
             // gen chamber pairs for each event
             for (auto& S2_event : S2_events) {
 
 #ifdef DEBUG_S2Event
-        Info("Event Loop", "<event %zu> Refreshing event pointers", S2_event.GetID());
+        std::printf("<Event Loop>: <event %zu> Refreshing event pointers\n", S2_event.GetID());
 #endif
                 // do this to make sure each track has the correct event pointer. 
                 S2_event.RefereshEventPointers(); 
 
 #ifdef DEBUG_S2Event
-        Info("Event Loop", "<event %zu> Making pairs for event", S2_event.GetID());
+        std::printf("<Event Loop>: <event %zu> Making pairs for event\n", S2_event.GetID());
 #endif
                 gen_pairs<C>(S2_event); 
             }
             
 #ifdef DEBUG_S2Event
-        Info("Event Loop", "Refresh & Sort (%zu total events)", S2_events.size());
+            std::printf("<Event Loop>: Refresh & Sort (Chamber %s)\n", VDC::chamber_name<C>().c_str());
 #endif
             // remove the events that didn't have any pairs generated
             remove_and_sort<VDC::ChamberPair<C>>(S2_events); 
@@ -306,7 +320,7 @@ void generate_vdc_tracks_from_S2Event(
         increment( nPass_1pair ); 
 
 #ifdef DEBUG_S2Event
-        Info("Event Loop", "%llu events so far surviving '1 pair' cut", static_cast<EventCounter>(nPass_1pair));
+        std::printf("<Event Loop>: %llu events so far surviving '1 pair' cut\n", static_cast<EventCounter>(nPass_1pair));
 #endif
         ///////////////////////////////////////////////////////////////////////////////////
         ///
@@ -326,7 +340,7 @@ void generate_vdc_tracks_from_S2Event(
         increment( nPass_1rawTrack ); 
 
 #ifdef DEBUG_S2Event
-        Info("Event Loop", "%llu events so far surviving '1 raw track' cut", static_cast<EventCounter>(nPass_1rawTrack));
+        std::printf("<Event Loop>: %llu events so far surviving '1 raw track' cut\n", static_cast<EventCounter>(nPass_1rawTrack));
 #endif
 
         ///////////////////////////////////////////////////////////////////////////////////
@@ -417,7 +431,7 @@ void generate_vdc_tracks_from_S2Event(
         increment( nPass_1refinedTrack );
 
 #ifdef DEBUG_S2Event
-        Info("Event Loop", "%llu events so far surviving '1 refined track' cut", static_cast<EventCounter>(nPass_1refinedTrack));
+        std::printf("<Event Loop>: %llu events so far surviving '1 refined track' cut\n", static_cast<EventCounter>(nPass_1refinedTrack));
 #endif
         return S2_events; 
     },

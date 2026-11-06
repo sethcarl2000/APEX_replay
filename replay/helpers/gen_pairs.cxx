@@ -35,8 +35,6 @@ template<VDC::Chamber C> void gen_pairs(
 #ifdef DEBUG_PAIR
     std::printf("<%s>: in body\n", __func__); 
 #endif
-    //use by tracks to identify pairs later
-    int pair_unique_id(0); 
     
     static constexpr bool is_loChamber = VDC::is_loChamber<C>(); 
 
@@ -65,10 +63,6 @@ template<VDC::Chamber C> void gen_pairs(
     const double Z_fPoint_Theta = z_S2 - 1./M_Theta;     
     const double Z_fPoint_Phi   = z_S2 - 1./M_Phi; 
 
-#ifdef DEBUG_PAIR
-    std::printf("<%s>: in body\n", __func__); 
-#endif
-    
     //____________________________________________________________________________________________________________________    
     auto Guess_slopes = [wVDC, 
             Z_fPoint_Theta, 
@@ -82,7 +76,7 @@ template<VDC::Chamber C> void gen_pairs(
         
         TVector3 S_uvw = VDC::Track::Rotate_xyz_to_uvw( TVector3( 
             r_xyz.X()/(r_xyz.Z()-Z_fPoint_Theta), 
-            r_xyz.X()/(r_xyz.Z()-Z_fPoint_Phi),
+            r_xyz.Y()/(r_xyz.Z()-Z_fPoint_Phi),
             1.
         ));       
 
@@ -155,7 +149,13 @@ template<VDC::Chamber C> void gen_pairs(
         }//for (int g=0; g<groups.size(); g++) 
         
         //no clusters found! 
-        if (clust_all.empty()) return; 
+        if (clust_all.empty()) { 
+#ifdef DEBUG_PAIR
+            std::printf("<gen_pairs: find_clusters %s>: No clusters found\n", VDC::plane_name<P>().c_str()); 
+
+#endif  
+            return; 
+        }
         
         //now, make sure that that clusters aren't bunched up together
         ROOT::RVec<VDC::HitCluster<P>> clust_keep; 
@@ -190,7 +190,10 @@ template<VDC::Chamber C> void gen_pairs(
         // add this cluster to the running list for the event 
         evt.emplace<VDC::HitCluster<P>>( *best_clust ); 
 #ifdef DEBUG_PAIR
-        std::printf("<gen_pairs: find_clusters>: <VDC Plane: %i> N. 'raw' clusters: %zu\n", VDC::number<P>(), evt.size<VDC::HitCluster<P>>());
+        std::printf("<gen_pairs: find_clusters %s>: N. 'raw' clusters: %zu\n", 
+            VDC::plane_name<P>().c_str(), 
+            evt.size<VDC::HitCluster<P>>()
+        );
 #endif
     }; 
     //____________________________________________________________________________________________________________________
@@ -199,11 +202,11 @@ template<VDC::Chamber C> void gen_pairs(
     // might be allowed to form a VDC::ChamberPair, and, if so, go ahead and generate it. 
     ROOT::RVec<VDC::ChamberPair<C>> pairs;  
 #ifdef DEBUG_PAIR
-    std::printf("<%s>: Finding Clusters <U>\n", __func__); 
+    std::printf("<%s>: Finding Clusters <%s>\n", __func__, VDC::plane_name<U>().c_str()); 
 #endif
     find_clusters( evt.GetCollection<VDC::HitGroup<U>>() ); 
 #ifdef DEBUG_PAIR
-    std::printf("<%s>: Finding Clusters <V>\n", __func__); 
+    std::printf("<%s>: Finding Clusters <%s>\n", __func__, VDC::plane_name<V>().c_str()); 
 #endif
     find_clusters( evt.GetCollection<VDC::HitGroup<V>>() ); 
 
@@ -231,7 +234,7 @@ template<VDC::Chamber C> void gen_pairs(
             Guess_slopes( u, v, m_u, m_v );
 
 #ifdef DEBUG_PAIR
-    std::printf("<%s>: starting grid search (u) group nhits: %i\n ", __func__, clust_V.GetGroup().Nhits()); 
+            std::printf("<%s>: starting grid search (u) group nhits: %i\n ", __func__, clust_V.GetGroup().Nhits()); 
 #endif         
             double Eta_u = grid_search( 
                 evt, clust_V.GetGroup(), 
@@ -241,7 +244,9 @@ template<VDC::Chamber C> void gen_pairs(
                 9.*units::ns,    //TAU_sigma
                 20.*units::ns 
             ); //TAU_buffer 
-            
+#ifdef DEBUG_PAIR
+            std::printf("<%s>: Eta:  %5.3f\n ", __func__, Eta_u); 
+#endif             
             if (Eta_u < run_parameters::kCUT_minEta) continue; 
 
 #ifdef DEBUG_PAIR
@@ -255,12 +260,13 @@ template<VDC::Chamber C> void gen_pairs(
                 9.*units::ns,    //TAU_sigma
                 20.*units::ns 
             ); //TAU_buffer 
-            
+#ifdef DEBUG_PAIR
+            std::printf("<%s>: Eta:  %5.3f\n ", __func__, Eta_v); 
+#endif             
             if (Eta_v < run_parameters::kCUT_minEta) continue; 
             
-            pair_unique_id++; //this will be used by tracks later
 #ifdef DEBUG_PAIR
-    std::printf("<%s>: keeping pair!\n", __func__); 
+            std::printf("<%s>: keeping pair!\n", __func__); 
 #endif         
             evt.emplace<VDC::ChamberPair<C>>( clust_U, clust_V ); 
 
