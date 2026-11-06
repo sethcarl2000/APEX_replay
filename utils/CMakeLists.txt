@@ -18,11 +18,12 @@ set(src_utils
     remove_file_from_disk.cxx
     get_file_size_KB.cxx
     get_task_rawfile_list.cxx
-  )
+)
 
 set(headers_utils
     include/APEX/utils.h
     include/APEX/utils/ErrorHandler.h
+    include/APEX/utils/AtomicCounter.h
 )
 
 add_library(APEX_utils SHARED ${src_utils})
