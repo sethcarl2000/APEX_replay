@@ -50,7 +50,7 @@ class S2Hit {
   double DeltaT_raw()   const { return (fRawTime_pmtR - fRawTime_pmtL); }
   
   double X()            const { return S2::get_paddle_X(fis_RHRS,fPaddle); }
-  double Y()            const { return S2::get_Y(); }
+  double Y()            const; 
   double Z()            const { return S2::get_Z(fis_RHRS); }
   
   double PaddleWidth() const { return S2::paddle_width_X; }
