@@ -15,10 +15,8 @@ private:
 
     std::map<std::string, std::atomic<unsigned long long>> counters{}; 
     
-    AtomicCounter() {
-        // register our custom user-function to be called when the program exits. 
-        std::atexit(&AtomicCounter::at_exit);     
-    };
+    AtomicCounter() = default; 
+    
 public: 
 
     inline static AtomicCounter& Instance() {
@@ -42,19 +40,16 @@ public:
             count.fetch_add(1, std::memory_order_relaxed);
         }
     }
-    
-    static void at_exit() {
 
-        auto& inst = Instance();
+    std::map<std::string, unsigned long long> static get() {
+        auto& inst = Instance(); 
+        if (inst.counters.empty()) return {}; 
 
-        if (inst.counters.empty()) return;  
-        
-        std::printf(
-            "<AtomicCounter>: Counters: \n"
-        );
-        for (auto& [name, count] : inst.counters) {
-            std::printf("   %30s    %llu\n", name.c_str(), static_cast<unsigned long long>(count)); 
-        }   
+        std::map<std::string, unsigned long long> counts;
+        for(const auto& [name, counter] : inst.counters) {
+            counts.emplace(name, static_cast<unsigned long long>(counter));
+        }
+        return counts; 
     }
 
 }; 
