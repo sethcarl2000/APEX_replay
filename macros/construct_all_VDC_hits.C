@@ -47,7 +47,7 @@ void construct_all_VDC_hits(std::string path_infile)
             Rv<APEX::S2Hit> hits; hits.reserve(APEX::S2Hit::N_paddles());  
 
             for (int i=0; i<APEX::S2Hit::N_paddles(); i++) {
-                auto hit = APEX::S2Hit(is_RHRS, i, pmt_l[i], pmt_r[i]); 
+                auto hit = APEX::S2Hit(is_RHRS, i, pmt_r[i], pmt_l[i]); 
                 if (hit.IsCoinc()) hits.emplace_back(hit); 
             }
             return hits; 

@@ -30,7 +30,7 @@
 namespace {
     constexpr bool kRHRS{true}, kLHRS{false}; 
     // left arm 
-    constexpr bool is_RHRS = kLHRS;  
+    constexpr bool is_RHRS = kRHRS;  
 
     constexpr int run_number = 4016; 
 
@@ -48,6 +48,8 @@ void drawVDC(const bool draw_whole);
 
 void drawVDC_whole() { drawVDC(true); }
 void drawVDC_part()  { drawVDC(false); }
+
+void drawS2(); 
 
 void drawGridSearch(); 
 
@@ -78,8 +80,8 @@ void draw_event(std::string path_infile="data-v2/decode.4016.root")
     kernel.AddUserSlider("group_V_id", 0., 5., 6, "%.0f"); 
 
 
-    kernel.AddUserWindow("VDC_whole", 1200, 900); 
-    kernel.AddDrawFunction("VDC_whole", "VDC_whole", drawVDC_whole, EDK::Frequency::Type::kEachEvent); 
+    //kernel.AddUserWindow("VDC_whole", 1200, 900); 
+    //kernel.AddDrawFunction("VDC_whole", "VDC_whole", drawVDC_whole, EDK::Frequency::Type::kEachEvent); 
 
     kernel.AddUserWindow("VDC_part", 1200, 900); 
     kernel.AddDrawFunction("VDC_part", "VDC_part", drawVDC_part, EDK::Frequency::Type::kEachEvent); 
@@ -87,11 +89,15 @@ void draw_event(std::string path_infile="data-v2/decode.4016.root")
     kernel.AddUserWindow("VDC_grid_search", 900, 900); 
     kernel.AddDrawFunction("VDC_grid_search", "VDC_grid_search", drawGridSearch, EDK::Frequency::Type::kEachEvent); 
 
+    kernel.AddUserWindow("S2", 1200, 500); 
+    kernel.AddDrawFunction("S2", "S2", drawS2, EDK::Frequency::Type::kEachEvent); 
 
     kernel.LaunchApp(); 
 }
 
 template<typename T> using Rv = ROOT::VecOps::RVec<T>; 
+
+TGraph* draw_track(APEX::S2Event& evt, double slope, double intercept, double t_offset); 
 
 //__________________________________________________________________________________________________
 void drawVDC(const bool draw_whole)
@@ -257,16 +263,16 @@ void drawVDC(const bool draw_whole)
 
             const double S2_u{S2_int_uvw.X()}, S2_v{S2_int_uvw.Y()}, S2_w{S2_int_uvw.Z()}; 
 
-            double t_S2 = S2_event.S2Time()/units::ns; 
-            std::printf(" t_S2: %.1f ns\n", t_S2); 
+            double t_S2 = S2_event.S2Time(); 
+            std::printf(" t_S2: %.1f ns\n", t_S2/units::ns); 
 
             for(const auto& group : S2_event.GetCollection<APEX::VDC::HitGroup<P>>()) {
 
                 auto box = new TBox(
                     ((double)group.LoEdge())  - APEX::VDC::kWireSpacing*((double)run_parameters::kGroup_max_gap)/2., 
-                    t_S2 + run_parameters::kVDC_min_realTime/units::ns,
+                    (t_S2 + run_parameters::kVDC_min_realTime)/units::ns,
                     ((double)group.HiEdge())  + APEX::VDC::kWireSpacing*((double)run_parameters::kGroup_max_gap)/2.,
-                    t_S2 + run_parameters::kVDC_max_realTime/units::ns
+                    (t_S2 + run_parameters::kVDC_max_realTime)/units::ns
                 ); 
                 
                 box->SetFillStyle(0);
@@ -316,32 +322,44 @@ void drawVDC(const bool draw_whole)
                             ? (S2_w - APEX::VDC::w<P>(is_RHRS))/(S2_v - best_x)
                             : (S2_w - APEX::VDC::w<P>(is_RHRS))/(S2_u - best_x); 
 
-                        double x_min = (is_U_plane<P>() ? best_v : best_u) - APEX::run_parameters::max_drift_distance/slope;
-                        double x_max = (is_U_plane<P>() ? best_v : best_u) + APEX::run_parameters::max_drift_distance/slope;
-
-                        static constexpr int n_draw_pts = 100; 
-                        const double dx = (x_max - x_min)/((double)n_draw_pts-1); 
-                        std::vector<double> pts_x(n_draw_pts), pts_t(n_draw_pts); 
-
-                        for (int i=0; i<n_draw_pts; i++) {
-                            
-                            double x = x_min + ((double)i)*dx; 
-                            double w = slope * std::fabs(x - best_x); 
-                            
-                            double tau = S2_event.Drift_T(w, slope)/units::ns + t_S2 - ToF/units::ns; 
-
-                            pts_x[i] = x; 
-                            pts_t[i] = tau; 
-
-                            std::printf(" x,tau: %.1f, %.1f\n", x, tau); 
-                        }
-
-                        auto graph = new TGraph(n_draw_pts, pts_x.data(), pts_t.data()); 
+                        auto graph = draw_track(S2_event, slope, best_x, t_S2 - ToF); 
+                        graph->SetLineColor(kRed); 
+                        graph->SetLineWidth(2); 
                         kernel.Draw(graph, "SAME"); 
                     } 
                 }
                 kernel.Draw(box, "SAME"); 
-            }
+
+            } // for (const auto& group ... 
+
+            // draw tracks 
+            std::printf("n. tracks: %zu\n", S2_event.size<APEX::VDC::Track>()); 
+            static const std::size_t n_draw_pts = 100; 
+            S2_event.RefereshEventPointers(); 
+            for (const auto& track : S2_event.GetCollection<APEX::VDC::Track>()) {
+                
+                double slope = track.Slope<P>(); 
+                double intercept = track.GetIntercept<P>(); 
+
+                double x_min = intercept - APEX::run_parameters::max_drift_distance/slope; 
+                double x_max = intercept + APEX::run_parameters::max_drift_distance/slope; 
+
+                const double dx = (x_max - x_min)/((double)n_draw_pts-1); 
+                double x = x_min; 
+
+                std::vector<double> pts_x(n_draw_pts), pts_t(n_draw_pts); 
+                for (int i=0; i<n_draw_pts; i++) {
+
+                    pts_x[i] = x; 
+                    pts_t[i] = (track.Get_T_model<P>(x) + t_S2)/units::ns; 
+                    
+                    x += dx; 
+                }
+                auto graph = new TGraph(n_draw_pts, pts_x.data(), pts_t.data()); 
+                kernel.Draw(graph, "SAME");  
+            
+            } // for (const auto& track ... 
+
         }
     }); 
 
@@ -379,7 +397,6 @@ void drawVDC(const bool draw_whole)
             }
         }
     }); 
-
 
 }
 
@@ -532,4 +549,204 @@ void drawGridSearch()
     });
 
 
+}
+//__________________________________________________________________________________________________
+void drawS2()
+{
+    auto& kernel = EDK::Instance(); 
+
+    using namespace APEX;
+
+    static const std::vector<std::string> plane_names{
+        "u1", "v1", "u2", "v2"
+    }; 
+    static const std::string arm = is_RHRS ? "R" : "L"; 
+    static const replay::EArmMode mode = is_RHRS ? replay::kRHRS : replay::kLHRS; 
+
+    using RVecD = Rv<double>; 
+
+    APEX::replay::helpers::RawVDCData VDC_data{
+        { kernel.GetData<Rv<double>>(arm+".vdc.u1.wire"), kernel.GetData<Rv<double>>(arm+".vdc.u1.rawtime") },
+        { kernel.GetData<Rv<double>>(arm+".vdc.v1.wire"), kernel.GetData<Rv<double>>(arm+".vdc.v1.rawtime") },
+        { kernel.GetData<Rv<double>>(arm+".vdc.u2.wire"), kernel.GetData<Rv<double>>(arm+".vdc.u2.rawtime") },
+        { kernel.GetData<Rv<double>>(arm+".vdc.v2.wire"), kernel.GetData<Rv<double>>(arm+".vdc.v2.rawtime") }
+    };
+
+
+    auto S2_hits_RHRS = replay::helpers::generate_S2_hits(
+        replay::kRHRS, 
+        kernel.GetData<Rv<double>>("R.s2.rt"),
+        kernel.GetData<Rv<double>>("R.s2.lt")
+    );
+    auto S2_hits_LHRS = replay::helpers::generate_S2_hits(
+        replay::kLHRS, 
+        kernel.GetData<Rv<double>>("L.s2.rt"),
+        kernel.GetData<Rv<double>>("L.s2.lt")
+    );
+
+    if (kernel.IsActive() && (S2_hits_RHRS.empty() || S2_hits_LHRS.empty())) return; 
+
+    std::shared_ptr<EventHandler> dummy_event;  
+
+    const std::size_t id_U = static_cast<std::size_t>(kernel.GetParameter<double>("group_U_id")); 
+    const std::size_t id_V = static_cast<std::size_t>(kernel.GetParameter<double>("group_V_id")); 
+
+    double beam_current = kernel.GetData<double>("hac_bcm_average"); 
+    
+    if (!kernel.IsActive()) return; 
+
+    dummy_event = std::make_shared<EventHandler>(mode, 
+        beam_current, run_number,
+        &S2_hits_RHRS.front(),
+        &S2_hits_LHRS.front()
+    ); 
+
+    APEX::replay::EventCounter_atomic d1,d2,d3,d4; 
+
+    const auto & S2_hits = is_RHRS ? S2_hits_RHRS : S2_hits_LHRS; 
+    Rv<S2Event> S2_events = APEX::replay::helpers::generate_vdc_tracks_from_S2Event(
+        is_RHRS, 
+        ROOT::RVec<EventHandler>{ *dummy_event }, 
+        S2_hits, 
+        VDC_data, 
+        d1,d2,d3,d4, true
+    ); 
+
+        
+    //draw the S2 plane & paddle
+    const double S2_x_range[2] = { 
+        S2::get_paddle_X(is_RHRS,0)  - S2::paddle_width_X/2., 
+        S2::get_paddle_X(is_RHRS,15) + S2::paddle_width_X/2.
+    };
+
+    static constexpr double paddle_width_y = 43.2*units::cm; 
+    const double S2_y_range[2] = { -paddle_width_y/2., +paddle_width_y/2. };
+
+    // buffer around total size of S2 
+    double buffer = 1.1; 
+
+    auto hist = new TH2D("h_S2", "S2 plane;x_{S2};y_{S2}", 
+        100,  
+        S2_x_range[0] - (S2_x_range[1]-S2_x_range[0])*(buffer - 1.)/2., 
+        S2_x_range[1] + (S2_x_range[1]-S2_x_range[0])*(buffer - 1.)/2.,
+
+        100,  
+        S2_y_range[0] - (S2_y_range[1]-S2_y_range[0])*(buffer - 1.)/2., 
+        S2_y_range[1] + (S2_y_range[1]-S2_y_range[0])*(buffer - 1.)/2.
+    );
+
+    kernel.Draw(hist); 
+
+    for (int i=0; i<APEX::S2::N_paddles; i++) {
+
+        auto box = new TBox(
+            S2::get_paddle_X(is_RHRS,i) - S2::paddle_width_X/2., -paddle_width_y/2., 
+            S2::get_paddle_X(is_RHRS,i) + S2::paddle_width_X/2., +paddle_width_y/2.
+        ); 
+        box->SetFillStyle(0); 
+        kernel.Draw(box); 
+    }
+
+    double S2_y_rms = 2.5*units::cm; 
+    for (const auto& S2_event : S2_events) {
+
+        const auto& hit = S2_event.GetS2Hit(); 
+
+        double S2_x = S2::get_paddle_X(is_RHRS,hit.Paddle()); 
+
+        std::printf("S2 hit: (%.1f cm, %.1f cm)\n", hit.X()/units::cm, hit.Y()/units::cm); 
+
+        auto box = new TBox(
+            S2_x - S2::paddle_width_X/2., hit.Y() - S2_y_rms, 
+            S2_x + S2::paddle_width_X/2., hit.Y() + S2_y_rms
+        ); 
+        box->SetLineColor(kBlack);
+        box->SetFillStyle(0); 
+        box->SetLineStyle(kDashed); 
+        kernel.Draw(box); 
+
+        // draw track 'crosshair' 
+        TLine* line; 
+        line = new TLine(
+            S2_x - S2::paddle_width_X/2., 
+            hit.Y(), 
+            S2_x + S2::paddle_width_X/2., 
+            hit.Y()
+        ); 
+        line->SetLineWidth(1); 
+        line->SetLineColor(kBlack); 
+        kernel.Draw(line); 
+
+        line = new TLine(
+            S2_x, 
+            hit.Y() - S2_y_rms, 
+            S2_x, 
+            hit.Y() + S2_y_rms            
+        ); 
+        line->SetLineWidth(1); 
+        line->SetLineColor(kBlack); 
+        kernel.Draw(line); 
+    }
+
+    const double track_line_width = 5.*units::cm; 
+
+    //now, draw tracks
+    for (const auto& S2_event : S2_events) {
+        for (const auto& track : S2_event.GetCollection<APEX::VDC::Track>()) {
+            //plot the S2 x & y 
+            double S2_x = track.S2_x(); 
+            double S2_y = track.S2_y(); 
+    
+            // draw track 'crosshair' 
+            TLine* line; 
+            line = new TLine(
+                S2_x, 
+                S2_y-track_line_width/2., 
+                S2_x, 
+                S2_y+track_line_width/2.
+            ); 
+            line->SetLineWidth(2); 
+            line->SetLineColor(kBlack); 
+            kernel.Draw(line); 
+
+            line = new TLine(
+                S2_x-track_line_width/2., 
+                S2_y, 
+                S2_x+track_line_width/2., 
+                S2_y
+            ); 
+            line->SetLineWidth(2); 
+            line->SetLineColor(kBlack); 
+            kernel.Draw(line); 
+        }
+    }
+    
+}
+
+//__________________________________________________________________________________________________
+TGraph* draw_track(APEX::S2Event& evt, double slope, double intercept, double t_offset)
+{
+    using namespace APEX;
+
+    double x_min = intercept - APEX::run_parameters::max_drift_distance/slope;
+    double x_max = intercept + APEX::run_parameters::max_drift_distance/slope;
+
+    static constexpr int n_draw_pts = 100; 
+    const double dx = (x_max - x_min)/((double)n_draw_pts-1); 
+    std::vector<double> pts_x(n_draw_pts), pts_t(n_draw_pts); 
+
+    for (int i=0; i<n_draw_pts; i++) {
+        
+        double x = x_min + ((double)i)*dx; 
+        double w = slope * std::fabs(x - intercept); 
+        
+        double tau = evt.Drift_T(w, slope) + t_offset; 
+
+        pts_x[i] = x; 
+        pts_t[i] = tau/units::ns; 
+
+        std::printf(" x,tau: %.1f, %.1f\n", x, tau); 
+    }
+
+    return new TGraph(n_draw_pts, pts_x.data(), pts_t.data()); 
 }
