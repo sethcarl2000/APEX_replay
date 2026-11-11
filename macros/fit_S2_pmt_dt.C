@@ -46,7 +46,7 @@ void fit_S2_pmt_dt(
     struct S2_pmt_data { double pmt_dt, S2_y; }; 
 
     // effective scintillator photon speed, in TDC tick / cm
-    const double v_effective = 25./30.; 
+    constexpr double v_effective = (5./3.)*units::cm/units::ns; 
 
     TCanvas* canv_all_paddles = new TCanvas; 
     canv_all_paddles->Divide(2,1); 
@@ -74,19 +74,24 @@ void fit_S2_pmt_dt(
         for (int paddle=0; paddle<S2::N_paddles; paddle++) {
 
             auto df_out = df    
-                .Define("pmt_data", [paddle, v_effective](Rv<int> t_paddle, Rv<double> t_pmt_dt, Rv<double> t_y){
+                .Define("pmt_data", [paddle, v_effective](
+                    Rv<int> t_paddle, 
+                    Rv<double> t_right_pmt_tdc, 
+                    Rv<double> t_left_pmt_tdc, 
+                    Rv<double> t_y){
                     Rv<S2_pmt_data> data; data.reserve(t_paddle.size());
                     
                     for (std::size_t i=0; i<t_paddle.size(); i++) {
                         if (t_paddle[i] == paddle) {
+                            double pmt_dt = t_right_pmt_tdc[i] - t_left_pmt_tdc[i];
                             data.emplace_back(
-                                t_pmt_dt[i]*units::ns - v_effective*t_y[i]/units::cm, t_y[i]/units::cm
+                                ((pmt_dt)*APEX::S2::TDC_resolution*v_effective - t_y[i])/units::cm, t_y[i]/units::cm
                             ); 
                         }
                     }
                     return data; 
 
-                }, {arm+"_S2_paddle", arm+"_S2_pmt_dt", arm+"_S2_y"})
+                }, {arm+"_S2_paddle", arm+"_S2_right_pmt_tdc", arm+"_S2_left_pmt_tdc", arm+"_S2_y"})
 
                 .Filter([](Rv<S2_pmt_data> data){ return !data.empty(); }, {"pmt_data"})
 
