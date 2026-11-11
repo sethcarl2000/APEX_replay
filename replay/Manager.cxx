@@ -423,6 +423,11 @@ int Manager::Process(const std::string& path_input, const std::string& stem_outp
     define_output_from_track(track_branch, arm+"_s2_x",     &VDC::Track::S2_x);
     define_output_from_track(track_branch, arm+"_s2_y",     &VDC::Track::S2_y);
 
+    define_output_from_track(track_branch, arm+"_cer_x",     &VDC::Track::Cerenkov_x);
+    define_output_from_track(track_branch, arm+"_cer_y",     &VDC::Track::Cerenkov_y);
+    define_output_from_track(track_branch, arm+"_cer_t",     &VDC::Track::Cerenkov_t);
+    
+
     //define_output_from_track(track_branch, arm+"_S2_x_param", &VDC::Track::xParam);
     define_output_from_track(track_branch, arm+"_S2_dt",    &VDC::Track::T0);
 
@@ -448,6 +453,24 @@ int Manager::Process(const std::string& path_input, const std::string& stem_outp
       return ret; 
     }, {track_branch});
 
+    rna.DefineOutput(arm+"_S2_right_pmt_tdc", [](const RVec<VDC::Track>& tracks){
+      RVecD ret; ret.reserve(tracks.size()); 
+      for (const auto& trk : tracks) {
+        const auto s2_hit = trk.GetEvent()->GetS2Hit(trk.IsRightArm());
+        ret.push_back(s2_hit->Right_PMT_TDC());
+      }
+      return ret; 
+    }, {track_branch});
+
+    rna.DefineOutput(arm+"_S2_left_pmt_tdc", [](const RVec<VDC::Track>& tracks){
+      RVecD ret; ret.reserve(tracks.size()); 
+      for (const auto& trk : tracks) {
+        const auto s2_hit = trk.GetEvent()->GetS2Hit(trk.IsRightArm());
+        ret.push_back(s2_hit->Left_PMT_TDC());
+      }
+      return ret; 
+    }, {track_branch});
+
     rna.DefineOutput(arm+"_S2_paddle", [](const RVec<VDC::Track>& tracks){
       RVec<int> ret; ret.reserve(tracks.size()); 
       for (const auto& trk : tracks) {
@@ -469,6 +492,9 @@ int Manager::Process(const std::string& path_input, const std::string& stem_outp
       return ret; 
     }, {track_branch});
 
+    rna.DefineOutput(arm+"_cer_a_c", [](const RVecD& v){ return v; }, {arm+".cer.a_c"}); 
+    rna.DefineOutput(arm+"_cer_t_c", [](const RVecD& v){ return v; }, {arm+".cer.t_c"}); 
+
     rna.AddBranchToOutput("R_position_vtx");
     rna.DefineOutput("R_y_BPM", [](double bpma_y, double bpmb_y){ return (bpma_y + bpmb_y)/2; }, {"Rrb.BPMA.y","Rrb.BPMB.y"});  
   }
@@ -483,6 +509,10 @@ int Manager::Process(const std::string& path_input, const std::string& stem_outp
     
     define_output_from_track(track_branch, arm+"_S2_x", &VDC::Track::S2_x);
     define_output_from_track(track_branch, arm+"_S2_y", &VDC::Track::S2_y);
+
+    define_output_from_track(track_branch, arm+"_cer_x",     &VDC::Track::Cerenkov_x);
+    define_output_from_track(track_branch, arm+"_cer_y",     &VDC::Track::Cerenkov_y);
+    define_output_from_track(track_branch, arm+"_cer_t",     &VDC::Track::Cerenkov_t);
 
     //define_output_from_track(track_branch, arm+"_S2_x_param", &VDC::Track::xParam);
     define_output_from_track(track_branch, arm+"_S2_dt", &VDC::Track::T0);
@@ -506,6 +536,24 @@ int Manager::Process(const std::string& path_input, const std::string& stem_outp
         ret.push_back(s2_hit->DeltaT_raw());
       }
       return ret; 
+    }, {track_branch}); 
+    
+    rna.DefineOutput(arm+"_S2_right_pmt_tdc", [](const RVec<VDC::Track>& tracks){
+      RVecD ret; ret.reserve(tracks.size()); 
+      for (const auto& trk : tracks) {
+        const auto s2_hit = trk.GetEvent()->GetS2Hit(trk.IsRightArm());
+        ret.push_back(s2_hit->Right_PMT_TDC());
+      }
+      return ret; 
+    }, {track_branch});
+
+    rna.DefineOutput(arm+"_S2_left_pmt_tdc", [](const RVec<VDC::Track>& tracks){
+      RVecD ret; ret.reserve(tracks.size()); 
+      for (const auto& trk : tracks) {
+        const auto s2_hit = trk.GetEvent()->GetS2Hit(trk.IsRightArm());
+        ret.push_back(s2_hit->Left_PMT_TDC());
+      }
+      return ret; 
     }, {track_branch});
 
     rna.DefineOutput(arm+"_S2_paddle", [](const RVec<VDC::Track>& tracks){
@@ -528,6 +576,9 @@ int Manager::Process(const std::string& path_input, const std::string& stem_outp
       }
       return ret; 
     }, {track_branch});
+
+    rna.DefineOutput(arm+"_cer_a_c", [](const RVecD& v){ return v; }, {arm+".cer.a_c"}); 
+    rna.DefineOutput(arm+"_cer_t_c", [](const RVecD& v){ return v; }, {arm+".cer.t_c"}); 
 
     rna.AddBranchToOutput("L_position_vtx");
     rna.DefineOutput("L_y_BPM", [](double bpma_y, double bpmb_y){ return (bpma_y + bpmb_y)/2; }, {"Lrb.BPMA.y","Lrb.BPMB.y"});  

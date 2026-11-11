@@ -22,6 +22,9 @@ class S2Hit {
   int    Paddle()       const { return fPaddle; }
   
   double DeltaT_raw()   const;
+
+  double Right_PMT_TDC() const { return fRawTime_pmtR; }
+  double Left_PMT_TDC() const { return fRawTime_pmtL; }
   
   double X()            const { return fX; }
   double Y()            const { return fY; }

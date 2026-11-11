@@ -3,6 +3,7 @@
 
 //APEX headers 
 #include <APEX/VDC.h> 
+#include <APEX/units.h>
 #include <APEX/VDC/ChamberPair.h> 
 #include <APEX/EventHandler.h> 
 #include <math.h> 
@@ -137,8 +138,23 @@ class Track {
     
   
   double GetTimeAtZ(const double z) const; 
-  
-  
+
+  // get x-intercept with Cerenkov plane (TRANSPORT coords)
+  double Cerenkov_x() const {
+    return ComputeIntercept_z(f_isRightArm ? 180.*units::cm : 181.*units::cm).X(); 
+  }
+
+  // get y-intercept with Cerenkov plane (TRANSPORT coords)
+  double Cerenkov_y() const {
+    return ComputeIntercept_z(f_isRightArm ? 180.*units::cm : 181.*units::cm).Y(); 
+  }
+
+  // get t-intercept with Cerenkov plane (TRANSPORT coords)
+  double Cerenkov_t() const {
+    return GetTimeAtZ(f_isRightArm ? 180.*units::cm : 181.*units::cm) + fT0; 
+  }
+
+
   double S2_x()  const; 
   double S2_y()  const; 
   
