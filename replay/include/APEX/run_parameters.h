@@ -21,8 +21,17 @@ namespace run_parameters {
     /// this cut is how we determine if two adjacent S2 hits are 'twin' hits (likely caused by the same particle)
     constexpr double kCUT_S2_twinHit_timeErr = 4.5*units::ns; 
 
-    // spacing between coarse-grained grid-search 
+    constexpr double S2_time_min_R{-25.*units::ns}, S2_time_max_R{+35.*units::ns}; 
+    constexpr double S2_time_min_L{-40.*units::ns}, S2_time_max_L{+25.*units::ns}; 
+
+    // spacing between coarse-grained grid-search. 
     constexpr double kGridSpacing = VDC::kWireSpacing/10.; 
+
+    // min distance between clusters before they are 'absorbed' into one another
+    constexpr double kMinClusterDistance = 1.*VDC::kWireSpacing; 
+
+    // max reasonable drift-distance (for either arm)
+    constexpr double max_drift_distance = 18.*units::mm; 
 
     //min eta of one plane (during grid-searching). 
     // this is analogous to the num. of points found

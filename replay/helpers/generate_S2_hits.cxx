@@ -30,7 +30,10 @@ ROOT::VecOps::RVec<S2Hit> generate_S2_hits(
         return {}; 
     }
     const bool is_RHRS = (arm_mode == kRHRS); 
-  
+    
+    const double t_min = is_RHRS ? APEX::run_parameters::S2_time_min_R : APEX::run_parameters::S2_time_min_L; 
+    const double t_max = is_RHRS ? APEX::run_parameters::S2_time_max_R : APEX::run_parameters::S2_time_max_L; 
+
     //generate a vector of all coinc s2-paddle hits
     ROOT::RVec<S2Hit> coinc_hits{}; 
     
@@ -42,7 +45,10 @@ ROOT::VecOps::RVec<S2Hit> generate_S2_hits(
         
         //check if it's a coinc-hit
         if ( !hit.IsCoinc() ) continue; 
-        
+
+        // if this hit's time is out-of-range, then throw it out. 
+        if ( hit.Time() > t_max || hit.Time() < t_min ) continue; 
+
         //check if this hit is a 'twin hit' with a previous hit
         if (coinc_hits.size()>0) { 
 

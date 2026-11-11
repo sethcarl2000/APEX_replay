@@ -2,7 +2,9 @@
 #define APEX_replay_helpers_h
 
 // APEX headers
+#include <APEX/units.h>
 #include <APEX/replay.h> 
+#include <APEX/ObjCollection.h>
 #include <APEX/replay/EventCounter.h> 
 #include <APEX/EventHandler.h>
 #include <APEX/ReactVertex.h>
@@ -20,7 +22,8 @@
 // ROOT headers
 #include <ROOT/RVec.hxx>
 // stdlib
-#include <atomic> 
+#include <vector> 
+#include <cstddef> 
 
 
 namespace APEX
@@ -50,8 +53,9 @@ template<VDC::Plane P> double grid_search(
     double m2, 
     double x_Lo,
     double x_Hi, 
-    double TAU_sigma  =9e-9, 
-    double TAU_buffer =20e-9 
+    double TAU_sigma  =9.*units::ns, 
+    double TAU_buffer =20.*units::ns, 
+    double TAU_offset =0.*units::ns
 );
 
 /// @brief The VDC chamber to iterate through. 
@@ -109,6 +113,14 @@ ROOT::VecOps::RVec<S2Hit> generate_S2_hits(
 );
 
 
+struct pair_candidate { double u,v, eta_u,eta_v; std::size_t id_U,id_V; };
+
+/// @brief Search for cluster-pairs in each VDC chamber
+/// @tparam C VDC Chamber
+/// @param event S2 Event (containing 'VDC::HitGroup' collections)
+template<VDC::Chamber C> std::vector<pair_candidate> chamber_grid_search( S2Event& event ); 
+
+
 template<VDC::Plane P> struct PlaneData { ROOT::VecOps::RVec<double> wire, rawtime; };
     
 using RawVDCData = std::tuple<
@@ -119,9 +131,6 @@ using RawVDCData = std::tuple<
 >;
 
 /// @brief Generates VDC tracks from an 'S2Event' object
-/// @param is_RHRS
-/// @param node_in input RDF node
-/// @param n_pass_1group EventCounter representing the number of events which reconstructed at least 1 group 
 ROOT::RVec<S2Event> generate_vdc_tracks_from_S2Event( 
     const bool is_RHRS, 
     const ROOT::RVec<EventHandler>& event_handlers,
@@ -130,7 +139,8 @@ ROOT::RVec<S2Event> generate_vdc_tracks_from_S2Event(
     EventCounter_atomic &nPass_1group, 
     EventCounter_atomic &nPass_1pair, 
     EventCounter_atomic &nPass_1rawTrack,
-    EventCounter_atomic &nPass_1refinedTrack
+    EventCounter_atomic &nPass_1refinedTrack, 
+    bool keep_empty_events=false
 );
 
 //

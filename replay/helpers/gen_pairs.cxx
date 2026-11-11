@@ -25,7 +25,7 @@ namespace {
     const double uFix = 26.*units::mm/std::sqrt(2);
 }; 
 
-//#define DEBUG_PAIR
+#define DEBUG_PAIR
 
 template<VDC::Chamber C> void gen_pairs( 
     S2Event& evt) 

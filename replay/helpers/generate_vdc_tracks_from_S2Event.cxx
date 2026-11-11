@@ -39,7 +39,7 @@ namespace replay
 namespace helpers
 {
 
-//#define DEBUG_S2Event
+#define DEBUG_S2Event
 
 namespace { 
     /// @return 'true' if RVec iss non-empty  
@@ -100,7 +100,8 @@ ROOT::RVec<S2Event> generate_vdc_tracks_from_S2Event(
     EventCounter_atomic &nPass_1group, 
     EventCounter_atomic &nPass_1pair, 
     EventCounter_atomic &nPass_1rawTrack,
-    EventCounter_atomic &nPass_1refinedTrack
+    EventCounter_atomic &nPass_1refinedTrack, 
+    bool keep_empty_events
 ) 
 {   
     /// increment an event counter by 1 
@@ -163,7 +164,7 @@ ROOT::RVec<S2Event> generate_vdc_tracks_from_S2Event(
 #ifdef DEBUG_S2Event
         std::printf("<Event Loop>: New Event ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~\n");
 #endif
-    VDC::for_each_plane([&VDC_data,&S2_events]<VDC::Plane P>(){ 
+    VDC::for_each_plane([&VDC_data,&S2_events,keep_empty_events]<VDC::Plane P>(){ 
         
         if (S2_events.empty()) return; 
 
@@ -182,7 +183,7 @@ ROOT::RVec<S2Event> generate_vdc_tracks_from_S2Event(
         std::printf("<Event Loop>: remove & sort (%s)\n", VDC::plane_name<P>().c_str());
 #endif
         // remove any S2 hits which don't have at least 1 group 
-        remove_and_sort<VDC::HitGroup<P>>(S2_events); 
+        if (!keep_empty_events) remove_and_sort<VDC::HitGroup<P>>(S2_events); 
     });
 
     // if there are no events left, then carry on 
@@ -202,7 +203,7 @@ ROOT::RVec<S2Event> generate_vdc_tracks_from_S2Event(
     ///
     ///     Create VDC HitClusters &  VDC ChamberPairs
     ///
-    VDC::for_each_chamber([&S2_events]<VDC::Chamber C>(){
+    VDC::for_each_chamber([&S2_events,keep_empty_events]<VDC::Chamber C>(){
 
         if (S2_events.empty()) return; 
 
@@ -229,7 +230,7 @@ ROOT::RVec<S2Event> generate_vdc_tracks_from_S2Event(
         std::printf("<Event Loop>: Refresh & Sort (Chamber %s)\n", VDC::chamber_name<C>().c_str());
 #endif
         // remove the events that didn't have any pairs generated
-        remove_and_sort<VDC::ChamberPair<C>>(S2_events); 
+        if (!keep_empty_events) remove_and_sort<VDC::ChamberPair<C>>(S2_events); 
     });
 
     // if there are no events left, then carry on 
@@ -256,7 +257,7 @@ ROOT::RVec<S2Event> generate_vdc_tracks_from_S2Event(
 #ifdef DEBUG_S2Event
     std::printf("<Event Loop>: Remove & sort rawtracks\n");
 #endif
-    remove_and_sort<VDC::Track>(S2_events); 
+    if (!keep_empty_events) remove_and_sort<VDC::Track>(S2_events); 
 
     // if there are no events left, then carry on 
     if (S2_events.empty()) return S2_events; 
@@ -347,7 +348,7 @@ ROOT::RVec<S2Event> generate_vdc_tracks_from_S2Event(
         }
     }
     //now, sort out events that don't have at least 1 refined track. 
-    remove_and_sort<VDC::Track>(S2_events); 
+    if (!keep_empty_events) remove_and_sort<VDC::Track>(S2_events); 
 
     // if there are no events left, then carry on 
     if (S2_events.empty()) return S2_events; 

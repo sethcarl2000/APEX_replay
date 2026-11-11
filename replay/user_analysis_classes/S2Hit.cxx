@@ -1,5 +1,6 @@
 
 #include <APEX/S2Hit.h>
+#include <APEX/S2.h>
 
 #include <cmath> 
 #include <array>
@@ -52,7 +53,7 @@ namespace {
   };
 
   // this is the effective 'velocity' of scintillation photons in the S2 paddles, in units of cm/TDC-step 
-  constexpr double v_effective = (1.2)*units::cm; 
+  constexpr double v_effective = (5./3.)*units::cm/units::ns; 
 
   inline bool is_nan(double x) { return x != x; }
 }
@@ -69,9 +70,9 @@ double S2Hit::Y() const
 {
   double pmt_diff = fRawTime_pmtR - fRawTime_pmtL;
  
-  double offset = Is_RightArm() ? pmt_dt_offsets_RHRS[Paddle()] : pmt_dt_offsets_LHRS[Paddle()]; 
+  double offset = fis_RHRS ? pmt_dt_offsets_RHRS[Paddle()] : pmt_dt_offsets_LHRS[Paddle()]; 
  
-  return (pmt_diff - offset)/v_effective; 
+  return (pmt_diff - offset)*S2::TDC_resolution * v_effective; 
 }
 
 }
