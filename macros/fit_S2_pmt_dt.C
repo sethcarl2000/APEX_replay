@@ -28,7 +28,7 @@ template<typename T> using Rv = ROOT::VecOps::RVec<T>;
 
 void fit_S2_pmt_dt(
     std::string infile_path="data-v2/replay.4016.root", 
-    std::string outgraphic_path="plots/S2_pmt_dt",
+    std::string outgraphic_path="plots/S2_pmt_dt_new",
     std::string outfile_path="data/csv/pmt_dt_offsets.txt"
 )
 {
@@ -46,11 +46,10 @@ void fit_S2_pmt_dt(
     struct S2_pmt_data { double pmt_dt, S2_y; }; 
 
     // effective scintillator photon speed, in TDC tick / cm
-    constexpr double v_effective = (5./3.)*units::cm/units::ns; 
+    constexpr double v_effective = (4.664)*units::cm/units::ns; 
 
     TCanvas* canv_all_paddles = new TCanvas; 
     canv_all_paddles->Divide(2,1); 
-
 
     TCanvas* canv_error = new TCanvas; 
     canv_error->Divide(2,1); 
@@ -64,9 +63,11 @@ void fit_S2_pmt_dt(
 
         std::string arm = is_RHRS ? "R" : "L"; 
 
+        std::string br_S2_y = is_RHRS ? "R_s2_y" : "L_S2_y"; 
+
         double pmt_dt_range[2] = {
-            is_RHRS ? -30. : -135.,
-            is_RHRS ? +15. : -95.
+            is_RHRS ? -15. : -70,
+            is_RHRS ? +10. : -40.
         }; 
         
         std::vector<double> pmt_offsets(S2::N_paddles, 0.); 
@@ -74,6 +75,9 @@ void fit_S2_pmt_dt(
         for (int paddle=0; paddle<S2::N_paddles; paddle++) {
 
             auto df_out = df    
+
+                // fix typo in replay file
+
                 .Define("pmt_data", [paddle, v_effective](
                     Rv<int> t_paddle, 
                     Rv<double> t_right_pmt_tdc, 
@@ -85,13 +89,14 @@ void fit_S2_pmt_dt(
                         if (t_paddle[i] == paddle) {
                             double pmt_dt = t_right_pmt_tdc[i] - t_left_pmt_tdc[i];
                             data.emplace_back(
-                                ((pmt_dt)*APEX::S2::TDC_resolution*v_effective - t_y[i])/units::cm, t_y[i]/units::cm
+                                pmt_dt - (t_y[i]/(v_effective*S2::TDC_resolution)), 
+                                t_y[i]
                             ); 
                         }
                     }
                     return data; 
 
-                }, {arm+"_S2_paddle", arm+"_S2_right_pmt_tdc", arm+"_S2_left_pmt_tdc", arm+"_S2_y"})
+                }, {arm+"_S2_paddle", arm+"_S2_right_pmt_tdc", arm+"_S2_left_pmt_tdc", br_S2_y})
 
                 .Filter([](Rv<S2_pmt_data> data){ return !data.empty(); }, {"pmt_data"})
 
@@ -128,7 +133,7 @@ void fit_S2_pmt_dt(
             f_gaus->SetParameter(1, center); 
             f_gaus->SetParameter(2, radius/2.); 
 
-            auto fit_result = hist_p->Fit("f_gaus", "R N S"); 
+            auto fit_result = hist_p->Fit("f_gaus", "R N Q S"); 
 
             if (static_cast<int>(fit_result)==0 && fit_result->IsValid()) {
                 
@@ -142,7 +147,7 @@ void fit_S2_pmt_dt(
 
                 double sigma  = fit_result->Parameter(2); 
 
-                std::printf("offset: %.1f, sigma: %.1f\n", offset, sigma); 
+                //std::printf("offset: %.1f, sigma: %.1f\n", offset, sigma); 
                 f_gaus->DrawClone("SAME"); 
             }
 
@@ -178,7 +183,8 @@ void fit_S2_pmt_dt(
                         canv->Print(path.c_str(), "pdf"); 
                 }
             }; 
-            save_canv_as_pdf(outgraphic_path + "_"+arm+"HRS"+ ".pdf"); 
+            if (!outgraphic_path.empty())
+                save_canv_as_pdf(outgraphic_path + "_"+arm+"HRS"+ ".pdf"); 
         }
 
         //make the output
@@ -194,16 +200,22 @@ void fit_S2_pmt_dt(
 
         auto df_all = df
             
-            .Define("pmt_data_corrected", [&pmt_offsets](Rv<int> t_paddle, Rv<double> t_pmt_dt, Rv<double> t_y){
+            .Define("pmt_data_corrected", [&pmt_offsets](
+                Rv<int> t_paddle, 
+                Rv<double> t_right_pmt_tdc, 
+                Rv<double> t_left_pmt_tdc, 
+                Rv<double> t_y)
+            {
                 Rv<S2_pmt_data> data; data.reserve(t_y.size()); 
                 for (std::size_t i=0; i<t_y.size(); i++) {
+                    double pmt_dt = t_right_pmt_tdc[i] - t_left_pmt_tdc[i]; 
                     data.emplace_back(
-                        t_pmt_dt[i]*units::ns - pmt_offsets[t_paddle[i]], 
+                        pmt_dt - pmt_offsets[t_paddle[i]], 
                         t_y[i]
                     );
                 }
                 return data; 
-            }, {arm+"_S2_paddle", arm+"_S2_pmt_dt", arm+"_S2_y"})
+            }, {arm+"_S2_paddle", arm+"_S2_right_pmt_tdc", arm+"_S2_left_pmt_tdc", br_S2_y})
 
             .Define("S2_y", [](const Rv<S2_pmt_data>& v){ 
                 Rv<double> out; 
@@ -222,7 +234,7 @@ void fit_S2_pmt_dt(
            .Define("S2_y_error", [v_effective](const Rv<S2_pmt_data>& v){ 
                 Rv<double> out; 
                 out.reserve(v.size()); 
-                for(const auto& d : v) out.emplace_back(d.S2_y/units::cm - d.pmt_dt/v_effective); 
+                for(const auto& d : v) out.emplace_back((d.S2_y - d.pmt_dt*S2::TDC_resolution*v_effective)/units::cm); 
                 return out; 
             }, {"pmt_data_corrected"});
             
@@ -248,8 +260,9 @@ void fit_S2_pmt_dt(
         
         canv_all_paddles->cd((is_RHRS ? 1 : 2)); 
         histo2d->DrawCopy("col"); 
-        
-        auto line = new TLine(-30.*v_effective,-30, +30*v_effective,30); 
+            
+        double dt_max = 30./(S2::TDC_resolution*v_effective/(units::cm)); 
+        auto line = new TLine(-dt_max,-30., +dt_max,30.); 
         line->SetLineColor(kRed);
         line->SetLineStyle(kDashed); 
         line->Draw(); 
@@ -263,7 +276,7 @@ void fit_S2_pmt_dt(
         f_gaus->SetParameter(1, 0.); 
         f_gaus->SetParameter(2, 2.);
         
-        auto fit_result = histo1d->Fit("f_gaus", "R N S");
+        auto fit_result = histo1d->Fit("f_gaus", "R N Q S");
         
         if (static_cast<int>(fit_result)==0 && fit_result->IsValid()) {
         
