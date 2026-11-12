@@ -223,7 +223,9 @@ ROOT::RVec<S2Event> generate_vdc_tracks_from_S2Event(
 #ifdef DEBUG_S2Event
     std::printf("<Event Loop>: <event %zu> Making pairs for event\n", S2_event.GetID());
 #endif
-            gen_pairs<C>(S2_event); 
+            chamber_grid_search<C>(S2_event, 
+                run_parameters::min_cluster_gap, run_parameters::kCUT_minEta
+            ); 
         }
         
 #ifdef DEBUG_S2Event
@@ -244,7 +246,7 @@ ROOT::RVec<S2Event> generate_vdc_tracks_from_S2Event(
 
     ///////////////////////////////////////////////////////////////////////////////////
     ///
-    ///     generate 'raw' tracks for each S2 event
+    ///     generate tracks for each S2 event
     ///
     for (auto& S2_event : S2_events) { 
         // do this to make sure each track has the correct event pointer. 
@@ -252,7 +254,7 @@ ROOT::RVec<S2Event> generate_vdc_tracks_from_S2Event(
 #ifdef DEBUG_S2Event
     std::printf("<Event Loop>: Gen rawtracks\n");
 #endif
-        gen_rawtracks(S2_event); 
+        generate_all_tracks(S2_event); 
     }
 #ifdef DEBUG_S2Event
     std::printf("<Event Loop>: Remove & sort rawtracks\n");
@@ -263,97 +265,7 @@ ROOT::RVec<S2Event> generate_vdc_tracks_from_S2Event(
     if (S2_events.empty()) return S2_events; 
     // count the number of events we still have 
     increment( nPass_1rawTrack ); 
-
-#ifdef DEBUG_S2Event
-    std::printf("<Event Loop>: %llu events so far surviving '1 raw track' cut\n", static_cast<EventCounter>(nPass_1rawTrack));
-#endif
-
-    ///////////////////////////////////////////////////////////////////////////////////
-    ///
-    ///     generate 'refined' tracks for each S2 event
-    ///
-    for (auto& S2_event : S2_events) {
-        // do this to make sure each track has the correct event pointer. 
-        S2_event.RefereshEventPointers(); 
-
-        const double tau_sigma = S2_event.GetEventHandler().Get_tauSigma(); 
-        
-        RVec<VDC::Track> refined_tracks; refined_tracks.reserve(S2_event.size<VDC::Track>()); 
-
-        auto& tracks = S2_event.GetCollection<VDC::Track>(); 
-
-        //first, 'refine' the tracks. 
-        for (auto& track : tracks) {
-            refine_track(track, 20, 25.*units::ns); 
-        }
-
-        //now, check to make it has good angular agreement. 
-        tracks.remove_if([=](const VDC::Track& trk){
-            
-            double err_Theta = trk.Theta() - Theta_model(trk); 
-            double err_Phi   = trk.Phi()   - Phi_model(trk); 
-                    
-            if ( err_Theta < CUT_th_min || 
-                    err_Theta > CUT_th_max || 
-                    err_Phi   < CUT_ph_min || 
-                    err_Phi   > CUT_ph_max ) { //cut this track 
-                
-                return true; //remove this track 
-            } 
-            return false; //keep this track 
-        });
-
-        // now, compute the 'track data' 
-        for (auto& trk : tracks) {
-            compute_trackdata(trk); 
-        }
-
-        // see if there are enough 'good points' for each plane 
-        tracks.remove_if([=](const VDC::Track& trk){
-            
-            // see if the track's 'Eta' is good enough 
-            if (trk.GetEta() < run_parameters::TRK_CUT_Eta) return true; 
-
-            // see if each VDC Plane has the min. number of hits 
-            if (trk.Get_nGoodPoints() < run_parameters::TRK_CUT_nGoodPts_min) true; 
-
-            // see if there are enough hits overall 
-            bool discard=false; 
-            VDC::for_each_plane([&]<VDC::Plane P>(){
-                if (trk.Get_nGoodPoints<P>() < run_parameters::TRK_CUT_nGoodPts_min_perPlane) { discard=true; }
-            });
-            if (discard) return true; 
-
-            return false; 
-        });
-
-        // see if this track's projection onto the S2 matches up well enough 
-        tracks.remove_if([=](const VDC::Track& trk){    
-            
-            //do some basic checks
-            double xParam = trk.xParam();
-            double Dt     = trk.T0(); 
-
-            if ( std::fabs(xParam-x_param_offset) > run_parameters::TRK_CUT_xParam || std::fabs(Dt-dt_offset) > dt_cut ) 
-            { 
-                //discard this track
-                return true;  
-            } 
-            return false; 
-        }); 
-
-        //compute track errors
-        for (auto& trk : tracks) {
-            Compute_trackError( trk ); 
-        }
-    }
-    //now, sort out events that don't have at least 1 refined track. 
-    if (!keep_empty_events) remove_and_sort<VDC::Track>(S2_events); 
-
-    // if there are no events left, then carry on 
-    if (S2_events.empty()) return S2_events; 
-    // count the number of events we still have 
-    increment( nPass_1refinedTrack );
+    increment( nPass_1refinedTrack ); 
 
 #ifdef DEBUG_S2Event
         std::printf("<Event Loop>: %llu events so far surviving '1 refined track' cut\n", static_cast<EventCounter>(nPass_1refinedTrack));
