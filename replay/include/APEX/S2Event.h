@@ -142,6 +142,10 @@ public:
     return *find_it; 
   }
 
+  /// @brief Erase a collection of objects 
+  /// @tparam T type of collection to erase 
+  template<AnaClass T> void clear() { std::get<ObjCollection<T>>( fObjects ).clear(); }
+
   /// @brief Compute the drift time for a given drift-distance, slope, (and derivative order).
   /// @param x absolute drift-distance from midplane of VDC drift chamber
   /// @param slope slope of current VDC track (affects some drift-parameters)
@@ -169,6 +173,8 @@ public:
   }
 
 };
+
+static_assert(std::is_copy_constructible_v<S2Event>); 
 /////////////////////////////////////////////////////////////////////////////////
 
 }
