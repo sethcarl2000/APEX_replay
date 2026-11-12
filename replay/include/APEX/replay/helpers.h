@@ -24,6 +24,7 @@
 // stdlib
 #include <vector> 
 #include <cstddef> 
+#include <cstddef> 
 
 
 namespace APEX
@@ -112,13 +113,45 @@ ROOT::VecOps::RVec<S2Hit> generate_S2_hits(
     const ROOT::RVec<double>& PMT_L 
 );
 
+template<typename T> concept Comparable = std::is_default_constructible_v<T> || 
+    requires(T& t1, T& t2) {  
+        {t1 <= t2} -> std::same_as<bool>; 
+    }; 
 
-struct pair_candidate { double u,v, eta_u,eta_v; std::size_t id_U,id_V; };
+template<Comparable T> struct Bound { 
+    T min{}, max{}; 
+
+    T clamp(const T& val) const { return (val <= max) ? ((min <= val) ? val : min) : max; }
+
+    bool within(const T& val) const { return (min <= val) && (val <= max); }
+}; 
+
+struct pair_candidate { 
+    // intercept
+    double u,v;
+
+    // eta of each intercept
+    double eta_u,eta_v; 
+
+    double min_eta() const { return std::min(eta_u,eta_v); }
+
+    bool operator<(const pair_candidate& rhs) const { return this->min_eta() < rhs.min_eta(); }
+
+    // 'boundary' of this cluster. 
+    Bound<double> boundary_u, boundary_v; 
+    std::size_t id_U,id_V; 
+};
 
 /// @brief Search for cluster-pairs in each VDC chamber
 /// @tparam C VDC Chamber
 /// @param event S2 Event (containing 'VDC::HitGroup' collections)
-template<VDC::Chamber C> std::vector<pair_candidate> chamber_grid_search( S2Event& event ); 
+/// @param min_cluster_gap Minimum gap between valid clusters, for them to not be combined 
+/// @param min_eta Minimum eta (per-plane) for a choice of intercepts to be considered a cluster 
+template<VDC::Chamber C> std::vector<pair_candidate> chamber_grid_search( 
+    S2Event& event,
+    double min_cluster_gap,
+    double min_eta
+); 
 
 
 template<VDC::Plane P> struct PlaneData { ROOT::VecOps::RVec<double> wire, rawtime; };

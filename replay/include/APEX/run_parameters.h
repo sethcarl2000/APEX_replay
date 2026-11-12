@@ -33,6 +33,9 @@ namespace run_parameters {
     // max reasonable drift-distance (for either arm)
     constexpr double max_drift_distance = 18.*units::mm; 
 
+    // maximum gap betwween clusters before the have to be merged into one cluster
+    constexpr double min_cluster_gap = 5.*units::mm; 
+
     //min eta of one plane (during grid-searching). 
     // this is analogous to the num. of points found
     constexpr double kCUT_minEta = 1.950; 
