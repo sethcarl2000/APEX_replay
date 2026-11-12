@@ -25,16 +25,15 @@ namespace {
     //this involves angular prediction based on typical S2-angles. 
     const double uFix = 26.*units::mm/std::sqrt(2);
 
-    inline bool operator<(const pair_candidate& lhs, const pair_candidate& rhs) {
-        return ((lhs.eta_u + lhs.eta_v) < (rhs.eta_u + rhs.eta_v)); 
-    }
-
 }; 
 
 //#define DEBUG_PAIR
 
-template<VDC::Chamber C> std::vector<pair_candidate> chamber_grid_search( S2Event& evt ) 
-{ 
+template<VDC::Chamber C> std::vector<pair_candidate> chamber_grid_search( 
+    S2Event& evt, 
+    const double min_cluster_gap, 
+    const double min_eta
+) { 
 #ifdef DEBUG_PAIR
 #endif
     
@@ -71,7 +70,6 @@ template<VDC::Chamber C> std::vector<pair_candidate> chamber_grid_search( S2Even
     // this is a reasonable upper-limit.
     const double overlap_buffer = ((double)3.)*VDC::kWireSpacing; 
 
-    std::vector<pair_candidate> pairs; pairs.reserve(100);  
     
     // grid-spacing in u and v 
     static constexpr double dx = run_parameters::kGridSpacing; 
@@ -86,6 +84,8 @@ template<VDC::Chamber C> std::vector<pair_candidate> chamber_grid_search( S2Even
 
     const double S2_u{S2_int_uvw.X()}, S2_v{S2_int_uvw.Y()}, S2_w{S2_int_uvw.Z()}; 
     
+    std::vector<pair_candidate> all_pairs; 
+
     // do brute-force grid search with all groups 
     for (const auto& group_U : evt.GetCollection<VDC::HitGroup<U>>()) {
         for (const auto& group_V : evt.GetCollection<VDC::HitGroup<V>>()) {
@@ -101,8 +101,60 @@ template<VDC::Chamber C> std::vector<pair_candidate> chamber_grid_search( S2Even
             const int n_steps_u = 1 + static_cast<int>((2.*overlap_buffer + group_V.Span())/dx); 
             const int n_steps_v = 1 + static_cast<int>((2.*overlap_buffer + group_U.Span())/dx); 
             
-            pairs.reserve(n_steps_u * n_steps_v); 
+            std::vector<pair_candidate> pairs; pairs.reserve(n_steps_u * n_steps_v); 
 
+            /// keep pair candidate (create new cluster, or combine into exsisting cluster)
+            //_______________________________________________________________________________________________________________
+            auto keep_candidate = [&pairs, min_cluster_gap](double u, double v, double eta_u, double eta_v) {
+
+                pair_candidate cand; 
+                cand.u = u; 
+                cand.v = v; 
+                cand.eta_u = eta_u; 
+                cand.eta_v = eta_v; 
+
+                for (auto& pair : pairs) {
+
+                    //is this candidate within this cluster's boundary? 
+                    if (pair.boundary_u.within(cand.u) && pair.boundary_v.within(cand.v)) {
+                        
+                        // this pair is in the 'boundary' of an existing cluster. 
+                        // check if this new pair is a better candidate then the existing one. 
+                        if (cand.min_eta() > pair.min_eta()) {
+
+                            pair.u = cand.u; 
+                            pair.v = cand.v; 
+
+                            pair.eta_u = cand.eta_u; 
+                            pair.eta_v = cand.eta_v; 
+                        }
+
+                        // set the new boundary of this cluster
+                        pair.boundary_u.min = std::min( pair.boundary_u.min, cand.u - min_cluster_gap ); 
+                        pair.boundary_u.max = std::max( pair.boundary_u.max, cand.u + min_cluster_gap ); 
+
+                        pair.boundary_v.min = std::min( pair.boundary_v.min, cand.v - min_cluster_gap ); 
+                        pair.boundary_v.max = std::max( pair.boundary_v.max, cand.v + min_cluster_gap ); 
+
+                        // exit (we've found a matching cluster)
+                        return; 
+                    }
+                }      
+
+                // if this doesn't match any existing clusters, then create a new one. 
+                cand.boundary_u = Bound<double>{
+                    u - run_parameters::min_cluster_gap,
+                    u + run_parameters::min_cluster_gap
+                }; 
+                cand.boundary_v = Bound<double>{
+                    v - run_parameters::min_cluster_gap,
+                    v + run_parameters::min_cluster_gap
+                }; 
+                pairs.emplace_back( std::move(cand) );
+                return; 
+            }; 
+            //_______________________________________________________________________________________________________________
+            
             for (int iu=0; iu<n_steps_u; iu++) {
                 double u = group_V.LoEdge() - overlap_buffer + ((double)iu)*dx; 
             
@@ -110,7 +162,7 @@ template<VDC::Chamber C> std::vector<pair_candidate> chamber_grid_search( S2Even
                     double v = group_U.LoEdge() - overlap_buffer + ((double)iv)*dx; 
                     
                     // is this u,v pair feasible? 
-                    if (v-u > CUT_vu_diff_max || v-u < CUT_vu_diff_min) continue; 
+                    if (v-u - overlap_buffer > CUT_vu_diff_max || v-u + overlap_buffer < CUT_vu_diff_min) continue; 
 
                     // distance to S2 
                     double dist_to_S2 = std::sqrt( 
@@ -138,23 +190,30 @@ template<VDC::Chamber C> std::vector<pair_candidate> chamber_grid_search( S2Even
                         u/units::mm, v/units::mm, dw_du, dw_dv, eta_u,eta_v
                     );
 #endif
-                    if (true) { //eta_u > eta_threshold && eta_v > eta_threshold) {
-                        pairs.emplace_back( u,v, eta_u,eta_v, group_U.ID(),group_V.ID() ); 
+                    if (eta_u > min_eta && eta_v > min_eta) {
+
+                        keep_candidate(u,v, eta_u,eta_v); 
                     }
                 }
             }
 
-            // some logic to prune clusters (some sort of greedy search)
-            return pairs; 
+            // now, for all the cluster-candidates which remain, fill their info into the event. 
+            for (auto & pair : pairs) {
+                evt.emplace<VDC::ChamberPair<C>>(
+                    VDC::HitCluster<U>(group_U, pair.v, pair.eta_v), 
+                    VDC::HitCluster<V>(group_V, pair.u, pair.eta_u)
+                ); 
+            }
 
+            // remove this later, it's only for debug purposes
         } // for (const auto& group_V ... 
     } // for (const auto& group_U ... 
 
-    return pairs;
+    return {};
 }; 
 
-template std::vector<pair_candidate> chamber_grid_search<VDC::Chamber::Low> (S2Event&); 
-template std::vector<pair_candidate> chamber_grid_search<VDC::Chamber::High>(S2Event&); 
+template std::vector<pair_candidate> chamber_grid_search<VDC::Chamber::Low> (S2Event&, double,double); 
+template std::vector<pair_candidate> chamber_grid_search<VDC::Chamber::High>(S2Event&, double,double); 
 
 }
 }
