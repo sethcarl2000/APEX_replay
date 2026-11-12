@@ -53,6 +53,9 @@ public:
 
     void reserve(std::size_t _size) { objects.reserve(_size); }
 
+    // clear container (does not reset unique ids!)
+    void clear() { objects.clear(); }
+
     /// @brief Get object with particular ID
     /// @param id id of object to fetch
     /// @return iterator pointing to object's posision, or this->end() if no matching object was found. 
