@@ -30,9 +30,9 @@
 namespace {
     constexpr bool kRHRS{true}, kLHRS{false}; 
     // left arm 
-    constexpr bool is_RHRS = kRHRS;  
+    constexpr bool is_RHRS = kLHRS;  
 
-    constexpr int run_number = 4016; 
+    constexpr int run_number = 4902; 
 
     constexpr double NaN = std::numeric_limits<double>::quiet_NaN(); 
 
@@ -53,7 +53,7 @@ void drawS2();
 
 void drawGridSearch(); 
 
-void draw_event(std::string path_infile="data-v2/decode.4016.root")
+void draw_event(std::string path_infile="data-v2/decode.4902.root")
 {
     using namespace APEX; 
 
@@ -74,6 +74,11 @@ void draw_event(std::string path_infile="data-v2/decode.4016.root")
     kernel.AddUserSlider("min_VDC_time", -400., 0., 401, "%3.0f ns"); 
     kernel.AddUserSlider("max_VDC_time", 0., +800., 801, "%3.0f ns"); 
 
+    // minimum 'eta' for a cluster to be considered
+    kernel.AddUserSlider("min_pair_eta", 0., 4., 400, "%3.2f"); 
+    kernel.AddUserSlider("min_cluster_gap", 0., 4., 400., "%4.2f mm"); 
+
+
     // '1' if low chamber, '0' otherwise 
     kernel.AddUserSlider("is_loChamber", 0., 1., 2, "%.0f"); 
     kernel.AddUserSlider("group_U_id", 0., 5., 6, "%.0f"); 
@@ -86,8 +91,8 @@ void draw_event(std::string path_infile="data-v2/decode.4016.root")
     kernel.AddUserWindow("VDC_part", 1200, 900); 
     kernel.AddDrawFunction("VDC_part", "VDC_part", drawVDC_part, EDK::Frequency::Type::kEachEvent); 
 
-    kernel.AddUserWindow("VDC_grid_search", 900, 900); 
-    kernel.AddDrawFunction("VDC_grid_search", "VDC_grid_search", drawGridSearch, EDK::Frequency::Type::kEachEvent); 
+    //kernel.AddUserWindow("VDC_grid_search", 900, 900); 
+    //kernel.AddDrawFunction("VDC_grid_search", "VDC_grid_search", drawGridSearch, EDK::Frequency::Type::kEachEvent); 
 
     kernel.AddUserWindow("S2", 1200, 500); 
     kernel.AddDrawFunction("S2", "S2", drawS2, EDK::Frequency::Type::kEachEvent); 
@@ -191,8 +196,8 @@ void drawVDC(const bool draw_whole)
         for (int i=0; i<APEX::VDC::kN_planes; i++) pad[i] = canv->cd(4-i); 
     }
 
-    auto grid_search_results_lo = replay::helpers::chamber_grid_search<APEX::VDC::Chamber::Low>( S2_events.front() );
-    auto grid_search_results_hi = replay::helpers::chamber_grid_search<APEX::VDC::Chamber::High>( S2_events.front() );
+    const double min_pair_eta_threshold = kernel.GetParameter<double>("min_pair_eta"); 
+    const double min_cluster_gap = kernel.GetParameter<double>("min_cluster_gap") * units::mm; 
 
     APEX::VDC::for_each_plane([&]<APEX::VDC::Plane P>(){
 
@@ -257,13 +262,46 @@ void drawVDC(const bool draw_whole)
 
             const auto& S2_hit = S2_event.GetS2Hit(); 
 
+            const double t_S2 = S2_hit.Time(); 
+
             TVector3 S2_int_xyz( S2_hit.X(), S2_hit.Y(), S2_hit.Z() ); 
 
             const TVector3 S2_int_uvw = APEX::VDC::Track::Rotate_xyz_to_uvw( S2_int_xyz );
 
             const double S2_u{S2_int_uvw.X()}, S2_v{S2_int_uvw.Y()}, S2_w{S2_int_uvw.Z()}; 
+                        
+            // create new chamber-pairs, using the new algorithm 
+            constexpr APEX::VDC::Chamber C = APEX::VDC::get_Chamber<P>(); 
+            auto event_pairs = S2_event; 
+            event_pairs.clear<APEX::VDC::ChamberPair<C>>(); 
 
-            double t_S2 = S2_event.S2Time(); 
+            replay::helpers::chamber_grid_search<C>( 
+                event_pairs, 
+                min_cluster_gap, 
+                min_pair_eta_threshold  
+            );            
+
+            for(const auto& pair : event_pairs.GetCollection<APEX::VDC::ChamberPair<C>>()) {
+
+                // distance to S2 
+                double ToF = std::sqrt( 
+                    utils::intpow<2>(S2_u - pair.u()) + 
+                    utils::intpow<2>(S2_v - pair.v()) + 
+                    utils::intpow<2>(S2_w - APEX::VDC::w<P>(is_RHRS)) 
+                )/units::speed_of_light_vacuum; 
+
+                double best_x = is_U_plane<P>() ? pair.v() : pair.u(); 
+
+                double slope = is_U_plane<P>() 
+                    ? (S2_w - APEX::VDC::w<P>(is_RHRS))/(S2_v - best_x)
+                    : (S2_w - APEX::VDC::w<P>(is_RHRS))/(S2_u - best_x); 
+
+                auto graph = draw_track(S2_event, slope, best_x, t_S2 - ToF); 
+                graph->SetLineColor(kBlue); 
+                graph->SetLineWidth(1); 
+                kernel.Draw(graph, "SAME"); 
+            }
+
             std::printf(" t_S2: %.1f ns\n", t_S2/units::ns); 
 
             for(const auto& group : S2_event.GetCollection<APEX::VDC::HitGroup<P>>()) {
@@ -278,56 +316,7 @@ void drawVDC(const bool draw_whole)
                 box->SetFillStyle(0);
                 box->SetLineColor(kBlack); 
                 box->SetLineStyle(kSolid); 
-                
-                std::size_t id; 
-                if (selected_chamber == APEX::VDC::get_Chamber<P>()) {
-                    if (selected_chamber == APEX::VDC::Chamber::Low) {
-                        id = (P == APEX::VDC::Plane::U1) ? id_U : id_V; 
-                    } else {
-                        id = (P == APEX::VDC::Plane::U2) ? id_U : id_V; 
-                    }
-
-                    if (group.ID() == id) {
-
-                        box->SetFillColor(kRed); 
-                        box->SetFillStyle(3004);
-                            
-                        auto& gs_data = (APEX::VDC::is_loChamber<P>()) ? 
-                            grid_search_results_lo : 
-                            grid_search_results_hi; 
-                            
-                        double best_u, best_v; 
-                        double best_min_eta=0.; 
-                        for (const auto& dat : gs_data) {
-
-                            double min_eta = std::min(dat.eta_u,dat.eta_v); 
-
-                            if (min_eta > best_min_eta) {
-                                best_min_eta = min_eta; 
-                                best_u = dat.u; 
-                                best_v = dat.v; 
-                            }
-                        }
-
-                        // distance to S2 
-                        double ToF = std::sqrt( 
-                            utils::intpow<2>(S2_u - best_u) + 
-                            utils::intpow<2>(S2_v - best_v) + 
-                            utils::intpow<2>(S2_w - APEX::VDC::w<P>(is_RHRS)) 
-                        )/units::speed_of_light_vacuum; 
-
-                        double best_x = is_U_plane<P>() ? best_v : best_u; 
-
-                        double slope = is_U_plane<P>() 
-                            ? (S2_w - APEX::VDC::w<P>(is_RHRS))/(S2_v - best_x)
-                            : (S2_w - APEX::VDC::w<P>(is_RHRS))/(S2_u - best_x); 
-
-                        auto graph = draw_track(S2_event, slope, best_x, t_S2 - ToF); 
-                        graph->SetLineColor(kRed); 
-                        graph->SetLineWidth(2); 
-                        kernel.Draw(graph, "SAME"); 
-                    } 
-                }
+                        
                 kernel.Draw(box, "SAME"); 
 
             } // for (const auto& group ... 
@@ -359,7 +348,6 @@ void drawVDC(const bool draw_whole)
                 kernel.Draw(graph, "SAME");  
             
             } // for (const auto& track ... 
-
         }
     }); 
 
@@ -483,12 +471,23 @@ void drawGridSearch()
     // take just the first S2 event
     auto& event = S2_events.front(); 
 
-    auto grid_search_results_lo = replay::helpers::chamber_grid_search<APEX::VDC::Chamber::Low>( event );
-    auto grid_search_results_hi = replay::helpers::chamber_grid_search<APEX::VDC::Chamber::High>( event );
+    auto grid_search_results_lo = replay::helpers::chamber_grid_search<APEX::VDC::Chamber::Low>( 
+        event, 
+        run_parameters::min_cluster_gap, 
+        run_parameters::kCUT_minEta  
+    );
+    auto grid_search_results_hi = replay::helpers::chamber_grid_search<APEX::VDC::Chamber::High>( 
+        event, 
+        run_parameters::min_cluster_gap, 
+        run_parameters::kCUT_minEta   
+    );
 
     const double overlap_buffer = ((double)3.)*APEX::VDC::kWireSpacing; 
     // grid-spacing in u and v 
     static constexpr double dx = run_parameters::kGridSpacing; 
+
+    const double min_pair_eta_threshold = kernel.GetParameter<double>("min_pair_eta"); 
+    const double min_cluster_gap = kernel.GetParameter<double>("min_cluster_gap") * units::mm; 
 
 
     APEX::VDC::for_each_chamber([&]<APEX::VDC::Chamber C>(){
@@ -530,6 +529,7 @@ void drawGridSearch()
                     for (const auto& dat : gs_data) {
 
                         double min_eta = std::min(dat.eta_u,dat.eta_v); 
+                        if (min_eta < min_pair_eta_threshold) continue; 
 
                         if (min_eta > best_min_eta) {
                             best_min_eta = min_eta; 
@@ -647,8 +647,32 @@ void drawS2()
         kernel.Draw(box); 
     }
 
+    // draw a crosshair 
+    auto draw_crosshair = [&kernel](double x, double y, double length, Color_t color, Width_t width) {
+
+        TLine* line; 
+        
+        line = new TLine(
+            x - length/2., y, 
+            x + length/2., y
+        ); 
+        line->SetLineWidth(width); 
+        line->SetLineColor(color); 
+        kernel.Draw(line); 
+
+        line = new TLine(
+            x, y - length/2., 
+            x, y + length/2.
+        ); 
+        line->SetLineWidth(width); 
+        line->SetLineColor(color); 
+        kernel.Draw(line); 
+    }; 
+
+    const double track_line_width = 5.*units::cm; 
+
     double S2_y_rms = 2.5*units::cm; 
-    for (const auto& S2_event : S2_events) {
+    for (auto& S2_event : S2_events) {
 
         const auto& hit = S2_event.GetS2Hit(); 
 
@@ -660,12 +684,13 @@ void drawS2()
             S2_x - S2::paddle_width_X/2., hit.Y() - S2_y_rms, 
             S2_x + S2::paddle_width_X/2., hit.Y() + S2_y_rms
         ); 
+
         box->SetLineColor(kBlack);
         box->SetFillStyle(0); 
         box->SetLineStyle(kDashed); 
         kernel.Draw(box); 
 
-        // draw track 'crosshair' 
+        // draw the actual S2 hit
         TLine* line; 
         line = new TLine(
             S2_x - S2::paddle_width_X/2., 
@@ -676,7 +701,7 @@ void drawS2()
         line->SetLineWidth(1); 
         line->SetLineColor(kBlack); 
         kernel.Draw(line); 
-
+        
         line = new TLine(
             S2_x, 
             hit.Y() - S2_y_rms, 
@@ -686,9 +711,58 @@ void drawS2()
         line->SetLineWidth(1); 
         line->SetLineColor(kBlack); 
         kernel.Draw(line); 
+
+
+        /*/ now, draw all clusters projected onto the S2 plane 
+        const APEX::VDC::Chamber selected_chamber = 
+            (static_cast<int>(kernel.GetParameter<double>("is_loChamber")) == 0) 
+            ? APEX::VDC::Chamber::Low : APEX::VDC::Chamber::High; 
+
+        auto gs_data = (selected_chamber == APEX::VDC::Chamber::Low)  
+            ? event_pairs.GetCollection<ApAPEX::VDC::Chamber::Low>( S2_event )
+            : APEX::replay::helpers::chamber_grid_search<APEX::VDC::Chamber::High>( S2_event );
+
+        for (const auto& pair : gs_data) {
+
+            double u = pair.u; 
+            double v = pair.v; 
+
+
+            TVector3 S2_uvw = APEX::VDC::Track::Rotate_xyz_to_uvw( TVector3(hit.X(), hit.Y(), hit.Z()) ); 
+
+            double w_sep = APEX::VDC::w<APEX::VDC::Plane::V1>(is_RHRS) - APEX::VDC::w<APEX::VDC::Plane::U1>(is_RHRS); 
+            
+            double w_VDC = (selected_chamber == APEX::VDC::Chamber::Low) 
+                ? 0.5*(APEX::VDC::w<APEX::VDC::Plane::U1>(is_RHRS) + APEX::VDC::w<APEX::VDC::Plane::V1>(is_RHRS))
+                : 0.5*(APEX::VDC::w<APEX::VDC::Plane::U2>(is_RHRS) + APEX::VDC::w<APEX::VDC::Plane::V2>(is_RHRS)); 
+
+            double dw_du = (S2_uvw[2] - w_VDC+(w_sep/2.)) / (S2_uvw[0] - u); 
+            double dw_dv = (S2_uvw[2] - w_VDC-(w_sep/2.)) / (S2_uvw[1] - v); 
+
+            TVector3 S_uvw( 
+                S2_uvw[0] - u, 
+                S2_uvw[1] - v, 
+                S2_uvw[2] - w_VDC
+            ); 
+            
+            TVector3 R = APEX::VDC::Track::Rotate_uvw_to_xyz(TVector3(
+                u + (S_uvw[0]/S_uvw[2])*w_sep/2., 
+                v - (S_uvw[1]/S_uvw[2])*w_sep/2., 
+                w_VDC 
+            )); 
+            
+            auto S = APEX::VDC::Track::Rotate_uvw_to_xyz(S_uvw).Unit(); 
+
+            double s = hit.Z() - R.Z(); 
+            double S2_x = R.X() + (S.X()/S.Z())*s; 
+            double S2_y = R.Y() + (S.Y()/S.Z())*s; 
+
+            //draw_crosshair(S2_x, S2_y, track_line_width, kBlue, 1); 
+        }*/ 
+
+
     }
 
-    const double track_line_width = 5.*units::cm; 
 
     //now, draw tracks
     for (const auto& S2_event : S2_events) {
@@ -698,26 +772,7 @@ void drawS2()
             double S2_y = track.S2_y(); 
     
             // draw track 'crosshair' 
-            TLine* line; 
-            line = new TLine(
-                S2_x, 
-                S2_y-track_line_width/2., 
-                S2_x, 
-                S2_y+track_line_width/2.
-            ); 
-            line->SetLineWidth(2); 
-            line->SetLineColor(kBlack); 
-            kernel.Draw(line); 
-
-            line = new TLine(
-                S2_x-track_line_width/2., 
-                S2_y, 
-                S2_x+track_line_width/2., 
-                S2_y
-            ); 
-            line->SetLineWidth(2); 
-            line->SetLineColor(kBlack); 
-            kernel.Draw(line); 
+            draw_crosshair(S2_x, S2_y, track_line_width, kBlack, 2); 
         }
     }
     
