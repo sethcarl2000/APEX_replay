@@ -1,6 +1,7 @@
 // APEX
 #include <APEX/VDC.h> 
 #include <APEX/utils.h> 
+#include <APEX/units.h>
 // ROOT
 #include <TString.h> 
 // stdlib
@@ -63,6 +64,8 @@ double RealTime( const bool is_RHRS,
     Double_t offset = (is_RHRS) 
         ? R_abs[plane][wireNum]
         : L_abs[plane][wireNum]; 
+      
+    offset = offset - (is_RHRS ? +28.84*units::ns : -14.12*units::ns); 
         
     return offset - (kTDC_resolution*rawTime); 
 }
