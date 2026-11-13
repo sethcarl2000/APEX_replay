@@ -74,8 +74,6 @@ template<VDC::Chamber C> std::vector<pair_candidate> chamber_grid_search(
     // grid-spacing in u and v 
     static constexpr double dx = run_parameters::kGridSpacing; 
 
-    static constexpr double eta_threshold = run_parameters::kCUT_minEta; 
-
     // get position of S2 hit
     const auto& S2_hit = evt.GetS2Hit(); 
     TVector3 S2_int_xyz( S2_hit.X(), S2_hit.Y(), S2_hit.Z() ); 
@@ -83,8 +81,6 @@ template<VDC::Chamber C> std::vector<pair_candidate> chamber_grid_search(
     const TVector3 S2_int_uvw = VDC::Track::Rotate_xyz_to_uvw( S2_int_xyz );
 
     const double S2_u{S2_int_uvw.X()}, S2_v{S2_int_uvw.Y()}, S2_w{S2_int_uvw.Z()}; 
-    
-    std::vector<pair_candidate> all_pairs; 
 
     // do brute-force grid search with all groups 
     for (const auto& group_U : evt.GetCollection<VDC::HitGroup<U>>()) {

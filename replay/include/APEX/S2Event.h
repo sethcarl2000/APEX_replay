@@ -122,6 +122,8 @@ public:
     return std::get<ObjCollection<T>>(fObjects); 
   }
 
+  template<AnaClass T> void reserve(std::size_t _size) { std::get<ObjCollection<T>>( fObjects ).reserve(_size); }
+
   /// @brief Try to remove object with same ID as 'item'
   /// @tparam T Type of object
   /// @param item intsance 

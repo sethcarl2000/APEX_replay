@@ -25,7 +25,7 @@ namespace run_parameters {
     constexpr double S2_time_min_L{-40.*units::ns}, S2_time_max_L{+25.*units::ns}; 
 
     // spacing between coarse-grained grid-search. 
-    constexpr double kGridSpacing = VDC::kWireSpacing/10.; 
+    constexpr double kGridSpacing = VDC::kWireSpacing/5.; 
 
     // min distance between clusters before they are 'absorbed' into one another
     constexpr double kMinClusterDistance = 1.*VDC::kWireSpacing; 
@@ -38,13 +38,24 @@ namespace run_parameters {
 
     //min eta of one plane (during grid-searching). 
     // this is analogous to the num. of points found
-    constexpr double kCUT_minEta = 1.950; 
+    constexpr double kCUT_minEta = 1.250; 
+
+    /// RMS of the S2-paddle y-position, calculated from the difference between the PMT TDC times on either side of each Paddle 
+    constexpr double S2_y_PMT_rms = 2.5*units::cm; 
+
+    /// cut tracks which don't match with the S2 paddle's y-position estimate (from PMT times)
+    constexpr double TRK_S2_y_CUT = 3.*S2_y_PMT_rms; 
+
+    // when deciding which raw-tracks to consider as viable final tracks, 
+    // throw out raw tracks (pairings of any two clusters) which don't meet the final, 
+    // 'raw' track cut criteria, multiplied by this value. 
+    constexpr double TRK_rawtrack_cut_multiplier = 1.5; 
 
     //track cuts
-    constexpr double TRK_R_CUT_Dt     = 12.*units::ns; 
+    constexpr double TRK_R_CUT_Dt     = 10.*units::ns; 
     constexpr double TRK_L_CUT_Dt     = 15.*units::ns; 
-    constexpr double TRK_R_Dt_offset  = 0.*units::ns; //+28.*units::ns; 
-    constexpr double TRK_L_Dt_offset  = -8.*units::ns; //-15.*units::ns;   
+    constexpr double TRK_R_Dt_offset  = +0.*units::ns; 
+    constexpr double TRK_L_Dt_offset  = -5.*units::ns;   
     constexpr double TRK_CUT_xParam = 0.60; 
     constexpr double TRK_R_xParam_offset = 0.10; 
     constexpr double TRK_L_xParam_offset = 0.00; 

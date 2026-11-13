@@ -153,6 +153,10 @@ template<VDC::Chamber C> std::vector<pair_candidate> chamber_grid_search(
     double min_eta
 ); 
 
+/// @brief generate 'raw' tracks, and check which ones are compatible with the given S2 hit. 
+/// @param event S2 Event to generate tracks from
+void generate_all_tracks(S2Event& event); 
+
 
 template<VDC::Plane P> struct PlaneData { ROOT::VecOps::RVec<double> wire, rawtime; };
     
@@ -173,6 +177,8 @@ ROOT::RVec<S2Event> generate_vdc_tracks_from_S2Event(
     EventCounter_atomic &nPass_1pair, 
     EventCounter_atomic &nPass_1rawTrack,
     EventCounter_atomic &nPass_1refinedTrack, 
+    EventCounter_atomic &total_S2_hits,
+    EventCounter_atomic &total_refined_tracks,
     bool keep_empty_events=false
 );
 

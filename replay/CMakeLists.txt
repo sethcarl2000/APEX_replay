@@ -37,6 +37,7 @@ set(src_replay
     helpers/gen_pid_data.cxx
     helpers/gen_pairs.cxx
     helpers/chamber_grid_search.cxx
+    helpers/generate_all_tracks.cxx
     helpers/gen_react_vertex.cxx
 )
 

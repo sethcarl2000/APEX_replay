@@ -39,7 +39,7 @@ namespace replay
 namespace helpers
 {
 
-#define DEBUG_S2Event
+//#define DEBUG_S2Event
 
 namespace { 
     /// @return 'true' if RVec iss non-empty  
@@ -101,32 +101,20 @@ ROOT::RVec<S2Event> generate_vdc_tracks_from_S2Event(
     EventCounter_atomic &nPass_1pair, 
     EventCounter_atomic &nPass_1rawTrack,
     EventCounter_atomic &nPass_1refinedTrack, 
+    EventCounter_atomic &total_S2_hits,
+    EventCounter_atomic &total_tracks,
     bool keep_empty_events
 ) 
 {   
     /// increment an event counter by 1 
-    auto increment = [](EventCounter_atomic& counter) { return counter.fetch_add(1, std::memory_order_relaxed); };
+    auto increment = [](EventCounter_atomic& counter, EventCounter step=1) { 
+        return counter.fetch_add(step, std::memory_order_relaxed); 
+    };
 
     using RVecD = ROOT::RVec<double>; 
     using namespace ROOT::VecOps; 
 
     ///now, group VDC hits
-
-    const double CUT_goodPoints_error = 40e-9; 
-    
-    const double CUT_ph_min = is_RHRS ? run_parameters::CUT_ph_min_R : run_parameters::CUT_ph_min_L; 
-    const double CUT_ph_max = is_RHRS ? run_parameters::CUT_ph_max_R : run_parameters::CUT_ph_max_L;
-
-    const double CUT_th_min = is_RHRS ? run_parameters::CUT_th_min_R : run_parameters::CUT_th_min_L;
-    const double CUT_th_max = is_RHRS ? run_parameters::CUT_th_max_R : run_parameters::CUT_th_max_L;
-   
-    const double x_param_offset = is_RHRS ? run_parameters::TRK_R_xParam_offset : run_parameters::TRK_L_xParam_offset; 
-
-    const double dt_offset = is_RHRS ? run_parameters::TRK_R_Dt_offset : run_parameters::TRK_L_Dt_offset; 
-    const double dt_cut    = is_RHRS ? run_parameters::TRK_R_CUT_Dt : run_parameters::TRK_L_CUT_Dt; 
-
-
-    
     // define an array of 'S2Events', which will be the basis of all our data. 
     RVec<S2Event> S2_events; S2_events.reserve(S2_hits.size()); 
     
@@ -156,6 +144,9 @@ ROOT::RVec<S2Event> generate_vdc_tracks_from_S2Event(
 
         S2_events.emplace_back( std::move(event) ); 
     }
+
+    // count the total number of tracks
+    increment( total_S2_hits, S2_hits.size() ); 
 
 #ifdef DEBUG_S2Event
     std::printf("<Event Loop>: N. S2 events: %zu\n", S2_events.size());
@@ -256,16 +247,32 @@ ROOT::RVec<S2Event> generate_vdc_tracks_from_S2Event(
 #endif
         generate_all_tracks(S2_event); 
     }
+
+    // at this point, we want to keep events that have 1 (and only 1) track compatible with the S2 hit. 
+    auto new_end = std::remove_if(
+        S2_events.begin(), 
+        S2_events.end(), 
+        [](const S2Event& event){ return event.size<VDC::Track>() != 1; }
+    );
+
+    S2_events.erase(
+        new_end, 
+        S2_events.end()
+    );
+
 #ifdef DEBUG_S2Event
     std::printf("<Event Loop>: Remove & sort rawtracks\n");
 #endif
-    if (!keep_empty_events) remove_and_sort<VDC::Track>(S2_events); 
 
     // if there are no events left, then carry on 
     if (S2_events.empty()) return S2_events; 
+
     // count the number of events we still have 
     increment( nPass_1rawTrack ); 
     increment( nPass_1refinedTrack ); 
+
+    // count the total number of tracks
+    increment( total_tracks, S2_events.size() ); 
 
 #ifdef DEBUG_S2Event
         std::printf("<Event Loop>: %llu events so far surviving '1 refined track' cut\n", static_cast<EventCounter>(nPass_1refinedTrack));

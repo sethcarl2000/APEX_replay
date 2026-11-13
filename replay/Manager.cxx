@@ -350,17 +350,27 @@ int Manager::Process(const std::string& path_input, const std::string& stem_outp
   
   PidManager pid_manager; 
   
-  EventCounter_atomic nPass_1group_R{0}, nPass_1pair_R{0}, nPass_1raw_R{0}, nPass_1ref_R{0}; 
-  EventCounter_atomic nPass_1group_L{0}, nPass_1pair_L{0}, nPass_1raw_L{0}, nPass_1ref_L{0}; 
+  EventCounter_atomic nPass_1group_R{0}, nPass_1pair_R{0}, nPass_1raw_R{0}, nPass_1ref_R{0}, nS2Hits_total_R{0}, nTracks_total_R{0}; 
+  EventCounter_atomic nPass_1group_L{0}, nPass_1pair_L{0}, nPass_1raw_L{0}, nPass_1ref_L{0}, nS2Hits_total_L{0}, nTracks_total_L{0}; 
 
   //first, generate tracks in the right arm 
-  if (is_RHRS_active) {
+  for (const bool is_RHRS : {true, false}) {
+
+    const bool is_LHRS = !is_RHRS; 
+
+    if (is_RHRS && (is_RHRS_active==false)) continue; 
+    if (is_LHRS && (is_LHRS_active==false)) continue; 
+
+    std::string arm = is_RHRS ? "R" : "L";
     
-    std::string arm = "R";
+    auto& np1g = is_RHRS ? nPass_1group_R  : nPass_1group_L;
+    auto& np1p = is_RHRS ? nPass_1pair_R   : nPass_1pair_L;
+    auto& np1r = is_RHRS ? nPass_1raw_R    : nPass_1raw_L;
+    auto& np1t = is_RHRS ? nPass_1ref_R    : nPass_1ref_L;
+    auto& ns2  = is_RHRS ? nS2Hits_total_R : nS2Hits_total_L;
+    auto& ntot = is_RHRS ? nTracks_total_R : nTracks_total_L; 
 
-    bool is_RHRS=true; 
-
-    rna.Overwrite(arm+"_S2Events", [&](
+    rna.Overwrite(arm+"_S2Events", [&np1g,&np1p,&np1r,&np1t,&ntot,&ns2, is_RHRS](
         const RVec<EventHandler>& events, 
         const RVec<S2Hit>& S2_hits,
         const RVec<double>& wire_u1, const RVec<double>& rawtime_u1,
@@ -378,10 +388,7 @@ int Manager::Process(const std::string& path_input, const std::string& stem_outp
       
       return helpers::generate_vdc_tracks_from_S2Event(
         is_RHRS, events, S2_hits, data, 
-        nPass_1group_R, 
-        nPass_1pair_R, 
-        nPass_1raw_R, 
-        nPass_1ref_R
+        np1g, np1p, np1r, np1t, ns2, ntot
       ); 
 
     }, {"coinc_events", 
@@ -395,52 +402,7 @@ int Manager::Process(const std::string& path_input, const std::string& stem_outp
     rna.Filter(vector_isnt_empty<S2Event>(), {arm+"_S2Events"}); 
 
     //generate pid data
-    helpers::gen_pid_data(kRHRS, rna, &pid_manager); 
-  }
-
-  //now, do the left-arm tracks
-  if (is_LHRS_active) {
-    //geenrate tracks
-    std::string arm = "L";
-
-    bool is_RHRS=false; 
-
-    rna.Overwrite(arm+"_S2Events", [&](
-        const RVec<EventHandler>& events, 
-        const RVec<S2Hit>& S2_hits,
-        const RVec<double>& wire_u1, const RVec<double>& rawtime_u1,
-        const RVec<double>& wire_v1, const RVec<double>& rawtime_v1,
-        const RVec<double>& wire_u2, const RVec<double>& rawtime_u2,
-        const RVec<double>& wire_v2, const RVec<double>& rawtime_v2
-    ){
-      
-      helpers::RawVDCData data{
-          {wire_u1, rawtime_u1},
-          {wire_v1, rawtime_v1},
-          {wire_u2, rawtime_u2},
-          {wire_v2, rawtime_v2}
-      };
-
-      return helpers::generate_vdc_tracks_from_S2Event(
-        is_RHRS, events, S2_hits, data, 
-        nPass_1group_L, 
-        nPass_1pair_L, 
-        nPass_1raw_L, 
-        nPass_1ref_L
-      ); 
-
-    }, {"coinc_events", 
-        arm+"_S2_hits",
-        arm+".vdc.u1.wire", arm+".vdc.u1.rawtime",
-        arm+".vdc.v1.wire", arm+".vdc.v1.rawtime",
-        arm+".vdc.u2.wire", arm+".vdc.u2.rawtime",
-        arm+".vdc.v2.wire", arm+".vdc.v2.rawtime" 
-    }); 
-
-    rna.Filter(vector_isnt_empty<S2Event>(), {arm+"_S2Events"}); 
-
-    //generate pid data
-    helpers::gen_pid_data(kLHRS, rna, &pid_manager); 
+    helpers::gen_pid_data(is_RHRS ? kRHRS : kLHRS, rna, &pid_manager); 
   }
 
   //let's do some react-vertex calculations
@@ -557,6 +519,23 @@ int Manager::Process(const std::string& path_input, const std::string& stem_outp
     n_pass_1raw_L,    100.*((double)n_pass_1raw_L)/((double)total_events),
     n_pass_1ref_L,    100.*((double)n_pass_1ref_L)/((double)total_events)
   ); 
+  std::printf(
+    "---------------------------------------------------------------------\n"
+    "   RHRS: ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~\n"
+    "     Total valid S2 Hits:  %10llu\n" 
+    "     Total tracks kept:    %10llu (%5.1f %% of all S2 hits)\n"
+    "   LHRS: ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~\n"
+    "     Total valid S2 Hits:  %10llu\n" 
+    "     Total tracks kept:    %10llu (%5.1f %% of all S2 hits)\n",
+    static_cast<EventCounter>(nS2Hits_total_R), 
+    static_cast<EventCounter>(nTracks_total_R), 
+    100.*((double)static_cast<EventCounter>(nTracks_total_R))/((double)static_cast<EventCounter>(nS2Hits_total_R)),
+    static_cast<EventCounter>(nS2Hits_total_L), 
+    static_cast<EventCounter>(nTracks_total_L), 
+    100.*((double)static_cast<EventCounter>(nTracks_total_L))/((double)static_cast<EventCounter>(nS2Hits_total_L))
+  );
+
+
   std::printf(
     "---------------------------------------------------------------------\n"
   );
