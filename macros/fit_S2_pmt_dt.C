@@ -26,10 +26,42 @@
 
 template<typename T> using Rv = ROOT::VecOps::RVec<T>; 
 
+class PdfWriter {
+private: 
+    std::map<std::string, TCanvas*> pdfs{};  
+
+public: 
+    PdfWriter() = default; 
+
+    void write_pdf_page(std::string path, TCanvas* canv) {
+     
+        canv->cd(); 
+
+        auto it = pdfs.find(path); 
+        // open new PDF
+        if (it==pdfs.end()) {
+
+            pdfs[path] = canv;
+            canv->Print(std::string{path + "["}.c_str(), "pdf"); 
+
+        } else {
+            
+            canv->Print(path.c_str(), "pdf"); 
+        }
+    }
+
+    void ClosePdfs() { 
+        for (const auto& [path, canv]: pdfs) {
+            canv->Print(std::string{path + "]"}.c_str());
+        }
+    }
+}; 
+
+
 void fit_S2_pmt_dt(
-    std::string infile_path="data-v2/replay.4016.root", 
-    std::string outgraphic_path="plots/S2_pmt_dt_new",
-    std::string outfile_path="data/csv/pmt_dt_offsets.txt"
+    std::string infile_path="data-v2/replay-NEW.4016.root", 
+    std::string outgraphic_path="plots/S2_pmt_dt_NEW",
+    std::string outfile_path="data/csv/pmt_dt_offsets_NEW.txt"
 )
 {
     ROOT::EnableImplicitMT(); 
@@ -43,7 +75,7 @@ void fit_S2_pmt_dt(
     auto f_gaus = std::make_unique<TF1>("f_gaus", "gaus(0)", -1., +1.); 
     f_gaus->SetLineStyle(kDashed); 
         
-    struct S2_pmt_data { double pmt_dt, S2_y; }; 
+    struct S2_pmt_data { double pmt_dt, S2_y, adc_R, adc_L; }; 
 
     // effective scintillator photon speed, in TDC tick / cm
     constexpr double v_effective = (4.664)*units::cm/units::ns; 
@@ -56,14 +88,19 @@ void fit_S2_pmt_dt(
 
     // open the output file 
     std::fstream outfile(outfile_path, std::ios::out | std::ios::trunc); 
-        
+    
+    PdfWriter pdf_writer; 
+
     // do right-arm first
     for (const bool is_RHRS : {true, false}) {
 
 
+        const double min_ADC = 4.0e3; 
+        const double max_ADC = 5.5e3; 
+
         std::string arm = is_RHRS ? "R" : "L"; 
 
-        std::string br_S2_y = is_RHRS ? "R_s2_y" : "L_S2_y"; 
+        std::string br_S2_y = is_RHRS ? "R_S2_y" : "L_S2_y"; 
 
         double pmt_dt_range[2] = {
             is_RHRS ? -15. : -70,
@@ -77,11 +114,12 @@ void fit_S2_pmt_dt(
             auto df_out = df    
 
                 // fix typo in replay file
-
                 .Define("pmt_data", [paddle, v_effective](
                     Rv<int> t_paddle, 
                     Rv<double> t_right_pmt_tdc, 
                     Rv<double> t_left_pmt_tdc, 
+                    Rv<double> t_right_pmt_adc, 
+                    Rv<double> t_left_pmt_adc, 
                     Rv<double> t_y){
                     Rv<S2_pmt_data> data; data.reserve(t_paddle.size());
                     
@@ -90,13 +128,19 @@ void fit_S2_pmt_dt(
                             double pmt_dt = t_right_pmt_tdc[i] - t_left_pmt_tdc[i];
                             data.emplace_back(
                                 pmt_dt - (t_y[i]/(v_effective*S2::TDC_resolution)), 
-                                t_y[i]
+                                t_y[i], 
+                                t_right_pmt_adc[i], t_left_pmt_adc[i]
                             ); 
                         }
                     }
                     return data; 
 
-                }, {arm+"_S2_paddle", arm+"_S2_right_pmt_tdc", arm+"_S2_left_pmt_tdc", br_S2_y})
+                }, {
+                    arm+"_S2_hit_paddle", 
+                    arm+"_S2_PMT_TDC_R", arm+"_S2_PMT_TDC_L", 
+                    arm+"_S2_PMT_ADC_R", arm+"_S2_PMT_ADC_L", 
+                    br_S2_y
+                })
 
                 .Filter([](Rv<S2_pmt_data> data){ return !data.empty(); }, {"pmt_data"})
 
@@ -104,6 +148,20 @@ void fit_S2_pmt_dt(
                     Rv<double> out; 
                     out.reserve(v.size()); 
                     for(const auto& d : v) out.emplace_back(d.pmt_dt); 
+                    return out; 
+                }, {"pmt_data"})
+
+                .Define("S2_pmt_adc_R", [](const Rv<S2_pmt_data>& v){ 
+                    Rv<double> out; 
+                    out.reserve(v.size()); 
+                    for(const auto& d : v) out.emplace_back(d.adc_R); 
+                    return out; 
+                }, {"pmt_data"})
+
+                .Define("S2_pmt_adc_L", [](const Rv<S2_pmt_data>& v){ 
+                    Rv<double> out; 
+                    out.reserve(v.size()); 
+                    for(const auto& d : v) out.emplace_back(d.adc_L); 
                     return out; 
                 }, {"pmt_data"}); 
 
@@ -114,6 +172,22 @@ void fit_S2_pmt_dt(
                     200, pmt_dt_range[0], pmt_dt_range[1]}, 
                     "S2_pmt_dt_raw"
                 ); 
+
+            auto hist_dt_adc_R = df_out
+                .Histo2D<Rv<double>>({
+                    "h_pmt_dt", 
+                    Form("%s S2, Paddle %i R-L vs R-ADC;TDC PMT_{R} - TDC PMT_{L} - 2/3*y_{S2}Right-PMT ADC;", (is_RHRS ? "RHRS" : "LHRS"), paddle), 
+                    100, pmt_dt_range[0], pmt_dt_range[1],
+                    100, min_ADC, max_ADC
+                }, "S2_pmt_dt_raw", "S2_pmt_adc_R");
+
+            auto hist_dt_adc_L = df_out
+                .Histo2D<Rv<double>>({
+                    "h_pmt_dt", 
+                    Form("%s S2, Paddle %i R-L vs L-ADC;TDC PMT_{R} - TDC PMT_{L} - 2/3*y_{S2};Left-PMT ADC;", (is_RHRS ? "RHRS" : "LHRS"), paddle), 
+                    100, pmt_dt_range[0], pmt_dt_range[1],
+                    100, min_ADC, max_ADC
+                }, "S2_pmt_dt_raw", "S2_pmt_adc_L");
             
             canv->cd(); 
             canv->Clear(); 
@@ -154,37 +228,28 @@ void fit_S2_pmt_dt(
             canv->Modified(); 
             canv->Update(); 
 
-            //save each 'file' to a pdf
-            auto save_canv_as_pdf = [canv](std::string path){
-                static std::map<std::string, std::size_t> pages{};  
-                
-                int page; 
-                auto find_pdf = pages.find(path);
-                if (find_pdf == pages.end()) { //no pages added for this pdf (yet), so make a new one 
-                    pages[path] = 1 ;
-                    page = 1; 
-                } else { // this pdf already has pages, so we just add to the page count
-                    auto& this_page = find_pdf->second; 
-                    page = (++this_page); 
-                }
-
-                switch (page) {
-
-                    //first page 
-                    case 1 : 
-                        canv->Print(std::string{path + "["}.c_str(), "pdf"); break; 
-                    
-                    //last page
-                    case (S2::N_paddles) : 
-                        canv->Print(std::string{path + "]"}.c_str(), "pdf"); break; 
-
-                    //any other page
-                    default : 
-                        canv->Print(path.c_str(), "pdf"); 
-                }
-            }; 
             if (!outgraphic_path.empty())
-                save_canv_as_pdf(outgraphic_path + "_"+arm+"HRS"+ ".pdf"); 
+                pdf_writer.write_pdf_page(outgraphic_path + "_"+arm+"HRS"+ ".pdf", canv); 
+
+            //now, write the ADC pages
+
+            canv->Clear(); 
+            hist_dt_adc_R->DrawCopy("col"); 
+            canv->Modified();
+            canv->Update();  
+
+            if (!outgraphic_path.empty())
+                pdf_writer.write_pdf_page(outgraphic_path + "_"+arm+"HRS"+ ".pdf", canv); 
+
+            canv->Clear(); 
+            hist_dt_adc_L->DrawCopy("col"); 
+            canv->Modified();
+            canv->Update();  
+
+            if (!outgraphic_path.empty())
+                pdf_writer.write_pdf_page(outgraphic_path + "_"+arm+"HRS"+ ".pdf", canv); 
+
+
         }
 
         //make the output
@@ -215,7 +280,7 @@ void fit_S2_pmt_dt(
                     );
                 }
                 return data; 
-            }, {arm+"_S2_paddle", arm+"_S2_right_pmt_tdc", arm+"_S2_left_pmt_tdc", br_S2_y})
+            }, {arm+"_S2_hit_paddle", arm+"_S2_PMT_TDC_R", arm+"_S2_PMT_TDC_L", br_S2_y})
 
             .Define("S2_y", [](const Rv<S2_pmt_data>& v){ 
                 Rv<double> out; 
@@ -287,6 +352,7 @@ void fit_S2_pmt_dt(
         
             
     }
+    pdf_writer.ClosePdfs(); 
 
     outfile.close(); 
 }
