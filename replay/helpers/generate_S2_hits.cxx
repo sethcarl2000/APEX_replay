@@ -20,8 +20,11 @@ namespace helpers
 
 ROOT::VecOps::RVec<S2Hit> generate_S2_hits(
     EArmMode arm_mode,
-    const ROOT::RVec<double>& PMT_R, 
-    const ROOT::RVec<double>& PMT_L )
+    const ROOT::RVec<double>& TDC_R, 
+    const ROOT::RVec<double>& TDC_L,
+    const ROOT::RVec<double>& ADC_R, 
+    const ROOT::RVec<double>& ADC_L 
+)
 {
     if (arm_mode == kBothArms) {
         throw std::invalid_argument(
@@ -41,7 +44,7 @@ ROOT::VecOps::RVec<S2Hit> generate_S2_hits(
     
     for (int p=0; p<S2Hit::N_paddles(); p++) { 
       
-        S2Hit hit( is_RHRS, p, PMT_R[p], PMT_L[p] );
+        S2Hit hit( is_RHRS, p, TDC_R[p], TDC_L[p], ADC_R[p], ADC_L[p] );
         
         //check if it's a coinc-hit
         if ( !hit.IsCoinc() ) continue; 
