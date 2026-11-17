@@ -109,8 +109,10 @@ void gen_react_vertex(RDFNodeAccumulator& rna, ReactVertex* vtx);
 
 ROOT::VecOps::RVec<S2Hit> generate_S2_hits(
     EArmMode arm_mode,
-    const ROOT::RVec<double>& PMT_R, 
-    const ROOT::RVec<double>& PMT_L 
+    const ROOT::RVec<double>& TDC_R, 
+    const ROOT::RVec<double>& TDC_L,
+    const ROOT::RVec<double>& ADC_R, 
+    const ROOT::RVec<double>& ADC_L 
 );
 
 template<typename T> concept Comparable = std::is_default_constructible_v<T> || 
