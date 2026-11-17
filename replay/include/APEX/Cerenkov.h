@@ -22,7 +22,7 @@ namespace Cerenkov
  
     /// @return Z-position of Cerenkov PMT mirrors, TRANSPORT coordinates 
     inline double Z(bool is_RHRS) {
-        return is_RHRS ? 180.*units::cm : 181.*units::cm; 
+        return is_RHRS ? 248.5*units::cm : 245.0*units::cm; 
     }
 
 }
