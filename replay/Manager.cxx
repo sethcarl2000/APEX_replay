@@ -239,18 +239,26 @@ int Manager::Process(const std::string& path_input, const std::string& stem_outp
 
   //create S2 hits
   if (is_RHRS_active) {
-    rna.Define("R_S2_hits", [](const RVec<double>& R_pmt, const RVec<double>& L_pmt)
-      {
-        return helpers::generate_S2_hits(kRHRS, R_pmt, L_pmt); 
-      }, {"R.s2.rt", "R.s2.lt"});
+    rna.Define("R_S2_hits", [](
+        const RVec<double>& R_tdc, 
+        const RVec<double>& L_tdc, 
+        const RVec<double>& R_adc, 
+        const RVec<double>& L_adc
+      ){
+        return helpers::generate_S2_hits(kRHRS, R_tdc, L_tdc, R_adc, L_adc); 
+      }, {"R.s2.rt", "R.s2.lt", "R.s2.ra", "R.s2.la"});
     rna.Filter(vector_isnt_empty<S2Hit>(), {"R_S2_hits"});
   }
   
   if (is_LHRS_active) {
-    rna.Define("L_S2_hits", [](const RVec<double>& R_pmt, const RVec<double>& L_pmt)
-      {
-        return helpers::generate_S2_hits(kLHRS, R_pmt, L_pmt); 
-      }, {"L.s2.rt", "L.s2.lt"}); 
+    rna.Define("L_S2_hits", [](
+      const RVec<double>& R_tdc, 
+      const RVec<double>& L_tdc, 
+      const RVec<double>& R_adc, 
+      const RVec<double>& L_adc
+    ) {
+        return helpers::generate_S2_hits(kLHRS, R_tdc, L_tdc, R_adc, L_adc); 
+      }, {"L.s2.rt", "L.s2.lt", "L.s2.ra", "L.s2.la"}); 
     rna.Filter(vector_isnt_empty<S2Hit>(), {"L_S2_hits"}); 
   }
   //add logic here to process both S2 hits
@@ -429,6 +437,19 @@ int Manager::Process(const std::string& path_input, const std::string& stem_outp
     define_track_output<double>(rna, event_branch, arm+"_S2_dt",   [](const VDC::Track& t){ return t.S2_t(); });
     
     // S2 hit information 
+    define_track_output<double>(rna, event_branch, arm+"_S2_PMT_TDC_R", [](const VDC::Track& t){ 
+      return t.GetEvent()->GetS2Hit().TDC_R(); 
+    });
+    define_track_output<double>(rna, event_branch, arm+"_S2_PMT_TDC_L", [](const VDC::Track& t){ 
+      return t.GetEvent()->GetS2Hit().TDC_L(); 
+    });
+    define_track_output<double>(rna, event_branch, arm+"_S2_PMT_ADC_R", [](const VDC::Track& t){ 
+      return t.GetEvent()->GetS2Hit().ADC_R(); 
+    });
+    define_track_output<double>(rna, event_branch, arm+"_S2_PMT_ADC_L", [](const VDC::Track& t){ 
+      return t.GetEvent()->GetS2Hit().ADC_L(); 
+    });
+
     define_track_output<double>(rna, event_branch, arm+"_S2_xParam",    [](const VDC::Track& t){ return t.xParam(); });
     define_track_output<double>(rna, event_branch, arm+"_S2_hit_time",  [](const VDC::Track& t){ return t.GetEvent()->S2Time(); });
     define_track_output<double>(rna, event_branch, arm+"_S2_hit_PMT_dt_raw",[](const VDC::Track& t){ return t.GetEvent()->GetS2Hit().DeltaT_raw(); });

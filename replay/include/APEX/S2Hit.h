@@ -16,8 +16,12 @@ class S2Hit {
   
   bool   fis_RHRS; 
   int    fPaddle; 
-  double fRawTime_pmtL; 
+  
+  double fADC_pmtR, fADC_pmtL; 
+
   double fRawTime_pmtR; 
+  double fRawTime_pmtL; 
+  
   double fRealTime_pmtR;
   double fRealTime_pmtL;
 
@@ -29,7 +33,7 @@ class S2Hit {
   //maximum difference between L/R pmt for this hit to be considered a coinc. hit 
   static constexpr double coinc_timing_cut = 7.5 * units::ns; 
 
-  S2Hit( bool is_RHRS, int paddle, double T_pmtR, double T_pmtL ); 
+  S2Hit( bool is_RHRS, int paddle, double T_pmtR, double T_pmtL , double adc_R, double adc_L ); 
 
   /// @return 'true' if this S2 hit is coinsidered a coinc. hit, 'false' if not. 
   bool   IsCoinc()      const { 
@@ -44,8 +48,11 @@ class S2Hit {
   double Time()         const { return 0.5*(fRealTime_pmtR + fRealTime_pmtL); } 
   int    Paddle()       const { return fPaddle; }
 
-  double Time_PMT_R() const { return fRealTime_pmtR; }
-  double Time_PMT_L() const { return fRealTime_pmtL; }
+  double TDC_R() const { return fRawTime_pmtR; }
+  double TDC_L() const { return fRawTime_pmtL; }
+
+  double ADC_R() const { return fADC_pmtR; }
+  double ADC_L() const { return fADC_pmtL; }
 
   double DeltaT_raw()   const { return (fRawTime_pmtR - fRawTime_pmtL); }
   
