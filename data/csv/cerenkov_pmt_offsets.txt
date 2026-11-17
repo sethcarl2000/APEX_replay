@@ -1,0 +1,200 @@
+
+
+
+\*________________________________________________________________________
+
+   Cerenkov PMT corrections - RHRS
+
+   Basically to get a 'reconstructed' time (a maximum-likelihood estimate (MLE) of the
+   'true' time of intercept of the track with the PMT mirror),
+   for a PMT TDC time: $t_{TDC}$ and pmt ADC $adc$, we have: 
+   read from pmt 'i_pmt', you want to add:
+
+       t_{MLE} = t_{TDC} - offset[i_pmt] - ADC_corr(adc)
+
+   Where:
+       offset[i_pmt] is read from the following table, per-PMT
+       ADC_corr(adc) is the value 't_mode', interpolated from the table below (see below for description of t_mode.)
+  ________________________________________________________________________
+*\
+
+\\ RHRS Cerenkov PMT offsets (indexed [0-9]):
+
+{
+   -1257.181*units::ns,
+   -1261.814*units::ns,
+   -1263.031*units::ns,
+   -1256.503*units::ns,
+   -1260.580*units::ns,
+   -1258.804*units::ns,
+   -1259.583*units::ns,
+   -1259.150*units::ns,
+   -1260.436*units::ns,
+   -1259.217*units::ns
+}
+
+
+
+
+\*________________________________________________________________________
+
+   Skew-normal shift:
+   
+   The way this PDF is defined is in the following way:
+   
+       f(t | t0,l,a) =  N((t-t0)/l) * CDF(a * (t-t0)/l)
+   
+   Where N(.) is a normalized gaus. PDF, and CDF(t) is: int_{-\infty}^{t} N(t') dt'
+   The following list is given as: {ADC, t_mode, RMS, t0, l, a}, where:
+       ADC     - Cerenkov PMT ADC amplitude for this fit
+       t_mode  - the t-point at which the PDF f(t) is maximal. coincides with t0 iff a==0
+       RMS     - the variance: <t^2> - <t>^2. Be careful, as this is _not_ centered on t_mode
+       t0      - the 'shift' of the distribution. when a=0, this is the gaus. mean
+       l       - the 'width' of the distribution. when a=0, this is the gaus. rms
+       a       - skewness parameter, this parametrizes how 'skew' the distribution is.
+                     when a=0, this is a regular gaus. dist
+  ________________________________________________________________________
+*\
+
+{
+    {  125,  +1.9607*units::ns,  +3.1810*units::ns,  -0.3763*units::ns,  +4.8262*units::ns, +2.82159123e+00},
+    {  375,  +1.4600*units::ns,  +3.5734*units::ns,  -1.1114*units::ns,  +5.4870*units::ns, +3.07924016e+00},
+    {  625,  +1.3669*units::ns,  +2.5793*units::ns,  -0.4776*units::ns,  +3.4069*units::ns, +1.42647042e+00},
+    {  875,  +1.3273*units::ns,  +2.1988*units::ns,  +1.3177*units::ns,  +2.1988*units::ns, +5.46510360e-03},
+    { 1125,  +1.3357*units::ns,  +1.9640*units::ns,  +2.6734*units::ns,  +2.5078*units::ns, -1.24372609e+00},
+    { 1375,  +1.2607*units::ns,  +1.8178*units::ns,  +2.5991*units::ns,  +2.4669*units::ns, -1.59502742e+00},
+    { 1625,  +1.1191*units::ns,  +1.6961*units::ns,  +2.3844*units::ns,  +2.3398*units::ns, -1.71084214e+00},
+    { 1875,  +1.0006*units::ns,  +1.6105*units::ns,  +2.2142*units::ns,  +2.2601*units::ns, -1.84630249e+00},
+    { 2125,  +0.8554*units::ns,  +1.5234*units::ns,  +2.0073*units::ns,  +2.1571*units::ns, -1.92456666e+00},
+    { 2375,  +0.7545*units::ns,  +1.4982*units::ns,  +1.8906*units::ns,  +2.1654*units::ns, -2.12613904e+00},
+    { 2625,  +0.6299*units::ns,  +1.4234*units::ns,  +1.7088*units::ns,  +2.0673*units::ns, -2.17961084e+00},
+    { 2875,  +0.5406*units::ns,  +1.4220*units::ns,  +1.6153*units::ns,  +2.0880*units::ns, -2.31090129e+00},
+    { 3125,  +0.4226*units::ns,  +1.3886*units::ns,  +1.4714*units::ns,  +2.0420*units::ns, -2.33019648e+00},
+    { 3375,  +0.3373*units::ns,  +1.3652*units::ns,  +1.3668*units::ns,  +2.0149*units::ns, -2.37723932e+00},
+    { 3625,  +0.2334*units::ns,  +1.3611*units::ns,  +1.2586*units::ns,  +2.0129*units::ns, -2.40444970e+00},
+    { 3875,  +0.1516*units::ns,  +1.3482*units::ns,  +1.1651*units::ns,  +2.0001*units::ns, -2.44905475e+00},
+    { 4125,  +0.0721*units::ns,  +1.3340*units::ns,  +1.0750*units::ns,  +1.9792*units::ns, -2.44984635e+00},
+    { 4375,  -0.0194*units::ns,  +1.3174*units::ns,  +0.9708*units::ns,  +1.9547*units::ns, -2.45179745e+00},
+    { 4625,  -0.0962*units::ns,  +1.3300*units::ns,  +0.9046*units::ns,  +1.9705*units::ns, -2.42946777e+00},
+    { 4875,  -0.1891*units::ns,  +1.3339*units::ns,  +0.8151*units::ns,  +1.9745*units::ns, -2.41711152e+00},
+    { 5125,  -0.2546*units::ns,  +1.3055*units::ns,  +0.7292*units::ns,  +1.9290*units::ns, -2.39292945e+00},
+    { 5375,  -0.3142*units::ns,  +1.2981*units::ns,  +0.6624*units::ns,  +1.9231*units::ns, -2.42994006e+00},
+    { 5625,  -0.4095*units::ns,  +1.2900*units::ns,  +0.5641*units::ns,  +1.9004*units::ns, -2.35344378e+00},
+    { 5875,  -0.4385*units::ns,  +1.3035*units::ns,  +0.5393*units::ns,  +1.9397*units::ns, -2.49305065e+00},
+    { 6125,  -0.5341*units::ns,  +1.2870*units::ns,  +0.4391*units::ns,  +1.8874*units::ns, -2.29441265e+00},
+    { 6375,  -0.5783*units::ns,  +1.2927*units::ns,  +0.3983*units::ns,  +1.9002*units::ns, -2.32411016e+00},
+    { 6625,  -0.6369*units::ns,  +1.2639*units::ns,  +0.3176*units::ns,  +1.8591*units::ns, -2.33312471e+00},
+    { 6875,  -0.7196*units::ns,  +1.2615*units::ns,  +0.2369*units::ns,  +1.8268*units::ns, -2.14751480e+00},
+    { 7125,  -0.7904*units::ns,  +1.2679*units::ns,  +0.1710*units::ns,  +1.8355*units::ns, -2.14357579e+00},
+    { 7375,  -0.7864*units::ns,  +1.2497*units::ns,  +0.1560*units::ns,  +1.8440*units::ns, -2.37394287e+00},
+    { 7625,  -0.8233*units::ns,  +1.2593*units::ns,  +0.1292*units::ns,  +1.8454*units::ns, -2.28542846e+00},
+    { 7875,  -0.9116*units::ns,  +1.2263*units::ns,  +0.0180*units::ns,  +1.7558*units::ns, -2.02898402e+00},
+    { 8125,  -0.9650*units::ns,  +1.2418*units::ns,  -0.0232*units::ns,  +1.7899*units::ns, -2.09674394e+00},
+    { 8375,  -1.1066*units::ns,  +1.2371*units::ns,  -0.1951*units::ns,  +1.6803*units::ns, -1.60072899e+00},
+    { 8625,  -1.0921*units::ns,  +1.2102*units::ns,  -0.1804*units::ns,  +1.6977*units::ns, -1.84312094e+00},
+    { 8875,  -1.2209*units::ns,  +1.2592*units::ns,  -0.2946*units::ns,  +1.7073*units::ns, -1.58908419e+00},
+    { 9125,  -1.0274*units::ns,  +1.2455*units::ns,  -0.0891*units::ns,  +1.7471*units::ns, -1.84253950e+00},
+    { 9375,  -1.2156*units::ns,  +1.1943*units::ns,  -0.3138*units::ns,  +1.6845*units::ns, -1.88945131e+00},
+    { 9625,  -1.3500*units::ns,  +1.1892*units::ns,  -0.5014*units::ns,  +1.5681*units::ns, -1.41669862e+00},
+    { 9875,  -1.0747*units::ns,  +1.3100*units::ns,  -0.0931*units::ns,  +1.9523*units::ns, -2.51553766e+00}
+}
+
+
+
+\*________________________________________________________________________
+
+   Cerenkov PMT corrections - LHRS
+
+   Basically to get a 'reconstructed' time (a maximum-likelihood estimate (MLE) of the
+   'true' time of intercept of the track with the PMT mirror),
+   for a PMT TDC time: $t_{TDC}$ and pmt ADC $adc$, we have: 
+   read from pmt 'i_pmt', you want to add:
+
+       t_{MLE} = t_{TDC} - offset[i_pmt] - ADC_corr(adc)
+
+   Where:
+       offset[i_pmt] is read from the following table, per-PMT
+       ADC_corr(adc) is the value 't_mode', interpolated from the table below (see below for description of t_mode.)
+  ________________________________________________________________________
+*\
+
+\\ LHRS Cerenkov PMT offsets (indexed [0-9]):
+
+{
+   -1386.854*units::ns,
+   -1386.777*units::ns,
+   -1390.323*units::ns,
+   -1384.659*units::ns,
+   -1389.198*units::ns,
+   -1387.543*units::ns,
+   -1388.646*units::ns,
+   -1386.887*units::ns,
+   -1388.787*units::ns,
+   -1391.747*units::ns
+}
+
+
+
+
+\*________________________________________________________________________
+
+   Skew-normal shift:
+   
+   The way this PDF is defined is in the following way:
+   
+       f(t | t0,l,a) =  N((t-t0)/l) * CDF(a * (t-t0)/l)
+   
+   Where N(.) is a normalized gaus. PDF, and CDF(t) is: int_{-\infty}^{t} N(t') dt'
+   The following list is given as: {ADC, t_mode, RMS, t0, l, a}, where:
+       ADC     - Cerenkov PMT ADC amplitude for this fit
+       t_mode  - the t-point at which the PDF f(t) is maximal. coincides with t0 iff a==0
+       RMS     - the variance: <t^2> - <t>^2. Be careful, as this is _not_ centered on t_mode
+       t0      - the 'shift' of the distribution. when a=0, this is the gaus. mean
+       l       - the 'width' of the distribution. when a=0, this is the gaus. rms
+       a       - skewness parameter, this parametrizes how 'skew' the distribution is.
+                     when a=0, this is a regular gaus. dist
+  ________________________________________________________________________
+*\
+
+{
+    {  125,  +9.7450*units::ns, +13.7495*units::ns,  +1.5844*units::ns, +22.0836*units::ns, +5.02328452e+00},
+    {  375,  +5.2647*units::ns,  +9.4322*units::ns,  +0.0091*units::ns, +15.2486*units::ns, +5.66546583e+00},
+    {  625,  +2.9458*units::ns,  +5.0812*units::ns,  -0.4290*units::ns,  +8.0108*units::ns, +3.91713331e+00},
+    {  875,  +2.0523*units::ns,  +4.2473*units::ns,  -0.7985*units::ns,  +6.6793*units::ns, +3.81261180e+00},
+    { 1125,  +1.5233*units::ns,  +3.8247*units::ns,  -1.1151*units::ns,  +5.9695*units::ns, +3.53628753e+00},
+    { 1375,  +1.0856*units::ns,  +3.5326*units::ns,  -1.3635*units::ns,  +5.5047*units::ns, +3.48458384e+00},
+    { 1625,  +0.8269*units::ns,  +3.2596*units::ns,  -1.4597*units::ns,  +5.0591*units::ns, +3.36147909e+00},
+    { 1875,  +0.5296*units::ns,  +3.0466*units::ns,  -1.6022*units::ns,  +4.7327*units::ns, +3.38770491e+00},
+    { 2125,  +0.3029*units::ns,  +2.8204*units::ns,  -1.7050*units::ns,  +4.3519*units::ns, +3.20055281e+00},
+    { 2375,  +0.0477*units::ns,  +2.6224*units::ns,  -1.7852*units::ns,  +4.0752*units::ns, +3.39965884e+00},
+    { 2625,  -0.1009*units::ns,  +2.4704*units::ns,  -1.8372*units::ns,  +3.8314*units::ns, +3.34078431e+00},
+    { 2875,  -0.2325*units::ns,  +2.2880*units::ns,  -1.8598*units::ns,  +3.5319*units::ns, +3.21170693e+00},
+    { 3125,  -0.2593*units::ns,  +2.1522*units::ns,  -1.8333*units::ns,  +3.2751*units::ns, +2.88147422e+00},
+    { 3375,  -0.3554*units::ns,  +2.0491*units::ns,  -1.8576*units::ns,  +3.1135*units::ns, +2.85054280e+00},
+    { 3625,  -0.4467*units::ns,  +1.9278*units::ns,  -1.8693*units::ns,  +2.9155*units::ns, +2.76066677e+00},
+    { 3875,  -0.5089*units::ns,  +1.8635*units::ns,  -1.8883*units::ns,  +2.8113*units::ns, +2.71610226e+00},
+    { 4125,  -0.5707*units::ns,  +1.7624*units::ns,  -1.8915*units::ns,  +2.6257*units::ns, +2.51093682e+00},
+    { 4375,  -0.6188*units::ns,  +1.7019*units::ns,  -1.9005*units::ns,  +2.5176*units::ns, +2.40809424e+00},
+    { 4625,  -0.6918*units::ns,  +1.6513*units::ns,  -1.9364*units::ns,  +2.4394*units::ns, +2.38951265e+00},
+    { 4875,  -0.7325*units::ns,  +1.5934*units::ns,  -1.9385*units::ns,  +2.3300*units::ns, +2.25935119e+00},
+    { 5125,  -0.8431*units::ns,  +1.5473*units::ns,  -2.0073*units::ns,  +2.2925*units::ns, +2.43094238e+00},
+    { 5375,  -0.8931*units::ns,  +1.5095*units::ns,  -2.0331*units::ns,  +2.2207*units::ns, +2.33517004e+00},
+    { 5625,  -0.9364*units::ns,  +1.4633*units::ns,  -2.0432*units::ns,  +2.1447*units::ns, +2.28768909e+00},
+    { 5875,  -1.0016*units::ns,  +1.4187*units::ns,  -2.0768*units::ns,  +2.0622*units::ns, +2.18977047e+00},
+    { 6125,  -1.0017*units::ns,  +1.3941*units::ns,  -2.0577*units::ns,  +1.9875*units::ns, +1.98744038e+00},
+    { 6375,  -1.0673*units::ns,  +1.3805*units::ns,  -2.1142*units::ns,  +1.9863*units::ns, +2.07857528e+00},
+    { 6625,  -1.1089*units::ns,  +1.3652*units::ns,  -2.1442*units::ns,  +1.9693*units::ns, +2.10504273e+00},
+    { 6875,  -1.1587*units::ns,  +1.3234*units::ns,  -2.1623*units::ns,  +1.9012*units::ns, +2.06268171e+00},
+    { 7125,  -1.2031*units::ns,  +1.3351*units::ns,  -2.2155*units::ns,  +1.9202*units::ns, +2.07489953e+00},
+    { 7375,  -1.2474*units::ns,  +1.3107*units::ns,  -2.2406*units::ns,  +1.8725*units::ns, +2.00745377e+00},
+    { 7625,  -1.2662*units::ns,  +1.3237*units::ns,  -2.2691*units::ns,  +1.8891*units::ns, +1.99715593e+00},
+    { 7875,  -1.2985*units::ns,  +1.3502*units::ns,  -2.3197*units::ns,  +1.9135*units::ns, +1.93212177e+00},
+    { 8125,  -1.3180*units::ns,  +1.3431*units::ns,  -2.3363*units::ns,  +1.9254*units::ns, +2.04113255e+00},
+    { 8375,  -1.2654*units::ns,  +1.3394*units::ns,  -2.2773*units::ns,  +1.8917*units::ns, +1.90173397e+00},
+    { 8625,  -1.4226*units::ns,  +1.4051*units::ns,  -2.4705*units::ns,  +2.1051*units::ns, +2.59843791e+00},
+    { 8875,  -1.3893*units::ns,  +1.4391*units::ns,  -2.4714*units::ns,  +2.1341*units::ns, +2.44345301e+00},
+    { 9125,  -1.2056*units::ns,  +1.4045*units::ns,  -2.2651*units::ns,  +1.9759*units::ns, +1.86729455e+00},
+    { 9375,  -1.3479*units::ns,  +1.6204*units::ns,  -2.5732*units::ns,  +2.3759*units::ns, +2.29291589e+00},
+    { 9625,  -1.6140*units::ns,  +1.5663*units::ns,  -2.6267*units::ns,  +2.4834*units::ns, +4.18170941e+00},
+    { 9875,  -1.2088*units::ns,  +1.4858*units::ns,  -2.3179*units::ns,  +2.2240*units::ns, +2.58375665e+00}
+}
